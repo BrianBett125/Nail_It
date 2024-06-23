@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nail It Dashboard</title>
+    <!-- Link to CSS stylesheet -->
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <!-- FontAwesome icons for various icons used in the page -->
+    <script src="https://kit.fontawesome.com/739d7a3cd3.js" crossorigin="anonymous"></script>
+    <!-- Favicons for different devices -->
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-app.js"></script>
+
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-storage.js"></script>
+
+</head>
+<body>
+    <!-- Header section with navigation bar -->
+    <header>
+        <div class="nav-bar">
+            <div class="logo">Nail <i class="fa-solid fa-exclamation"></i> It</div>
+            <!-- Navigation links -->
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="about-us.html">About Us</a>
+            </div>
+            <!-- Search bar -->
+            <div class="search-container">
+                <input type="text" placeholder="Search...">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main dashboard layout -->
+    <div class="dashboard">
+        <!-- Sidebar with list of sites -->
+        <div class="sidebar">
+            <h2>Sites Dashboard</h2>
+            <ul id="siteList">
+                <!-- <li><a href="#">Mombasa <i class="fas fa-trash-alt"></i></a></li>
+                <li><a href="#">Cape Town <i class="fas fa-trash-alt"></i></a></li> -->
+            </ul>
+            <button id="addSiteButton">Add Site</button>
+        </div>
+        <!-- Main content section -->
+        <div class="main-content">
+            <div class="content-header">
+                <h1>Materials</h1>
+                <button id="addMaterialButton">Add Material</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material Name</th>
+                        <th>Quantity</th>
+                        <th>Units</th>
+                        <th>Last Updated</th>
+                        <th>Update</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody id="materialTableBody">                    
+                    <!-- <tr>
+                        <td>Wheelbarrows</td>
+                        <td>4</td>
+                        <td>Unit</td>
+                        <td>2024-05-25</td>
+                        <td><button><i class="fa-regular fa-pen-to-square"></i></button></td>
+                        <td><button><i class="fas fa-trash-alt"></i></button></td>
+                    </tr> -->
+                    <!-- Additional rows as needed -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal forms for adding and updating sites and materials -->
+    <!-- Add Site Form -->
+    <div id="siteFormContainer" class="site-form-container">
+        <form id="siteForm" class="site-form">
+            <h2>Add New Site</h2>
+            <label for="siteName">Name:</label>
+            <input type="text" id="siteName" name="siteName" required>
+            <label for="siteLocation">Location:</label>
+            <input type="text" id="siteLocation" name="siteLocation" required>
+            <label for="buildingType">Type of Building:</label>
+            <input type="text" id="buildingType" name="buildingType" required>
+            <label for="metadataDate">Date:</label>
+            <input type="date" id="metadataDate" name="metadataDate" required>
+            <button type="button" id="cancelButton">Cancel</button>
+            <button type="submit" id="add-site-btn">Add Site</button>
+        </form>
+    </div>
+
+    <!-- UPDATE FORM -->
+    <div id="updateFormContainer" class="update-form-container">
+        <form id="updateForm" class="update-form">
+            <h2>Edit</h2>
+            <label for="materialName">Material Name:</label>
+            <input type="text" id="uMaterialName" name="materialName" required>
+            <label for="quantity">Quantity:</label>
+            <input type="number" id="uQuantity" name="quantity" required>
+            <label for="units">Units:</label>
+            <input type="text" id="uUnits" name="units" required>
+            <label for="metadataDate">Date:</label>
+            <input type="date" id="uLastUpdated" name="lastUpdated" required>
+            <button type="button" id="updateCancelButton">Cancel</button>
+            <button type="submit" id="update-material-btn">Update</button>
+        </form>
+    </div>
+
+    <!-- NEW MATERIAL FORM -->
+    <div id="materialFormContainer" class="material-form-container">
+        <form id="materialForm" class="material-form">
+            <h2>New Material</h2>
+            <label for="materialName">Material Name:</label>
+            <input type="text" id="materialsName" name="materialName" required>
+            <label for="quantity">Quantity:</label>
+            <input type="number" id="mQuantity" name="quantity" required>
+            <label for="units">Units:</label>
+            <input type="text" id="mUnits" name="units" required>
+            <label for="metadataDate">Date:</label>
+            <input type="date" id="mLastUpdated" name="lastUpdated" required>
+            <button type="button" id="materialCancelButton">Cancel</button>
+            <button type="submit" id="material-btn">Submit</button>
+        </form>
+    </div>
+
+    <!-- Delete material confirmation -->
+    <div id="deleteFormContainer" class="del-site-form-container">
+        <form id="siteFor" class="delete-form">
+            <h3>Are you sure you want to delete?</h3>
+            <button type="button" id="delCancelButton">Cancel</button>
+            <button type="button" id="del-yes-btn">Yes</button>
+        </form>
+    </div>
+
+    <!-- DELETE SITE FORM -->
+    <div id="deleteFormContainer" class="modal">
+        <div class="modal-content">
+            <h2>Confirm Deletion</h2>
+            <p>Are you sure you want to delete this site and related materials?</p>
+            <button id="delCancelButton">Cancel</button>
+            <button id="del-yes-btn">Yes</button>
+        </div>
+    </div>
+    
+
+    <script src="dashboard.js" type="module"></script>
+</body>
+</html>
