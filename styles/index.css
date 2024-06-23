@@ -1,0 +1,180 @@
+/* Reset some default styles */
+body, h1, h2, p, ul, li, a, img {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    /* background-color: grey; */
+}
+
+header {
+    background-color: #000;
+    color: #fff;
+    padding: 10px 20px;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 95%;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Times New Roman', Times, serif;
+    color: antiquewhite;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.nav-links a {
+    color: antiquewhite;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 16px;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    margin-left: 15px;
+}
+
+.search-container input {
+    padding: 5px;
+    font-size: 16px;
+    border: none;
+    border-radius: 3px;
+}
+
+.search-container button {
+    background-color: #ecf0f1;
+    border: none;
+    padding: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.intro-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: url('../assets/sparks.jpg') no-repeat center center/cover;
+    color: #ffedd5;
+    text-align: center;
+    padding: 20px;
+}
+
+.intro-content h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.intro-content p {
+    font-size: 24px;
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 10px 20px;
+    background-color: #f97316;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.feature-section {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.feature-section h2 {
+    font-size: 36px;
+    margin-bottom: 40px;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.feature img {
+    width: 50%;
+    margin-right: 20px;
+}
+
+.feature-info {
+    text-align: left;
+}
+
+.feature-info h3 {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+.feature-info p {
+    font-size: 18px;
+}
+
+.about-section {
+    padding: 60px 20px;
+    background-color: #f4f4f4;
+    text-align: center;
+}
+
+.about-section h2 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+.about-section p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.social-links {
+    margin-bottom: 20px;
+}
+
+.social-links a {
+    color: #3498db;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+footer {
+    padding: 20px;
+    text-align: center;
+    background-color: #000;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .feature {
+        flex-direction: column;
+    }
+
+    .feature img {
+        margin: 0 0 20px 0;
+    }
+}
