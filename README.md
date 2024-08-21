@@ -4,7 +4,7 @@ Nail_It is a construction ite stock taking application, able to store materials 
 
 ##Authors
 
-* [Brian Bett] @BrianBett125
+* [Brian Bett] @BrianBett756@gmail.com
 * [Njenga Mwangi] @wilsonnjenga799@gmail.com
 
 ##Link to Demo Web Application
