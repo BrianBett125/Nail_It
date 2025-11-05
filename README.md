@@ -35,5 +35,3 @@ A huge shout out to my guy @willykar for the Javascript code and advise especial
 
 MIT License:
 Do whatever you like with the code, I embrace open-source as a way for the community to benefit at large. A shout-out too will be appreciated for the sleepless nights coming up with it.
-
-
