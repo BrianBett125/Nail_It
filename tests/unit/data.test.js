@@ -25,13 +25,15 @@ beforeEach(() => {
     sdk.setError = null;
 });
 
-test("the database URL is the one the app has always used, and the app is created once", () => {
+test("the app points at the new project's database, and is created once", () => {
     assert.equal(initCalls.length, 1);
     assert.equal(initCalls[0].args[0], firebaseConfig);
+    assert.equal(firebaseConfig.projectId, "nail-it-6b883");
     assert.equal(
         firebaseConfig.databaseURL,
-        "https://nail-it-8f766-default-rtdb.asia-southeast1.firebasedatabase.app/",
+        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app/",
     );
+    assert.equal(firebaseConfig.authDomain, "nail-it-6b883.firebaseapp.com");
 });
 
 // ---- sites -------------------------------------------------------------------------
