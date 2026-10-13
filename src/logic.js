@@ -3,6 +3,12 @@
 export const NO_SITE_MESSAGE = "Select a site first";
 export const REQUIRED_MESSAGE = "Please fill in all required fields";
 export const QUANTITY_MESSAGE = "Quantity must be a number, zero or more";
+export const BUILDING_TYPE_MESSAGE = "Choose a building type from the list";
+export const UNITS_MESSAGE = "Choose a unit from the list";
+
+// The dropdown options. Stored values are exactly these strings.
+export const BUILDING_TYPES = ["Residential", "Commercial", "Industrial", "Road/Civil", "Other"];
+export const UNITS = ["kg", "tonnes", "bags", "pieces", "metres", "litres", "bundles", "sheets"];
 
 // Returns a finite number >= 0, or null. Empty strings are rejected on purpose:
 // Number("") is 0, which would silently record a blank field as zero stock.
@@ -21,30 +27,87 @@ function clean(raw) {
     return typeof raw === "string" ? raw.trim() : "";
 }
 
-export function validateSite(input) {
+// "  cement   mix " -> "cement mix". Inner runs of whitespace collapse to one space.
+export function normalizeName(raw) {
+    return clean(raw).replace(/\s+/g, " ");
+}
+
+// Two names that differ only in case or spacing share a key.
+export function nameKey(raw) {
+    return normalizeName(raw).toLowerCase();
+}
+
+// Reuse the spelling already in the list, so "cement" typed next to "Cement" is
+// stored as "Cement" and does not become a second material.
+export function canonicalName(raw, knownNames = []) {
+    const name = normalizeName(raw);
+    const key = name.toLowerCase();
+    const match = knownNames.find((known) => nameKey(known) === key);
+    return match ? normalizeName(match) : name;
+}
+
+// One entry per name key, first spelling wins, sorted for the autocomplete list.
+export function suggestNames(names) {
+    const seen = new Map();
+    for (const raw of names) {
+        const name = normalizeName(raw);
+        if (name && !seen.has(name.toLowerCase())) {
+            seen.set(name.toLowerCase(), name);
+        }
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+
+// Local calendar date as YYYY-MM-DD, for the date input default. Not toISOString():
+// that is UTC and would show yesterday on a site east of Greenwich after midnight.
+export function todayISO(now = new Date()) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+// What the user must type to delete a site: its name, or "delete" when the name is blank.
+export function deletePhrase(site) {
+    return normalizeName(site && site.name) || "delete";
+}
+
+export function phraseMatches(typed, phrase) {
+    return normalizeName(typed) === phrase;
+}
+
+// createdAt is stamped here, not typed: `now` is a parameter so tests can fix it.
+export function validateSite(input, now = Date.now()) {
     const value = {
-        name: clean(input.name),
-        location: clean(input.location),
+        name: normalizeName(input.name),
+        location: normalizeName(input.location),
         buildingType: clean(input.buildingType),
-        date: clean(input.date),
+        createdAt: now,
     };
-    if (!value.name || !value.location || !value.buildingType || !value.date) {
+    if (!value.name || !value.location || !value.buildingType) {
         return { ok: false, error: REQUIRED_MESSAGE };
+    }
+    if (!BUILDING_TYPES.includes(value.buildingType)) {
+        return { ok: false, error: BUILDING_TYPE_MESSAGE };
     }
     return { ok: true, value };
 }
 
 // siteId may be null: the caller has not selected a site yet. That is a different
 // problem from an empty field, so it gets its own message.
-export function validateMaterial(input, siteId) {
+// options.knownNames: names already on the site, to reuse their spelling.
+// options.legacyUnit: a unit the material already has that is not in the dropdown
+// (records from before the dropdown), so editing it does not force a change.
+export function validateMaterial(input, siteId, options = {}) {
     if (!siteId) {
         return { ok: false, error: NO_SITE_MESSAGE };
     }
-    const name = clean(input.name);
+    const name = canonicalName(input.name, options.knownNames);
     const units = clean(input.units);
     const lastUpdated = clean(input.lastUpdated);
     if (!name || !units || !lastUpdated) {
         return { ok: false, error: REQUIRED_MESSAGE };
+    }
+    if (!UNITS.includes(units) && units !== options.legacyUnit) {
+        return { ok: false, error: UNITS_MESSAGE };
     }
     const quantity = parseQuantity(input.quantity);
     if (quantity === null) {
@@ -54,8 +117,8 @@ export function validateMaterial(input, siteId) {
 }
 
 // Same checks as validateMaterial without the site: an edit keeps its siteId.
-export function validateMaterialEdit(input) {
-    const result = validateMaterial(input, "edit");
+export function validateMaterialEdit(input, options = {}) {
+    const result = validateMaterial(input, "edit", options);
     if (!result.ok) {
         return result;
     }

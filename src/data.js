@@ -6,6 +6,7 @@ import {
     ref,
     onValue,
     push,
+    set,
     update,
     remove,
     query,
@@ -54,6 +55,12 @@ export function updateMaterial(materialId, fields) {
 
 export function removeMaterial(materialId) {
     return remove(ref(db, `materials/${materialId}`));
+}
+
+// Undo for a delete: write the material back at its original key, so nothing that
+// pointed at the id (Phase 3 movements) loses its target.
+export function restoreMaterial(materialId, material) {
+    return set(ref(db, `materials/${materialId}`), material);
 }
 
 export const OFFLINE_MESSAGE = "Could not reach the database. Check your connection and try again.";

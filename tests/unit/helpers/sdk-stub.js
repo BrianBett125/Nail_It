@@ -49,6 +49,11 @@ export function update(target, values) {
     return Promise.resolve();
 }
 
+export function set(target, value) {
+    record("set", target, value);
+    return Promise.resolve();
+}
+
 export function remove(target) {
     record("remove", target);
     return Promise.resolve();

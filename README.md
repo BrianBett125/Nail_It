@@ -15,17 +15,17 @@ Hosted on Vercel at the moment.
 
 ## Usage
 
-# The web application is straight forwad and easy to use:
-	1. Navigate to the dashboard page
-	2. At the left bottomest part of the screen, click the Add Site button
-	3. Fill in the displayed form including the Site Name, Site Location, Type of Building & Date and click Submit
-	4. On the dashboard side, click on the site name (It should have a different background color from other sites i.e black)
-	5. Once in the site choosen, click on the Add Material button on the right top part below the header to add the materials.
-	6. Fill in with the desired material from the displayed form including the Material Name, Quantity, Units(kgs, number, metres etc), & Date and click Submit
-	7. Now you can be able to see the materials. Go ahead and play with the application.
-	8. At the same line of the material name, click the Pen & Paper icon to edit the material.
-	9. Click on the Delete icon to delete the material.
-	10. And if you want to delete the entire site find the Delete icon next to the sitename, click on it and confirm Yes to delete a site and associated materials.
+The dashboard is meant to be used without reading instructions. A site and three materials is 17 actions (clicks, typing, choosing from a list), counted by an automated test in `tests/e2e/streamline.test.js`.
+
+1. Open the dashboard page. **Add Site** is at the top of the left sidebar.
+2. Type the site name and location, pick the type of building from the list, and click **Add Site**. The new site opens by itself, and the dashboard opens the same site next time you come back.
+3. Click **Add Material**. Type the name (names you used before are suggested, and "cement" is saved as "Cement" if that already exists), the quantity, and pick the unit from the list. The date is today unless you change it.
+4. Click **Add** to save and close, or **Add & another** to save and keep the form open for the next item. The unit and date stay filled in, so a delivery of 15 items is 15 times name, quantity, **Add & another**.
+5. To change a material, click the pen and paper icon on its row.
+6. To delete a material, click the bin icon on its row. It goes at once and a **Deleted. Undo** message stays for 8 seconds. Click **Undo** to put it back.
+7. To delete a whole site, click the bin icon next to its name and type the site name to confirm. The site and all its materials are removed together.
+
+Messages (saved, deleted, errors) appear at the bottom of the screen and go away by themselves. Empty pages say what to do next.
 
 ## Development
 
@@ -43,8 +43,11 @@ How it is laid out:
 
 * `dashboard.js` wires the page. It talks to the database only through `src/data.js`.
 * `src/data.js` is the only file that imports Firebase.
-* `src/logic.js` holds validation and the cascade-delete builder, with no DOM and no Firebase.
+* `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
+* `src/toast.js` shows the toast messages that replaced `alert()`.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
+
+What is stored: a site is `{ name, location, buildingType, createdAt }` (`createdAt` is stamped by the app, sites from before this change keep their old `date` field and still work). A material is `{ name, quantity, units, lastUpdated, siteId }`. The browser also keeps two small things in `localStorage`: the last opened site and the material names you typed before (for suggestions). Nothing breaks if `localStorage` is blocked.
 
 The E2E tests use the system Chrome at `/usr/bin/google-chrome`. Set `CHROME_PATH` to use another one.
 

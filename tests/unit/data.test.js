@@ -126,3 +126,13 @@ test("removeMaterial removes exactly that material", async () => {
     await data.removeMaterial("m1");
     assert.deepEqual(calls("remove").map((c) => c.args[0].path), ["materials/m1"]);
 });
+
+test("restoreMaterial writes the whole material back at its original key (Undo)", async () => {
+    const material = { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03", siteId: "A" };
+    await data.restoreMaterial("m1", material);
+    assert.equal(calls("set").length, 1);
+    assert.equal(calls("set")[0].args[0].path, "materials/m1");
+    assert.deepEqual(calls("set")[0].args[1], material);
+    assert.equal(calls("update").length, 0);
+    assert.equal(calls("push").length, 0);
+});
