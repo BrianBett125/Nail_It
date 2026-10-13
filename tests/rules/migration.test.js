@@ -193,3 +193,71 @@ describe("after the migration, under the real rules", () => {
         await assertFails(set(ref(anonymous(env), "materials/oldapp"), { name: "x", quantity: 1, units: "y", lastUpdated: "2024-01-01", siteId: "sA" }));
     });
 });
+
+// The real plan for the new Firebase project: an empty database that already has the new rules, the
+// owner signed in, and the old data read from somewhere else. No rules switched off.
+describe("copy into an empty project with the real rules active", () => {
+    const readSource = async () => structuredClone(LEGACY);
+    const copy = (apply, dir = outDir()) => runMigration({ db: boss(), ref, get, update, user: BOSS, apply, outDir: dir, log: quiet, readSource });
+
+    beforeEach(async () => {
+        await env.clearDatabase();
+    });
+
+    it("a dry run reads the source and the target, and writes nothing", async () => {
+        const result = await copy(false);
+        assert.equal(result.applied, false);
+        assert.equal(await raw(env, "/"), null);
+        assert.equal(result.report.counts.sitesToMigrate, 4);
+    });
+
+    it("every site and material is created as the owner, in two steps, and the rules accept all of it", async () => {
+        const result = await copy(true);
+        assert.equal(result.verified, true, JSON.stringify(result.failures));
+        assert.deepEqual(Object.keys(await raw(env, "sites")).sort(), ["sA", "sB", "sC", "sD"]);
+        assert.deepEqual(Object.keys(await raw(env, "materials")).sort(), ["sA", "sB", "sC", "sD"]);
+        assert.equal(await raw(env, "materials/m1"), null, "no flat legacy nodes in the new project");
+        assert.equal(await raw(env, "members/sA/boss"), "owner");
+        assert.deepEqual(await raw(env, "memberInfo/sA/boss"), { email: "boss@example.com" });
+    });
+
+    it("the owner then sees their sites, and nobody else sees anything", async () => {
+        await copy(true);
+        const siteList = (await get(ref(boss(), "userSites/boss"))).val();
+        assert.deepEqual(Object.keys(siteList).sort(), ["sA", "sB", "sC", "sD"]);
+        for (const p of ["sites/sA", "materials/sA", "members/sA"]) {
+            await assertSucceeds(get(ref(boss(), p)));
+            await assertFails(get(ref(anonymous(env), p)));
+            await assertFails(get(ref(as(env, "stranger"), p)));
+        }
+        await assertFails(get(ref(anonymous(env), "/")));
+    });
+
+    it("a second run changes nothing, and does not undo an edit made in the new project", async () => {
+        await copy(true);
+        await assertSucceeds(update(ref(boss(), "materials/sA/m1"), { quantity: 99 }));
+        const before = await raw(env, "/");
+        const second = await copy(true);
+        assert.equal(second.verified, true);
+        assert.deepEqual(await raw(env, "/"), before);
+    });
+
+    it("a re-run after a crash between the two steps fills in the missing materials", async () => {
+        // Step one only: the site and owner entries exist, the materials do not.
+        await assertSucceeds(update(ref(boss()), {
+            "sites/sA": { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1714521600000, ownerUid: "boss" },
+            "members/sA/boss": "owner", "userSites/boss/sA": "owner", "memberInfo/sA/boss": { email: "boss@example.com" },
+        }));
+        const result = await copy(true);
+        assert.equal(result.verified, true);
+        assert.deepEqual(Object.keys(await raw(env, "materials/sA")).sort(), ["m1", "m2"]);
+        assert.equal(result.report.sites.find((s) => s.id === "sA").action, "already migrated");
+    });
+
+    it("someone who is not signed in cannot run it: the rules refuse the first read", async () => {
+        await assert.rejects(runMigration({
+            db: anonymous(env), ref, get, update, user: BOSS, apply: true, outDir: outDir(), log: quiet, readSource,
+        }));
+        assert.equal(await raw(env, "/"), null);
+    });
+});

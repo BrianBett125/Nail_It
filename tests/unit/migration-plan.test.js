@@ -193,6 +193,8 @@ test("running it a second time changes nothing that was edited since: owned site
     };
     const second = planMigration(after, OWNER);
     assert.equal("sites/sA" in second.updates, false, "the renamed site is not overwritten");
+    assert.deepEqual(Object.keys(second.updates).filter((p) => /^(members|userSites|memberInfo)\//.test(p)), [],
+        "the owner entries are not written twice: the rules refuse an owner rewriting their own entry");
     assert.equal("materials/sA/m1" in second.updates, false, "the edited material is not overwritten");
     assert.equal(second.report.sites[0].action, "already migrated");
     assert.equal(second.report.materials[0].action, "already migrated");

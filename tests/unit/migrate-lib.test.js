@@ -79,20 +79,19 @@ test("the snapshot is written BEFORE the first write", async () => {
     assert.ok(events.every((e) => e === "snapshot-present"));
 });
 
-test("apply writes one update per site, each holding that site and its materials together", async () => {
+test("apply writes two updates per site: the site and its owner entries first, then its materials", async () => {
     const mem = memoryDb(LEGACY);
     const result = await runMigration({ ...mem, user: USER, apply: true, outDir: outDirFor(), log: quiet });
 
     assert.equal(result.applied, true);
-    assert.equal(mem.writes.length, 2, "two sites, two updates");
+    assert.equal(mem.writes.length, 4, "two sites, two updates each");
+    const siteOf = (p) => (p.startsWith("userSites/") ? p.split("/")[2] : p.split("/")[1]);
     for (const paths of mem.writes) {
-        const sites = new Set(paths.map((p) => (p.startsWith("userSites/") ? p.split("/")[2] : p.split("/")[1])));
-        assert.equal(sites.size, 1, `an update mixes sites: ${paths}`);
+        assert.equal(new Set(paths.map(siteOf)).size, 1, `an update mixes sites: ${paths}`);
     }
-    const sA = mem.writes.find((paths) => paths.includes("sites/sA"));
-    assert.deepEqual([...sA].sort(), [
-        "materials/sA/m1", "materials/sA/m2", "memberInfo/sA/boss", "members/sA/boss", "sites/sA", "userSites/boss/sA",
-    ]);
+    const [first, second] = mem.writes;
+    assert.deepEqual([...first].sort(), ["memberInfo/sA/boss", "members/sA/boss", "sites/sA", "userSites/boss/sA"]);
+    assert.deepEqual([...second].sort(), ["materials/sA/m1", "materials/sA/m2"]);
 });
 
 test("after apply the new layout is in place, the old materials are untouched, and it is verified", async () => {
@@ -166,4 +165,69 @@ test("a database that returns the keys in another order still verifies", async (
     };
     const result = await runMigration({ ...mem, user: USER, apply: true, outDir: outDirFor(), log: quiet });
     assert.equal(result.verified, true);
+});
+
+// ---- copy mode: old database -> a different, empty one ----------------------------
+
+// A target that behaves like the real rules in the one way that matters here: materials of a
+// site are accepted only once the owner entry for that site exists.
+function ruleLikeTarget(initial = {}) {
+    const mem = memoryDb(initial);
+    const update = mem.update;
+    mem.update = async (r, updates) => {
+        for (const p of Object.keys(updates)) {
+            if (p.startsWith("materials/")) {
+                const siteId = p.split("/")[1];
+                if (!mem.root.members?.[siteId]?.boss) {
+                    throw new Error(`PERMISSION_DENIED: ${p} before the owner entry of ${siteId}`);
+                }
+            }
+        }
+        return update(r, updates);
+    };
+    return mem;
+}
+
+test("copy mode: the old database is read, the new one is written, and the old one is never touched", async () => {
+    const source = memoryDb(LEGACY);
+    const target = ruleLikeTarget({});
+    const readSource = async () => ({ sites: source.root.sites, materials: source.root.materials });
+    const result = await runMigration({ ...target, user: USER, apply: true, outDir: outDirFor(), log: quiet, readSource });
+
+    assert.equal(result.verified, true);
+    assert.deepEqual(source.writes, []);
+    assert.deepEqual(source.root, LEGACY);
+    assert.deepEqual(Object.keys(target.root.sites).sort(), ["sA", "sB"]);
+    assert.equal(target.root.sites.sA.ownerUid, "boss");
+    assert.deepEqual(target.root.materials.sA.m1, { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" });
+    assert.equal(target.root.materials.m1, undefined, "no old flat nodes in the new database");
+});
+
+test("copy mode: the snapshot holds the old data exactly, and the progress log says it is a copy", async () => {
+    const target = ruleLikeTarget({});
+    const outDir = outDirFor();
+    const result = await runMigration({ ...target, user: USER, apply: false, outDir, log: quiet, readSource: async () => structuredClone(LEGACY) });
+    assert.deepEqual(JSON.parse(fs.readFileSync(result.snapshotFile, "utf8")).source, LEGACY);
+    assert.match(fs.readFileSync(path.join(outDir, "progress.log"), "utf8"), /Copy mode: 2 sites and 3 materials in the old database, 0 sites already in the new one/);
+    assert.deepEqual(target.writes, [], "a dry run writes nothing to the new database either");
+});
+
+test("copy mode: a second run copies only what is new, and keeps edits made in the new database", async () => {
+    const source = memoryDb(LEGACY);
+    const target = ruleLikeTarget({});
+    const readSource = async () => ({ sites: structuredClone(source.root.sites), materials: structuredClone(source.root.materials) });
+    await runMigration({ ...target, user: USER, apply: true, outDir: outDirFor(), log: quiet, readSource });
+
+    target.root.materials.sA.m1.quantity = 77;                                 // edited in the new app
+    target.root.sites.sA.name = "Mombasa North";                               // renamed in the new app
+    source.root.materials.m9 = { name: "Gravel", quantity: 4, units: "tonnes", lastUpdated: "2024-06-01", siteId: "sA" };  // added in the old app since
+    target.writes.length = 0;
+
+    const second = await runMigration({ ...target, user: USER, apply: true, outDir: outDirFor(), log: quiet, readSource });
+    assert.equal(second.verified, true);
+    assert.equal(target.root.materials.sA.m1.quantity, 77);
+    assert.equal(target.root.sites.sA.name, "Mombasa North");
+    assert.deepEqual(target.root.materials.sA.m9, { name: "Gravel", quantity: 4, units: "tonnes", lastUpdated: "2024-06-01" });
+    assert.deepEqual(second.report.counts.materialsToCopy, 1);
+    assert.ok(target.writes.flat().every((p) => !p.startsWith("sites/")), "no site was rewritten");
 });

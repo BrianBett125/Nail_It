@@ -1,15 +1,22 @@
 #!/usr/bin/env node
-// One-time migration of the live database to the Phase 2 layout. READ docs/PHASE2-DEPLOY.md first.
+// One-time move of the live data to the Phase 2 layout. READ docs/PHASE2-DEPLOY.md first.
 //
-//   NAILIT_EMAIL=you@example.com NAILIT_PASSWORD=... node scripts/migrate.mjs           # dry run
-//   NAILIT_EMAIL=you@example.com NAILIT_PASSWORD=... node scripts/migrate.mjs --apply   # writes
+//   NAILIT_EMAIL=you@example.com NAILIT_PASSWORD=... \
+//   NAILIT_SOURCE_DB_URL=https://OLD-PROJECT-default-rtdb.REGION.firebasedatabase.app \
+//   node scripts/migrate.mjs [--apply]
 //
-// The password comes from the environment, never from the command line (it would land in the
-// shell history and in `ps`). The account must already exist (Firebase console > Authentication >
-// Add user). It becomes the owner of every existing site.
+// Without --apply it is a dry run and writes nothing. The password comes from the environment,
+// never from the command line (it would land in the shell history and in `ps`). The account must
+// already exist in the NEW project (Firebase console > Authentication > Add user), and it becomes
+// the owner of every site that is copied.
 //
-// Run it BEFORE database.rules.json is deployed: the new rules do not allow anyone to read the
-// old flat layout, which is exactly what this script reads.
+// Copy mode (NAILIT_SOURCE_DB_URL set): the old database is read over its public URL, which only
+// works while its rules are still open, and everything is written to the project in
+// src/firebase-config.js, which must already have database.rules.json deployed. The old database
+// is only ever read.
+//
+// In place (no NAILIT_SOURCE_DB_URL): migrates the project in src/firebase-config.js itself. Run
+// it BEFORE the new rules are deployed: they do not allow reading the old flat layout.
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getDatabase, ref, get, update } from "firebase/database";
@@ -20,6 +27,20 @@ const apply = process.argv.includes("--apply");
 const email = process.env.NAILIT_EMAIL;
 const password = process.env.NAILIT_PASSWORD;
 const outDir = process.env.NAILIT_OUT_DIR || "/tmp/nailit-migration";
+const sourceUrl = (process.env.NAILIT_SOURCE_DB_URL || "").replace(/\/+$/, "");
+
+// The old database answered anyone without a login, so a plain GET reads it. That also means a
+// refusal here is meaningful: the old rules have been closed.
+async function readOldDatabase() {
+    const read = async (node) => {
+        const response = await fetch(`${sourceUrl}/${node}.json`);
+        if (!response.ok) {
+            throw new Error(`could not read ${sourceUrl}/${node}.json (HTTP ${response.status}). The old database may already be locked.`);
+        }
+        return response.json();
+    };
+    return { sites: await read("sites"), materials: await read("materials") };
+}
 
 if (!isConfigured()) {
     console.error("src/firebase-config.js still has the placeholder apiKey. Fill it in first.");
@@ -43,6 +64,7 @@ try {
         user: { uid: user.uid, email: user.email },
         apply,
         outDir,
+        readSource: sourceUrl ? readOldDatabase : null,
     });
     process.exitCode = result.applied && !result.verified ? 2 : 0;
 } catch (error) {

@@ -146,16 +146,17 @@ export function planMigration(legacy, { ownerUid, ownerEmail, now = Date.now() }
             continue;
         }
         if (site.ownerUid === ownerUid) {
+            // Done before, and its owner entries were written with it in one update. Writing them
+            // again would be refused: the rules let an owner create their entry, never rewrite it.
             report.sites.push({ id: siteId, name: site.name, action: "already migrated", changes: [] });
-        } else {
-            const { value, changes } = repairSite(site, now);
-            updates[`sites/${siteId}`] = { ...value, ownerUid };
-            report.sites.push({ id: siteId, name: value.name, action: "migrate", changes });
+            continue;
         }
-        // Idempotent: the same owner entries every time.
+        const { value, changes } = repairSite(site, now);
+        updates[`sites/${siteId}`] = { ...value, ownerUid };
         updates[`members/${siteId}/${ownerUid}`] = "owner";
         updates[`userSites/${ownerUid}/${siteId}`] = "owner";
         updates[`memberInfo/${siteId}/${ownerUid}`] = { email: ownerEmail };
+        report.sites.push({ id: siteId, name: value.name, action: "migrate", changes });
     }
 
     for (const [key, value] of Object.entries(materialsRoot)) {
