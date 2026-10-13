@@ -483,3 +483,240 @@ td button:hover {
     background: #ecf0f1;
     color: #2c3e50;
 }
+
+/* Phase 2: accounts, roles, members */
+[hidden] {
+    display: none !important;
+}
+
+.user-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 15px;
+    font-size: 14px;
+}
+
+.user-area #userEmail {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-area button {
+    padding: 5px 10px;
+    border: 1px solid antiquewhite;
+    border-radius: 3px;
+    background: transparent;
+    color: antiquewhite;
+    cursor: pointer;
+}
+
+.user-area button:hover {
+    background: antiquewhite;
+    color: #000;
+}
+
+.verify-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px 14px;
+    border-left: 4px solid #d3a269;
+    border-radius: 3px;
+    background: #fdf3e3;
+    color: #5a4021;
+}
+
+.verify-banner button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    background: #d3a269;
+    color: #fff;
+    cursor: pointer;
+}
+
+.invites-panel {
+    margin: 10px 5px;
+    padding: 10px;
+    border-radius: 5px;
+    background: #34495e;
+    font-size: 14px;
+}
+
+.invites-panel h3 {
+    margin-bottom: 6px;
+    color: antiquewhite;
+    font-size: 15px;
+}
+
+.invites-panel li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.invites-panel button {
+    margin: 0 6px 0 0;
+    padding: 5px 10px;
+}
+
+.content-header {
+    gap: 10px;
+}
+
+.content-header h1 {
+    margin-right: auto;
+}
+
+.role-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: #2c3e50;
+    color: antiquewhite;
+    font-size: 13px;
+}
+
+#membersButton {
+    padding: 10px;
+    border: 1px solid #2c3e50;
+    border-radius: 5px;
+    background: transparent;
+    color: #2c3e50;
+    cursor: pointer;
+}
+
+#membersButton:hover {
+    background: #2c3e50;
+    color: #fff;
+}
+
+.role-tag {
+    margin-left: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #d3a269;
+    color: #2c3e50;
+    font-size: 12px;
+}
+
+/* A viewer sees the table without the Update and Delete columns. */
+table.readonly th:nth-child(n+5),
+table.readonly td:nth-child(n+5) {
+    display: none;
+}
+
+.members-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.members-dialog {
+    box-sizing: border-box;
+    width: 480px;
+    max-width: calc(100% - 32px);
+    margin: 8vh auto;
+    padding: 20px;
+    border-radius: 5px;
+    background: #fff;
+}
+
+.members-dialog h2 {
+    margin-bottom: 12px;
+}
+
+.members-dialog h3 {
+    margin: 18px 0 6px;
+}
+
+.member-list {
+    list-style: none;
+}
+
+.member-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.member-list .member-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-all;
+}
+
+.member-list .member-role {
+    color: #555;
+}
+
+.member-list select {
+    padding: 6px;
+}
+
+.members-dialog .hint,
+.hint {
+    color: #666;
+    font-size: 13px;
+}
+
+.invite-form label {
+    display: block;
+    margin: 8px 0 4px;
+}
+
+.invite-form input,
+.invite-form select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.members-dialog button,
+.member-list button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    background: #3498db;
+    color: #fff;
+    cursor: pointer;
+}
+
+.invite-form button {
+    margin-top: 12px;
+}
+
+.member-list .remove-member,
+.member-list .revoke-invite,
+#leaveSiteButton {
+    background: #c0392b;
+}
+
+.members-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.members-dialog button:disabled,
+.member-list button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

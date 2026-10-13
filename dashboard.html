@@ -26,6 +26,11 @@
                 <a href="dashboard.html">Dashboard</a>
                 <a href="about-us.html">About Us</a>
             </div>
+            <!-- Who is signed in -->
+            <div class="user-area">
+                <span id="userEmail"></span>
+                <button type="button" id="signOutButton">Sign out</button>
+            </div>
             <!-- Search bar -->
             <div class="search-container">
                 <input type="text" placeholder="Search...">
@@ -39,13 +44,26 @@
         <div class="sidebar">
             <h2>Sites Dashboard</h2>
             <button id="addSiteButton">Add Site</button>
+            <!-- Invitations waiting for this account's verified email -->
+            <section id="invitesPanel" class="invites-panel" aria-label="Invitations" hidden>
+                <h3>Invitations</h3>
+                <ul id="inviteList"></ul>
+            </section>
             <p id="sitesStatus" class="status" role="status">Loading sites...</p>
             <ul id="siteList"></ul>
         </div>
         <!-- Main content section -->
         <div class="main-content">
+            <!-- Shown until the account's email is verified: an unverified email cannot accept invitations -->
+            <div id="verifyBanner" class="verify-banner" role="status" hidden>
+                <span>Verify your email to accept invitations. We sent a link to <strong id="verifyEmail"></strong>.</span>
+                <button type="button" id="resendVerification">Send again</button>
+                <button type="button" id="checkVerified">I have verified</button>
+            </div>
             <div class="content-header">
                 <h1>Materials</h1>
+                <span id="roleBadge" class="role-badge" hidden></span>
+                <button id="membersButton" hidden>Members</button>
                 <button id="addMaterialButton">Add Material</button>
             </div>
             <p id="materialsStatus" class="status status-main" role="status">Loading...</p>
@@ -127,6 +145,31 @@
             <button type="button" id="siteDeleteCancel">Cancel</button>
             <button type="submit" id="siteDeleteConfirm" disabled>Delete site</button>
         </form>
+    </div>
+
+    <!-- Members: who is in the site, their roles. The owner can also invite, change roles and remove. -->
+    <div id="membersContainer" class="members-container">
+        <div class="members-dialog" role="dialog" aria-modal="true" aria-labelledby="membersTitle">
+            <h2 id="membersTitle">Members</h2>
+            <ul id="memberList" class="member-list"></ul>
+            <div id="inviteSection" hidden>
+                <h3>Invite someone</h3>
+                <p class="hint">They join by signing up or signing in with this email and verifying it. No email is sent from here, so tell them.</p>
+                <form id="inviteForm" class="invite-form">
+                    <label for="inviteEmail">Email</label>
+                    <input type="email" id="inviteEmail" autocomplete="off" required>
+                    <label for="inviteRole">Role</label>
+                    <select id="inviteRole"></select>
+                    <button type="submit" id="inviteSubmit">Send invite</button>
+                </form>
+                <h3>Pending invitations</h3>
+                <ul id="pendingInviteList" class="member-list"></ul>
+            </div>
+            <div class="members-actions">
+                <button type="button" id="leaveSiteButton" hidden>Leave site</button>
+                <button type="button" id="membersClose">Close</button>
+            </div>
+        </div>
     </div>
 
     <script src="dashboard.js" type="module"></script>

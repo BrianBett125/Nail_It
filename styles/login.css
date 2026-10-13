@@ -12,17 +12,18 @@ body {
     display: flex;
     align-items: center;
     flex-direction: column;
-    justify-content: space-between;
-    height: 100vh;
+    justify-content: center;
+    min-height: 100vh;
     background-size: cover;
     background-position: center;
-    overflow: hidden;
+    padding: 16px;
 }
 
 .login {
     border: 1px solid black;
     width: 400px;
-    height: 500px;
+    max-width: 100%;
+    min-height: 500px;
     background: url('../assets/hammer.jpg');
     color: antiquewhite;
     background-size: cover;
@@ -36,7 +37,7 @@ form {
     box-sizing: border-box;
     padding: 40px;
     width: 100%;
-    height: 100%;
+    min-height: 500px;
     backdrop-filter: brightness(0.6);
     flex-direction: column;
     display: flex;
@@ -45,7 +46,7 @@ form {
 
 h1 {
     text-align: center;
-    margin-bottom: 60px;
+    margin-bottom: 30px;
     font-weight: normal;
     font-size: 30px;
     text-shadow: 0px 0px 2px rgba(0,0,0,0.5);
@@ -83,4 +84,58 @@ button {
     cursor: pointer;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
     margin: 10px 0px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.field-group[hidden],
+.auth-message[hidden],
+.auth-links button[hidden] {
+    display: none;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.auth-message {
+    margin: 0 10px 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.auth-message.error {
+    border-left: 4px solid #ff6b5e;
+    color: #ffd6d1;
+}
+
+.auth-message.ok {
+    border-left: 4px solid #5ed67a;
+    color: #d6f5dd;
+}
+
+.auth-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+button.link {
+    background: none;
+    box-shadow: none;
+    height: auto;
+    margin: 4px 0;
+    padding: 6px;
+    font-size: 14px;
+    letter-spacing: 0;
+    text-decoration: underline;
+    color: antiquewhite;
 }

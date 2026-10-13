@@ -13,11 +13,27 @@ Nail_It is a construction site stock taking application, able to store materials
 
 Hosted on Vercel at the moment.
 
+## Accounts and roles
+
+You sign in with an email and a password (the **Sign in** page; **Create an account** and **Forgot password?** are on it). Firebase sends a verification email: you can use the app straight away, but you can only accept an invitation once your email is verified.
+
+Every site has people in it, each with one role:
+
+| Role | Can do |
+|---|---|
+| **Owner** (whoever created the site) | Everything: add, edit and delete materials, delete the site, invite people, change roles, remove people |
+| **Storekeeper** (foreman) | Add, edit and delete materials |
+| **Viewer** (engineer, QS, architect) | Read the stock. No buttons to change anything |
+
+The page only shows what your role may do, and the database refuses the rest even if someone bypasses the page (`database.rules.json`).
+
+**Inviting someone:** open the site, click **Members**, type their email, pick **Storekeeper** or **Viewer**, click **Send invite**. Nothing is emailed from the app: tell them to sign up or sign in with that email. They accept under **Invitations** in the sidebar. Non-owners can leave a site from the same dialog (two taps), and owners can change roles or remove people there.
+
 ## Usage
 
 The dashboard is meant to be used without reading instructions. A site and three materials is 17 actions (clicks, typing, choosing from a list), counted by an automated test in `tests/e2e/streamline.test.js`.
 
-1. Open the dashboard page. **Add Site** is at the top of the left sidebar.
+1. Open the dashboard page and sign in (or create an account). **Add Site** is at the top of the left sidebar.
 2. Type the site name and location, pick the type of building from the list, and click **Add Site**. The new site opens by itself, and the dashboard opens the same site next time you come back.
 3. Click **Add Material**. Type the name (names you used before are suggested, and "cement" is saved as "Cement" if that already exists), the quantity, and pick the unit from the list. The date is today unless you change it.
 4. Click **Add** to save and close, or **Add & another** to save and keep the form open for the next item. The unit and date stay filled in, so a delivery of 15 items is 15 times name, quantity, **Add & another**.
@@ -32,22 +48,40 @@ Messages (saved, deleted, errors) appear at the bottom of the screen and go away
 The site is static, there is no build step. `package.json` only holds the test tooling.
 
 ```
-npm install              # once; installs playwright-core
-npm run test:unit        # pure logic, under a second, runs on every commit
-npm run test:e2e         # drives dashboard.html in Chrome against an in-memory fake database
-npm test                 # both
+npm install              # once; installs the test tooling
+npm run test:unit        # pure logic, data layer, auth and migration planning, under a few seconds, runs on every commit
+npm run test:rules       # the database rules, on the Firebase emulator (needs Java 17+; first run downloads the emulator)
+npm run test:e2e         # drives the pages in Chrome against an in-memory fake database and fake sign-in
+npm test                 # unit and e2e
+npm run test:all         # unit, rules and e2e
 git config core.hooksPath .githooks   # run the unit tests before every commit
 ```
 
 How it is laid out:
 
 * `dashboard.js` wires the page. It talks to the database only through `src/data.js`.
-* `src/data.js` is the only file that imports Firebase.
+* `src/data.js` and `src/auth.js` are the only files that talk to Firebase (both use the one app made in `src/firebase-app.js`, configured in `src/firebase-config.js`).
+* `src/roles.js` holds who may do what on the page, and the invite email keys. `src/auth-errors.js` turns Firebase Auth errors into plain sentences.
+* `login.html` and `login.js` are the sign-in, sign-up and reset page. `dashboard.js` sends anyone who is not signed in there.
+* `database.rules.json` is the real access control. `tests/rules/` checks it on the emulator: who can read and write what, validation, invites, creating and deleting a site, and the migration.
+* `scripts/` holds the one-time migration of the old data (`docs/PHASE2-DEPLOY.md` has the steps, including the ones only the project owner can do).
 * `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
 * `src/toast.js` shows the toast messages that replaced `alert()`.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
 
-What is stored: a site is `{ name, location, buildingType, createdAt }` (`createdAt` is stamped by the app, sites from before this change keep their old `date` field and still work). A material is `{ name, quantity, units, lastUpdated, siteId }`. The browser also keeps two small things in `localStorage`: the last opened site and the material names you typed before (for suggestions). Nothing breaks if `localStorage` is blocked.
+What is stored (everything is under a site, so one person's sites are never downloaded with another's):
+
+```
+/sites/<siteId>                    { name, location, buildingType, createdAt, ownerUid }
+/members/<siteId>/<uid>            "owner" | "storekeeper" | "viewer"
+/userSites/<uid>/<siteId>          the same role, so a user can list their own sites
+/memberInfo/<siteId>/<uid>         { email }, to show who is who
+/materials/<siteId>/<materialId>   { name, quantity, units, lastUpdated }
+/userInvites/<emailKey>/<siteId>   { role, siteName, invitedBy }, read by the invited person
+/siteInvites/<siteId>/<emailKey>   role, read by the owner
+```
+
+`<emailKey>` is the email in lower case with each `.` written as `,` (keys cannot contain dots). The browser also keeps two small things in `localStorage`: the last opened site and the material names you typed before (for suggestions). Nothing breaks if `localStorage` is blocked.
 
 The E2E tests use the system Chrome at `/usr/bin/google-chrome`. Set `CHROME_PATH` to use another one.
 

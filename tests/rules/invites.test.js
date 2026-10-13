@@ -15,8 +15,10 @@ const EMAIL = "sam.w.mwangi@mail.example.com";
 const KEY = "sam,w,mwangi@mail,example,com";
 const sam = (claims = {}) => as(env, "sam", { email: EMAIL, ...claims });
 
+// The invitee cannot read the site, so the invite carries what they need to recognise it.
+const inviteRecord = (role) => ({ role, siteName: "Mombasa", invitedBy: "owner1@example.com" });
 const invite = (role = "viewer", siteId = "s1") => ({
-    [`userInvites/${KEY}/${siteId}`]: role,
+    [`userInvites/${KEY}/${siteId}`]: inviteRecord(role),
     [`siteInvites/${siteId}/${KEY}`]: role,
 });
 const accept = (role = "viewer", siteId = "s1") => ({
@@ -44,6 +46,17 @@ describe("sending an invite", () => {
     });
     it("cannot invite as owner (one owner per site)", async () => {
         await assertFails(update(ref(as(env, "owner1")), invite("owner")));
+    });
+    it("the invite carries the site name and the inviter, and nothing else", async () => {
+        await ownerInvites("viewer");
+        assert.deepEqual(await raw(env, `userInvites/${KEY}/s1`), inviteRecord("viewer"));
+        const base = inviteRecord("viewer");
+        for (const bad of [
+            { ...base, siteName: "" }, { ...base, siteName: "x".repeat(101) }, { ...base, invitedBy: "" },
+            { ...base, admin: true }, { role: "viewer" }, { ...base, role: "owner" }, "viewer",
+        ]) {
+            await assertFails(update(ref(as(env, "owner1")), { [`userInvites/${KEY}/s1`]: bad }));
+        }
     });
     it("cannot invite with an invalid role", async () => {
         await assertFails(update(ref(as(env, "owner1")), invite("admin")));
@@ -131,7 +144,7 @@ describe("accepting an invite", () => {
     it("an email with a plus sign, digits and several dots works as a key", async () => {
         const email = "a.b+c.d9@sub.mail.example.org";
         const key = "a,b+c,d9@sub,mail,example,org";
-        await assertSucceeds(update(ref(as(env, "owner1")), { [`userInvites/${key}/s1`]: "viewer", [`siteInvites/s1/${key}`]: "viewer" }));
+        await assertSucceeds(update(ref(as(env, "owner1")), { [`userInvites/${key}/s1`]: inviteRecord("viewer"), [`siteInvites/s1/${key}`]: "viewer" }));
         const dot = as(env, "dot", { email });
         await assertSucceeds(update(ref(dot), {
             "members/s1/dot": "viewer", "userSites/dot/s1": "viewer",
@@ -175,6 +188,6 @@ describe("declining an invite", () => {
     it("somebody else cannot delete it", async () => {
         await ownerInvites("viewer");
         await assertFails(update(ref(as(env, "mallory", { email: "mallory@evil.example.com" })), { [`userInvites/${KEY}/s1`]: null }));
-        assert.equal(await raw(env, `userInvites/${KEY}/s1`), "viewer");
+        assert.equal((await raw(env, `userInvites/${KEY}/s1`)).role, "viewer");
     });
 });

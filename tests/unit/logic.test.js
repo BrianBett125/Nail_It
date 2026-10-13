@@ -141,11 +141,11 @@ test("validateMaterial without a selected site says so, not 'fill all fields' (B
     assert.deepEqual(validateMaterial(filled, undefined), { ok: false, error: NO_SITE_MESSAGE });
 });
 
-test("validateMaterial stores quantity as a number and tags the site (B8)", () => {
+test("validateMaterial stores quantity as a number and leaves the siteId out (B8)", () => {
     const result = validateMaterial({ name: " Cement ", quantity: "5", units: "bags", lastUpdated: "2024-05-25" }, "site1");
     assert.deepEqual(result, {
         ok: true,
-        value: { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-25", siteId: "site1" },
+        value: { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-25" },
     });
 });
 
@@ -166,21 +166,28 @@ test("validateMaterialEdit never carries a siteId, so an edit cannot move a mate
     assert.equal(validateMaterialEdit({ name: "n", quantity: "-1", units: "u", lastUpdated: "d" }).ok, false);
 });
 
-test("buildSiteDeleteUpdates is one object covering the site and only its materials (B4)", () => {
-    const materials = {
-        m1: { siteId: "A", name: "Cement" },
-        m2: { siteId: "B", name: "Sand" },
-        m3: { siteId: "A", name: "Nails" },
-    };
-    assert.deepEqual(buildSiteDeleteUpdates("A", materials), {
+test("buildSiteDeleteUpdates is one object covering the site and everything under it (B4)", () => {
+    assert.deepEqual(buildSiteDeleteUpdates("A", ["u1", "u2"], ["sam@x,com"]), {
         "sites/A": null,
-        "materials/m1": null,
-        "materials/m3": null,
+        "materials/A": null,
+        "memberInfo/A": null,
+        "siteInvites/A": null,
+        "members/A/u1": null,
+        "userSites/u1/A": null,
+        "members/A/u2": null,
+        "userSites/u2/A": null,
+        "userInvites/sam@x,com/A": null,
     });
 });
 
-test("buildSiteDeleteUpdates copes with no materials and null entries (B4)", () => {
-    assert.deepEqual(buildSiteDeleteUpdates("A", null), { "sites/A": null });
-    assert.deepEqual(buildSiteDeleteUpdates("A", {}), { "sites/A": null });
-    assert.deepEqual(buildSiteDeleteUpdates("A", { m1: null }), { "sites/A": null });
+test("buildSiteDeleteUpdates for a site with no members or invites still removes the site and its materials", () => {
+    const expected = { "sites/A": null, "materials/A": null, "memberInfo/A": null, "siteInvites/A": null };
+    assert.deepEqual(buildSiteDeleteUpdates("A"), expected);
+    assert.deepEqual(buildSiteDeleteUpdates("A", [], []), expected);
+});
+
+test("buildSiteDeleteUpdates only ever deletes: every value is null, and nothing outside the site is named", () => {
+    const updates = buildSiteDeleteUpdates("A", ["u1"], ["k"]);
+    assert.ok(Object.values(updates).every((v) => v === null));
+    assert.ok(Object.keys(updates).every((path) => path.split("/").includes("A")));
 });

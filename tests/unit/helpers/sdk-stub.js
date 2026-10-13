@@ -41,7 +41,9 @@ export function get(target) {
     if (sdk.hangGet) {
         return new Promise(() => {}); // the server never answers: no signal
     }
-    return Promise.resolve({ val: () => sdk.getValue });
+    // sdk.getValues maps a path to its value; anything else gets sdk.getValue.
+    const value = sdk.getValues && target.path in sdk.getValues ? sdk.getValues[target.path] : sdk.getValue;
+    return Promise.resolve({ val: () => value });
 }
 
 export function update(target, values) {
@@ -51,7 +53,7 @@ export function update(target, values) {
 
 export function set(target, value) {
     record("set", target, value);
-    return Promise.resolve();
+    return sdk.setError ? Promise.reject(sdk.setError) : Promise.resolve();
 }
 
 export function remove(target) {
@@ -64,4 +66,65 @@ export function push(target, value) {
     sdk.keyCounter += 1;
     record("push", target, value);
     return Object.assign(Promise.resolve(), { key: `-Nstub${sdk.keyCounter}` });
+}
+
+// ---- firebase-auth.js -------------------------------------------------------------
+
+// Each call is recorded; sdk.authError (an error to throw) and sdk.currentUser steer the next call.
+const fakeUser = (extra = {}) => ({
+    uid: "u1",
+    email: "sam@example.com",
+    emailVerified: false,
+    reload: async () => { record("user.reload"); },
+    getIdToken: async (force) => { record("user.getIdToken", force); return "token"; },
+    ...extra,
+});
+
+const authState = (globalThis.__authState = { auth: { currentUser: null }, listeners: [] });
+
+export function getAuth() {
+    return authState.auth;
+}
+
+export function onAuthStateChanged(auth, callback) {
+    authState.listeners.push(callback);
+    record("onAuthStateChanged");
+    return () => record("auth.unsubscribe");
+}
+
+async function maybeFail() {
+    if (sdk.authError) {
+        throw sdk.authError;
+    }
+}
+
+export async function signInWithEmailAndPassword(auth, email, password) {
+    record("signIn", email, password);
+    await maybeFail();
+    authState.auth.currentUser = fakeUser({ email });
+    return { user: authState.auth.currentUser };
+}
+
+export async function createUserWithEmailAndPassword(auth, email, password) {
+    record("createUser", email, password);
+    await maybeFail();
+    authState.auth.currentUser = fakeUser({ email });
+    return { user: authState.auth.currentUser };
+}
+
+export async function sendEmailVerification(user) {
+    record("sendEmailVerification", user.email);
+    if (sdk.verificationError) {
+        throw sdk.verificationError;
+    }
+}
+
+export async function sendPasswordResetEmail(auth, email) {
+    record("sendPasswordResetEmail", email);
+    await maybeFail();
+}
+
+export async function signOut() {
+    record("signOut");
+    authState.auth.currentUser = null;
 }

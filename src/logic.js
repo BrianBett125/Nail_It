@@ -92,7 +92,8 @@ export function validateSite(input, now = Date.now()) {
 }
 
 // siteId may be null: the caller has not selected a site yet. That is a different
-// problem from an empty field, so it gets its own message.
+// problem from an empty field, so it gets its own message. The material itself carries no
+// siteId: it is stored under /materials/<siteId>/, and the database rules refuse the field.
 // options.knownNames: names already on the site, to reuse their spelling.
 // options.legacyUnit: a unit the material already has that is not in the dropdown
 // (records from before the dropdown), so editing it does not force a change.
@@ -113,27 +114,33 @@ export function validateMaterial(input, siteId, options = {}) {
     if (quantity === null) {
         return { ok: false, error: QUANTITY_MESSAGE };
     }
-    return { ok: true, value: { name, quantity, units, lastUpdated, siteId } };
+    return { ok: true, value: { name, quantity, units, lastUpdated } };
 }
 
-// Same checks as validateMaterial without the site: an edit keeps its siteId.
+// Same checks as validateMaterial, for a material that already lives in a site.
 export function validateMaterialEdit(input, options = {}) {
-    const result = validateMaterial(input, "edit", options);
-    if (!result.ok) {
-        return result;
-    }
-    const { siteId, ...value } = result.value;
-    return { ok: true, value };
+    return validateMaterial(input, "edit", options);
 }
 
-// One multi-path update that removes a site and every material belonging to it.
-// Applied with a single update(), so it either all happens or none of it does.
-export function buildSiteDeleteUpdates(siteId, materials) {
-    const updates = { [`sites/${siteId}`]: null };
-    for (const [materialId, material] of Object.entries(materials || {})) {
-        if (material && material.siteId === siteId) {
-            updates[`materials/${materialId}`] = null;
-        }
+// One multi-path update that removes a site and everything that hangs off it: its materials,
+// its members, each member's entry in their own site list, the member info, and every pending
+// invite (both copies). Applied with a single update(), so it all happens or none of it does,
+// and the rules only accept it as a whole: the memberships must go in the same update as the site.
+//   memberUids: every uid in members/<siteId>
+//   inviteKeys: every email key in siteInvites/<siteId>
+export function buildSiteDeleteUpdates(siteId, memberUids = [], inviteKeys = []) {
+    const updates = {
+        [`sites/${siteId}`]: null,
+        [`materials/${siteId}`]: null,
+        [`memberInfo/${siteId}`]: null,
+        [`siteInvites/${siteId}`]: null,
+    };
+    for (const uid of memberUids) {
+        updates[`members/${siteId}/${uid}`] = null;
+        updates[`userSites/${uid}/${siteId}`] = null;
+    }
+    for (const key of inviteKeys) {
+        updates[`userInvites/${key}/${siteId}`] = null;
     }
     return updates;
 }

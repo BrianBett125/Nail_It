@@ -31,7 +31,7 @@
       "$siteId": {
         ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
         "$uid": {
-          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.val() === 'owner' && !root.child('sites').child($siteId).exists() && newData.parent().parent().parent().child('sites').child($siteId).child('ownerUid').val() === auth.uid) || (root.child('members').child($siteId).child(auth.uid).val() === 'owner' && $uid !== auth.uid) || (auth.uid === $uid && !data.exists() && newData.exists() && auth.token.email_verified === true && root.child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).val() === newData.val() && !newData.parent().parent().parent().child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).exists()) || (auth.uid === $uid && !newData.exists() && data.val() !== 'owner') || (auth.uid === $uid && !newData.exists() && data.val() === 'owner' && !newData.parent().parent().parent().child('sites').child($siteId).exists())) && newData.parent().parent().parent().child('userSites').child($uid).child($siteId).val() === newData.val()",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.val() === 'owner' && !root.child('sites').child($siteId).exists() && newData.parent().parent().parent().child('sites').child($siteId).child('ownerUid').val() === auth.uid) || (root.child('members').child($siteId).child(auth.uid).val() === 'owner' && $uid !== auth.uid) || (auth.uid === $uid && !data.exists() && newData.exists() && auth.token.email_verified === true && root.child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).child('role').val() === newData.val() && !newData.parent().parent().parent().child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).exists()) || (auth.uid === $uid && !newData.exists() && data.val() !== 'owner') || (auth.uid === $uid && !newData.exists() && data.val() === 'owner' && !newData.parent().parent().parent().child('sites').child($siteId).exists())) && newData.parent().parent().parent().child('userSites').child($uid).child($siteId).val() === newData.val()",
           ".validate": "newData.isString() && (newData.val() === 'storekeeper' || newData.val() === 'viewer' || (newData.val() === 'owner' && newData.parent().parent().parent().child('sites').child($siteId).child('ownerUid').val() === $uid))"
         }
       }
@@ -66,7 +66,19 @@
         ".read": "auth != null && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $emailKey",
         "$siteId": {
           ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
-          ".validate": "(newData.val() === 'storekeeper' || newData.val() === 'viewer')"
+          ".validate": "newData.hasChildren(['role', 'siteName', 'invitedBy'])",
+          "role": {
+            ".validate": "newData.isString() && (newData.val() === 'storekeeper' || newData.val() === 'viewer')"
+          },
+          "siteName": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "invitedBy": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 254"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
