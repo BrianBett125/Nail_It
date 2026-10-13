@@ -12,15 +12,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
-    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
-    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-app.js"></script>
-
-    <!-- Add Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-storage.js"></script>
-
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <!-- Firebase is loaded as an ES module from src/data.js, imported by dashboard.js -->
 </head>
 <body>
     <!-- Header section with navigation bar -->
@@ -105,13 +98,13 @@
     <div id="updateFormContainer" class="update-form-container">
         <form id="updateForm" class="update-form">
             <h2>Edit</h2>
-            <label for="materialName">Material Name:</label>
+            <label for="uMaterialName">Material Name:</label>
             <input type="text" id="uMaterialName" name="materialName" required>
-            <label for="quantity">Quantity:</label>
-            <input type="number" id="uQuantity" name="quantity" required>
-            <label for="units">Units:</label>
+            <label for="uQuantity">Quantity:</label>
+            <input type="number" id="uQuantity" name="quantity" min="0" step="any" required>
+            <label for="uUnits">Units:</label>
             <input type="text" id="uUnits" name="units" required>
-            <label for="metadataDate">Date:</label>
+            <label for="uLastUpdated">Date:</label>
             <input type="date" id="uLastUpdated" name="lastUpdated" required>
             <button type="button" id="updateCancelButton">Cancel</button>
             <button type="submit" id="update-material-btn">Update</button>
@@ -122,38 +115,27 @@
     <div id="materialFormContainer" class="material-form-container">
         <form id="materialForm" class="material-form">
             <h2>New Material</h2>
-            <label for="materialName">Material Name:</label>
+            <label for="materialsName">Material Name:</label>
             <input type="text" id="materialsName" name="materialName" required>
-            <label for="quantity">Quantity:</label>
-            <input type="number" id="mQuantity" name="quantity" required>
-            <label for="units">Units:</label>
+            <label for="mQuantity">Quantity:</label>
+            <input type="number" id="mQuantity" name="quantity" min="0" step="any" required>
+            <label for="mUnits">Units:</label>
             <input type="text" id="mUnits" name="units" required>
-            <label for="metadataDate">Date:</label>
+            <label for="mLastUpdated">Date:</label>
             <input type="date" id="mLastUpdated" name="lastUpdated" required>
             <button type="button" id="materialCancelButton">Cancel</button>
             <button type="submit" id="material-btn">Submit</button>
         </form>
     </div>
 
-    <!-- Delete material confirmation -->
+    <!-- Delete material confirmation. Site deletion uses confirm() in dashboard.js. -->
     <div id="deleteFormContainer" class="del-site-form-container">
-        <form id="siteFor" class="delete-form">
+        <form id="deleteForm" class="delete-form">
             <h3>Are you sure you want to delete?</h3>
             <button type="button" id="delCancelButton">Cancel</button>
             <button type="button" id="del-yes-btn">Yes</button>
         </form>
     </div>
-
-    <!-- DELETE SITE FORM -->
-    <div id="deleteFormContainer" class="modal">
-        <div class="modal-content">
-            <h2>Confirm Deletion</h2>
-            <p>Are you sure you want to delete this site and related materials?</p>
-            <button id="delCancelButton">Cancel</button>
-            <button id="del-yes-btn">Yes</button>
-        </div>
-    </div>
-    
 
     <script src="dashboard.js" type="module"></script>
 </body>

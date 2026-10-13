@@ -1,155 +1,225 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-// Firebase configuration
-const appSettings = {
-    databaseURL: "https://nail-it-8f766-default-rtdb.asia-southeast1.firebasedatabase.app/"
-};
-
-const app = initializeApp(appSettings);
-const db = getDatabase(app);
-
-const sitesRef = ref(db, 'sites');
-const materialsRef = ref(db, 'materials');
+import * as data from "./src/data.js";
+import { validateSite, validateMaterial, validateMaterialEdit } from "./src/logic.js";
 
 // DOM Elements
 const addSiteBtn = document.getElementById('addSiteButton');
-const addSiteForm = document.getElementById('siteFormContainer');
+const addSiteContainer = document.getElementById('siteFormContainer');
+const siteForm = document.getElementById('siteForm');
 const siteCancelBtn = document.getElementById('cancelButton');
-const addSiteFormBtn = document.getElementById('add-site-btn');
 const siteList = document.getElementById('siteList');
-const materialForm = document.getElementById('materialFormContainer');
+const materialContainer = document.getElementById('materialFormContainer');
+const materialForm = document.getElementById('materialForm');
 const addMaterialButton = document.getElementById('addMaterialButton');
 const materialCancelButton = document.getElementById('materialCancelButton');
-const materialBtn = document.getElementById('material-btn');
 const tableBody = document.getElementById("materialTableBody");
 const delForm = document.getElementById('deleteFormContainer');
 const delCancelButton = document.getElementById('delCancelButton');
 const delYesBtn = document.getElementById('del-yes-btn');
-const updateForm = document.getElementById('updateFormContainer');
+const updateContainer = document.getElementById('updateFormContainer');
+const updateForm = document.getElementById('updateForm');
 const updateCancelButton = document.getElementById('updateCancelButton');
-const updateBtn = document.getElementById('update-material-btn');
 
+const updateSubmitBtn = document.getElementById('update-material-btn');
+
+// State. The ids live here and are read at submit time, never captured in a handler
+// that gets added more than once.
 let currentSiteId = null;
+let unsubscribeMaterials = null;
+let editingMaterialId = null;
+let deletingMaterialId = null;
+const savingMaterials = new Set();   // ids with an edit sent but not yet acknowledged
+const removingMaterials = new Set(); // ids with a delete sent but not yet acknowledged
+
+const UNNAMED_SITE = "(unnamed site)";
+
+// A legacy site may have no name, or only spaces: either would render an invisible link.
+function siteLabel(site) {
+    return String(site.name ?? "").trim() || UNNAMED_SITE;
+}
+
+function reportError(error) {
+    alert(error.message);
+}
 
 // Event Listeners
 addSiteBtn.addEventListener('click', () => {
-    addSiteForm.style.display = 'block';
+    addSiteContainer.style.display = 'block';
 });
 
 siteCancelBtn.addEventListener('click', () => {
-    addSiteForm.style.display = 'none';
+    addSiteContainer.style.display = 'none';
 });
 
-addSiteFormBtn.addEventListener('click', getNewSiteData);
+siteForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    addNewSite();
+});
 
 addMaterialButton.addEventListener('click', () => {
-    materialForm.style.display = 'block';
+    materialContainer.style.display = 'block';
 });
 
 materialCancelButton.addEventListener('click', () => {
-    materialForm.style.display = 'none';
+    materialContainer.style.display = 'none';
 });
 
-materialBtn.addEventListener('click', addNewMaterial);
+materialForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    addNewMaterial();
+});
 
 delCancelButton.addEventListener('click', () => {
+    deletingMaterialId = null;
     delForm.style.display = 'none';
+    refreshModalButtons();
+});
+
+delYesBtn.addEventListener('click', () => {
+    if (deletingMaterialId && !removingMaterials.has(deletingMaterialId)) {
+        deleteMaterial(deletingMaterialId);
+    }
 });
 
 updateCancelButton.addEventListener('click', () => {
-    updateForm.style.display = 'none';
+    editingMaterialId = null;
+    updateContainer.style.display = 'none';
+    refreshModalButtons();
 });
 
-updateBtn.addEventListener('click', updateMaterial);
+updateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    updateMaterial();
+});
 
 // Function to add new site data to Firebase
-function getNewSiteData() {
-    const siteName = document.getElementById('siteName').value;
-    const siteLocation = document.getElementById('siteLocation').value;
-    const buildingType = document.getElementById('buildingType').value;
-    const date = document.getElementById('metadataDate').value;
-    if (siteName && siteLocation && buildingType && date) {
-        push(sitesRef, { name: siteName, location: siteLocation, buildingType: buildingType, date: date });
-        alert('Added successfully!');
-        addSiteForm.style.display = 'none';
-    } else {
-        alert('Please fill in all required fields');
+function addNewSite() {
+    const result = validateSite({
+        name: document.getElementById('siteName').value,
+        location: document.getElementById('siteLocation').value,
+        buildingType: document.getElementById('buildingType').value,
+        date: document.getElementById('metadataDate').value,
+    });
+    if (!result.ok) {
+        alert(result.error);
+        return;
     }
+    data.addSite(result.value).done.catch(reportError);
+    siteForm.reset();
+    alert('Added successfully!');
+    addSiteContainer.style.display = 'none';
 }
 
 // Function to add a new material to Firebase
 function addNewMaterial() {
-    const materialName = document.getElementById('materialsName').value;
-    const quantity = document.getElementById('mQuantity').value;
-    const units = document.getElementById('mUnits').value;
-    const lastUpdated = document.getElementById('mLastUpdated').value;
+    const result = validateMaterial({
+        name: document.getElementById('materialsName').value,
+        quantity: document.getElementById('mQuantity').value,
+        units: document.getElementById('mUnits').value,
+        lastUpdated: document.getElementById('mLastUpdated').value,
+    }, currentSiteId);
+    if (!result.ok) {
+        alert(result.error);
+        return;
+    }
+    data.addMaterial(result.value).done.catch(reportError);
+    materialForm.reset();
+    alert("Material added successfully!");
+    materialContainer.style.display = 'none';
+}
 
-    if (materialName && quantity && units && lastUpdated && currentSiteId) {
-        const newMaterialRef = push(materialsRef);
-        update(newMaterialRef, { name: materialName, quantity, units, lastUpdated, siteId: currentSiteId });
-        alert("Material added successfully!");
-        materialForm.style.display = 'none';
-    } else {
-        alert("Please fill in all required fields");
+// Build one sidebar entry. Site names are user text, so they only ever go through textContent.
+function buildSiteItem(siteId, site) {
+    const item = document.createElement('li');
+
+    const link = document.createElement('a');
+    link.href = '#';
+    link.dataset.siteId = siteId;
+    link.textContent = siteLabel(site);
+    if (siteId === currentSiteId) {
+        link.classList.add('active');
+    }
+    link.addEventListener('click', (event) => {
+        event.preventDefault();
+        selectSite(siteId);
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'delete-site-btn';
+    deleteButton.dataset.siteId = siteId;
+    deleteButton.setAttribute('aria-label', `Delete site ${siteLabel(site)}`);
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-trash-alt';
+    deleteButton.appendChild(icon);
+    deleteButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent triggering the site link click event
+        showDeleteSiteConfirmation(siteId);
+    });
+
+    item.append(link, ' ', deleteButton);
+    return item;
+}
+
+// Render the sidebar. The selected site stays highlighted across re-renders.
+function renderSites(sites) {
+    siteList.replaceChildren();
+    for (const [siteId, site] of Object.entries(sites)) {
+        siteList.appendChild(buildSiteItem(siteId, site));
+    }
+    if (currentSiteId && !sites[currentSiteId]) {
+        clearSelection();
     }
 }
 
 // Fetch and display sites in the sidebar
-onValue(sitesRef, (snapshot) => {
-    siteList.innerHTML = '';
-    const sitesData = snapshot.val();
-    if (sitesData) {
-        for (const siteId in sitesData) {
-            const site = sitesData[siteId];
-            const siteElement = document.createElement('li');
-            siteElement.innerHTML = `<a href="#" data-site-id="${siteId}">${site.name}</a> <button class="delete-site-btn" data-site-id="${siteId}"><i class='fas fa-trash-alt'></i></button>`;
-            siteList.appendChild(siteElement);
-        }
+data.subscribeSites(renderSites, reportError);
+
+function clearSelection() {
+    if (unsubscribeMaterials) {
+        unsubscribeMaterials();
+        unsubscribeMaterials = null;
     }
-    attachSiteEventListeners();
-});
-
-// Attach event listeners to each site link and delete button in the sidebar
-function attachSiteEventListeners() {
-    const siteLinks = siteList.querySelectorAll('a');
-    const deleteSiteButtons = siteList.querySelectorAll('.delete-site-btn');
-    
-    siteLinks.forEach(link => {
-        link.addEventListener('click', (event) => {
-            event.preventDefault();
-            siteLinks.forEach(link => link.classList.remove('active')); // Remove 'active' class from all links
-            event.target.classList.add('active'); // Add 'active' class to the selected link
-            currentSiteId = event.target.dataset.siteId;
-            fetchAndDisplayMaterials(currentSiteId);
-        });
-    });
-
-    deleteSiteButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent triggering the site link click event
-            const siteId = event.target.dataset.siteId;
-            showDeleteSiteConfirmation(siteId);
-        });
-    });
+    currentSiteId = null;
+    tableBody.replaceChildren();
+    closeMaterialModals();
 }
 
-// Fetch and display materials for the selected site
-function fetchAndDisplayMaterials(siteId) {
-    onValue(materialsRef, (snapshot) => {
-        const materialsData = snapshot.val();
-        tableBody.innerHTML = '';
-        if (materialsData) {
-            for (const materialId in materialsData) {
-                const material = materialsData[materialId];
-                if (material.siteId === siteId) {
-                    addMaterialRow(materialId, material);
-                }
-            }
-        } else {
-            console.log("No materials found!");
-        }
+// An edit or delete confirmation names one material. When the material is gone (deleted
+// by someone else, or its site was removed) the modal must close, or submitting it would
+// make update() recreate the material as an orphan node with no siteId.
+function closeMaterialModals() {
+    editingMaterialId = null;
+    updateContainer.style.display = 'none';
+    deletingMaterialId = null;
+    delForm.style.display = 'none';
+    refreshModalButtons();
+}
+
+// Select a site: drop the previous materials subscription before opening the next one.
+function selectSite(siteId) {
+    if (unsubscribeMaterials) {
+        unsubscribeMaterials();
+    }
+    currentSiteId = siteId;
+    siteList.querySelectorAll('a').forEach(link => {
+        link.classList.toggle('active', link.dataset.siteId === siteId);
     });
+    tableBody.replaceChildren();
+    unsubscribeMaterials = data.subscribeMaterials(siteId, (materials) => {
+        if (siteId === currentSiteId) { // ignore a late callback from a site we left
+            renderMaterials(materials);
+        }
+    }, reportError);
+}
+
+function renderMaterials(materials) {
+    tableBody.replaceChildren();
+    for (const [materialId, material] of Object.entries(materials)) {
+        addMaterialRow(materialId, material);
+    }
+    if ((editingMaterialId && !materials[editingMaterialId])
+        || (deletingMaterialId && !materials[deletingMaterialId])) {
+        closeMaterialModals();
+    }
 }
 
 // Function to add a material row to the table
@@ -166,83 +236,105 @@ function addMaterialRow(materialId, materialData) {
     lastUpdatedCell.textContent = materialData.lastUpdated;
 
     const updateCell = document.createElement("td");
-    updateCell.innerHTML = "<button><i class='fa-regular fa-pen-to-square'></i></button>";
+    updateCell.innerHTML = "<button aria-label='Edit material'><i class='fa-regular fa-pen-to-square'></i></button>";
     const deleteCell = document.createElement("td");
-    deleteCell.innerHTML = "<button><i class='fas fa-trash-alt'></i></button>";
+    deleteCell.innerHTML = "<button aria-label='Delete material'><i class='fas fa-trash-alt'></i></button>";
 
-    const updateButton = updateCell.querySelector("button");
-    updateButton.addEventListener("click", () => {
+    updateCell.querySelector("button").addEventListener("click", () => {
         showUpdateForm(materialId, materialData);
     });
-
-    const deleteButton = deleteCell.querySelector("button");
-    deleteButton.addEventListener("click", () => {
+    deleteCell.querySelector("button").addEventListener("click", () => {
         showDeleteConfirmation(materialId);
     });
 
-    newRow.appendChild(nameCell);
-    newRow.appendChild(quantityCell);
-    newRow.appendChild(unitsCell);
-    newRow.appendChild(lastUpdatedCell);
-    newRow.appendChild(updateCell);
-    newRow.appendChild(deleteCell);
+    newRow.append(nameCell, quantityCell, unitsCell, lastUpdatedCell, updateCell, deleteCell);
     tableBody.appendChild(newRow);
 }
 
 // Function to show the update form and populate it with material data
 function showUpdateForm(materialId, materialData) {
-    updateForm.style.display = 'block';
-    const materialName = document.getElementById('uMaterialName');
-    const quantity = document.getElementById('uQuantity');
-    const units = document.getElementById('uUnits');
-    const lastUpdated = document.getElementById('uLastUpdated');
+    editingMaterialId = materialId;
+    updateContainer.style.display = 'block';
+    // ?? "" so a legacy record with a missing field shows an empty input, not the text "undefined".
+    document.getElementById('uMaterialName').value = materialData.name ?? "";
+    document.getElementById('uQuantity').value = materialData.quantity ?? "";
+    document.getElementById('uUnits').value = materialData.units ?? "";
+    document.getElementById('uLastUpdated').value = materialData.lastUpdated ?? "";
+    refreshModalButtons();
+}
 
-    materialName.value = materialData.name;
-    quantity.value = materialData.quantity;
-    units.value = materialData.units;
-    lastUpdated.value = materialData.lastUpdated;
-
-    updateBtn.onclick = () => {
-        updateMaterial(materialId);
-    };
+// The Update and Yes buttons are locked per material while its write is unacknowledged
+// (slow or no signal), so a repeated tap cannot send it twice. Another material is unaffected.
+function refreshModalButtons() {
+    const saving = savingMaterials.has(editingMaterialId);
+    updateSubmitBtn.disabled = saving;
+    updateSubmitBtn.textContent = saving ? 'Saving...' : 'Update';
+    const removing = removingMaterials.has(deletingMaterialId);
+    delYesBtn.disabled = removing;
+    delYesBtn.textContent = removing ? 'Deleting...' : 'Yes';
 }
 
 // Function to update material data in Firebase
-function updateMaterial(materialId) {
-    const materialName = document.getElementById('uMaterialName').value;
-    const quantity = document.getElementById('uQuantity').value;
-    const units = document.getElementById('uUnits').value;
-    const lastUpdated = document.getElementById('uLastUpdated').value;
-    const materialToUpdate = ref(db, 'materials/' + materialId);
-
-    update(materialToUpdate, { name: materialName, quantity, units, lastUpdated })
+function updateMaterial() {
+    const materialId = editingMaterialId;
+    if (!materialId || savingMaterials.has(materialId)) {
+        return;
+    }
+    const result = validateMaterialEdit({
+        name: document.getElementById('uMaterialName').value,
+        quantity: document.getElementById('uQuantity').value,
+        units: document.getElementById('uUnits').value,
+        lastUpdated: document.getElementById('uLastUpdated').value,
+    });
+    if (!result.ok) {
+        alert(result.error);
+        return;
+    }
+    savingMaterials.add(materialId);
+    refreshModalButtons();
+    // Promise.resolve().then so a synchronous throw still reaches catch and finally.
+    Promise.resolve()
+        .then(() => data.updateMaterial(materialId, result.value))
         .then(() => {
             alert("Material Updated successfully!");
-            updateForm.style.display = 'none';
+            // The ack can arrive after the user moved on to another material. Only close
+            // the modal if it still belongs to the edit that was sent.
+            if (editingMaterialId === materialId) {
+                editingMaterialId = null;
+                updateContainer.style.display = 'none';
+            }
         })
-        .catch((error) => {
-            alert(error.message);
+        .catch(reportError)
+        .finally(() => {
+            savingMaterials.delete(materialId);
+            refreshModalButtons();
         });
 }
 
 // Function to show delete confirmation
 function showDeleteConfirmation(materialId) {
+    deletingMaterialId = materialId;
     delForm.style.display = 'block';
-    delYesBtn.onclick = () => {
-        deleteMaterial(materialId);
-    };
+    refreshModalButtons();
 }
 
 // Function to delete material data from Firebase
 function deleteMaterial(materialId) {
-    const materialToDelete = ref(db, 'materials/' + materialId);
-    remove(materialToDelete)
+    removingMaterials.add(materialId);
+    refreshModalButtons();
+    Promise.resolve()
+        .then(() => data.removeMaterial(materialId))
         .then(() => {
             alert("Material deleted successfully!");
-            delForm.style.display = 'none';
+            if (deletingMaterialId === materialId) {
+                deletingMaterialId = null;
+                delForm.style.display = 'none';
+            }
         })
-        .catch((error) => {
-            alert(error.message);
+        .catch(reportError)
+        .finally(() => {
+            removingMaterials.delete(materialId);
+            refreshModalButtons();
         });
 }
 
@@ -253,28 +345,11 @@ function showDeleteSiteConfirmation(siteId) {
     }
 }
 
-// Function to delete a site and its associated materials
+// Function to delete a site and its associated materials in one atomic write
 function deleteSite(siteId) {
-    const siteToDelete = ref(db, 'sites/' + siteId);
-
-    // Remove the site
-    remove(siteToDelete)
+    data.deleteSiteCascade(siteId)
         .then(() => {
-            // Remove materials associated with the site
-            onValue(materialsRef, (snapshot) => {
-                const materialsData = snapshot.val();
-                if (materialsData) {
-                    for (const materialId in materialsData) {
-                        if (materialsData[materialId].siteId === siteId) {
-                            const materialToDelete = ref(db, 'materials/' + materialId);
-                            remove(materialToDelete);
-                        }
-                    }
-                }
-            });
             alert("Site and its materials deleted successfully!");
         })
-        .catch((error) => {
-            alert(error.message);
-        });
+        .catch(reportError);
 }
