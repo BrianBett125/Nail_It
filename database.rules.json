@@ -1,0 +1,112 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "sites": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
+        ".write": "auth != null && ((!newData.exists() && data.child('ownerUid').val() === auth.uid && !newData.parent().parent().child('members').child($siteId).exists()) || (newData.exists() && data.exists() && data.child('ownerUid').val() === auth.uid) || (newData.exists() && !data.exists() && newData.child('ownerUid').val() === auth.uid && newData.parent().parent().child('members').child($siteId).child(auth.uid).val() === 'owner'))",
+        ".validate": "newData.hasChildren(['name', 'location', 'buildingType', 'createdAt', 'ownerUid']) && (!data.exists() || newData.child('ownerUid').val() === data.child('ownerUid').val())",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "buildingType": {
+          ".validate": "newData.isString() && (newData.val() === 'Residential' || newData.val() === 'Commercial' || newData.val() === 'Industrial' || newData.val() === 'Road/Civil' || newData.val() === 'Other')"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "ownerUid": {
+          ".validate": "newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "members": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
+        "$uid": {
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.val() === 'owner' && !root.child('sites').child($siteId).exists() && newData.parent().parent().parent().child('sites').child($siteId).child('ownerUid').val() === auth.uid) || (root.child('members').child($siteId).child(auth.uid).val() === 'owner' && $uid !== auth.uid) || (auth.uid === $uid && !data.exists() && newData.exists() && auth.token.email_verified === true && root.child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).val() === newData.val() && !newData.parent().parent().parent().child('userInvites').child(auth.token.email.toLowerCase().replace('.', ',')).child($siteId).exists()) || (auth.uid === $uid && !newData.exists() && data.val() !== 'owner') || (auth.uid === $uid && !newData.exists() && data.val() === 'owner' && !newData.parent().parent().parent().child('sites').child($siteId).exists())) && newData.parent().parent().parent().child('userSites').child($uid).child($siteId).val() === newData.val()",
+          ".validate": "newData.isString() && (newData.val() === 'storekeeper' || newData.val() === 'viewer' || (newData.val() === 'owner' && newData.parent().parent().parent().child('sites').child($siteId).child('ownerUid').val() === $uid))"
+        }
+      }
+    },
+    "userSites": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$siteId": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('members').child($siteId).child(auth.uid).val() === 'owner') && newData.val() === newData.parent().parent().parent().child('members').child($siteId).child($uid).val()",
+          ".validate": "newData.isString() && (newData.val() === 'owner' || newData.val() === 'storekeeper' || newData.val() === 'viewer')"
+        }
+      }
+    },
+    "memberInfo": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
+        ".write": "auth != null && !newData.exists() && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
+        "$uid": {
+          ".write": "auth != null && ((auth.uid === $uid && newData.exists() && newData.parent().parent().parent().child('members').child($siteId).child($uid).exists() && newData.child('email').val() === auth.token.email) || (!newData.exists() && !newData.parent().parent().parent().child('members').child($siteId).child($uid).exists() && (auth.uid === $uid || root.child('members').child($siteId).child(auth.uid).val() === 'owner')))",
+          ".validate": "newData.hasChildren(['email']) && newData.child('email').isString() && newData.child('email').val().length <= 254",
+          "email": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "userInvites": {
+      "$emailKey": {
+        ".read": "auth != null && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $emailKey",
+        "$siteId": {
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
+          ".validate": "(newData.val() === 'storekeeper' || newData.val() === 'viewer')"
+        }
+      }
+    },
+    "siteInvites": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
+        ".write": "auth != null && !newData.exists() && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
+        "$emailKey": {
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
+          ".validate": "(newData.val() === 'storekeeper' || newData.val() === 'viewer')"
+        }
+      }
+    },
+    "materials": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
+        ".write": "auth != null && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
+        "$materialId": {
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || root.child('members').child($siteId).child(auth.uid).val() === 'storekeeper')",
+          ".validate": "newData.hasChildren(['name', 'quantity', 'units', 'lastUpdated'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "quantity": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+          },
+          "units": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "minLevel": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}
