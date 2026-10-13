@@ -85,7 +85,8 @@ describe("site form and layout", () => {
         await addSite(page, "Eldoret", { type: "Road/Civil" });
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
         const [write] = await wrote(page);
-        assert.deepEqual(Object.keys(write.value).sort(), ["buildingType", "createdAt", "location", "name"]);
+        assert.deepEqual(Object.keys(write.value).sort(), ["buildingType", "createdAt", "location", "name", "ownerUid"]);
+        assert.equal(write.value.ownerUid, "u1", "the signed-in user owns the site they create");
         assert.equal(write.value.buildingType, "Road/Civil");
         assert.equal(typeof write.value.createdAt, "number");
         assert.ok(write.value.createdAt >= before && write.value.createdAt <= Date.now());
@@ -125,7 +126,7 @@ describe("auto-select and remember the last site", () => {
         await page.click("#material-btn");
         await waitForRows(page, ["Cement"]);
         const [, second] = await wrote(page);
-        assert.equal(second.value.siteId, (await wrote(page))[0].id);
+        assert.equal(second.path, `materials/${(await wrote(page))[0].id}`, "filed under the new site");
         await context.close();
     });
 
@@ -348,8 +349,10 @@ describe("dropdown units, autocomplete, Add & another", () => {
         }
         await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr").length === 15);
         const db = await dbState(page);
-        assert.equal(Object.keys(db.materials).length, 15);
-        assert.ok(Object.values(db.materials).every((m) => m.units === "pieces"));
+        const [siteMaterials] = Object.values(db.materials);
+        assert.equal(Object.keys(db.materials).length, 1, "all under the one site");
+        assert.equal(Object.keys(siteMaterials).length, 15);
+        assert.ok(Object.values(siteMaterials).every((m) => m.units === "pieces"));
         await context.close();
     });
 
@@ -623,7 +626,7 @@ describe("eval: the measurable outcome", () => {
         assert.deepEqual(state.pageErrors, []);
         const db = await dbState(page);
         assert.equal(Object.keys(db.sites).length, 1);
-        assert.equal(Object.keys(db.materials).length, 3);
+        assert.equal(Object.keys(Object.values(db.materials)[0]).length, 3);
         await context.close();
     });
 });

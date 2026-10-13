@@ -1,19 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up/In</title>
+    <title>Sign in | Nail It</title>
     <link rel="stylesheet" href="styles/login.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
 </head>
 
 <body>
   <div class="login">
-    <form>
-      <h1>LOG IN</h1>
-      <label>Username</label>
-        <input type="text" name="username" placeholder="Enter your username">
-        <label>Password</label>
-        <input type="password" name="password" placeholder="Enter your password"> 
-        <button>Submit</button> 
+    <!-- One form, three modes (sign in, create account, reset password). login.js switches them. -->
+    <form id="authForm" novalidate>
+      <h1 id="authTitle">LOG IN</h1>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="username" required>
+
+      <div id="passwordGroup" class="field-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+      </div>
+
+      <p id="authMessage" class="auth-message" role="status" hidden></p>
+
+      <button type="submit" id="authSubmit">Sign in</button>
+
+      <div class="auth-links">
+        <button type="button" class="link" id="toSignUp">Create an account</button>
+        <button type="button" class="link" id="toReset">Forgot password?</button>
+        <button type="button" class="link" id="toSignIn" hidden>Back to sign in</button>
+      </div>
     </form>
   </div>
+  <script src="login.js" type="module"></script>
 </body>
+</html>

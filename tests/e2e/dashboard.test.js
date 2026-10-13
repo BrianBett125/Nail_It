@@ -69,11 +69,11 @@ describe("dashboard core behavior (Phase 0)", () => {
 
         const writes = await wrote(page);
         assert.equal(writes.length, 1, `expected one write, got ${JSON.stringify(writes)}`);
-        assert.equal(writes[0].path, "materials/m1");
+        assert.equal(writes[0].path, "materials/sA/m1");
         assert.equal(writes[0].value.quantity, 8);
         assert.equal(typeof writes[0].value.quantity, "number");
         assert.deepEqual(junkPaths(writes), []);
-        assert.deepEqual(Object.keys((await dbState(page)).materials).sort(), ["m1", "m2", "m3"]);
+        assert.deepEqual(Object.keys((await dbState(page)).materials.sA).sort(), ["m1", "m2"]);
         assert.deepEqual(state.pageErrors, []);
         await context.close();
     });
@@ -92,7 +92,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await page.waitForFunction(() => window.__nailit.writes.length >= 2);
 
         const writes = await wrote(page);
-        assert.deepEqual(writes.map((w) => w.path), ["materials/m1", "materials/m2"]);
+        assert.deepEqual(writes.map((w) => w.path), ["materials/sA/m1", "materials/sA/m2"]);
         await context.close();
     });
 
@@ -143,8 +143,8 @@ describe("dashboard core behavior (Phase 0)", () => {
         assert.deepEqual(listeners.filter((l) => l.kind === "materials"), [{ kind: "materials", siteId: "sB" }]);
 
         // Somebody else adds stock to the site we left. Our table must not change.
-        await page.evaluate(() => window.__nailit.externalSetMaterial("m9", {
-            name: "Bricks", quantity: 1, units: "pieces", lastUpdated: "2024-06-03", siteId: "sA",
+        await page.evaluate(() => window.__nailit.externalSetMaterial("sA", "m9", {
+            name: "Bricks", quantity: 1, units: "pieces", lastUpdated: "2024-06-03",
         }));
         await page.waitForTimeout(100);
         assert.deepEqual(await rowTexts(page), ["Nails"]);
@@ -190,12 +190,14 @@ describe("dashboard core behavior (Phase 0)", () => {
         const writes = await wrote(page);
         assert.equal(writes.length, 1, "cascade must be a single write");
         assert.equal(writes[0].op, "multi");
-        assert.deepEqual(Object.keys(writes[0].paths).sort(), ["materials/m1", "materials/m2", "sites/sA"]);
+        assert.deepEqual(Object.keys(writes[0].paths).sort(), [
+            "materials/sA", "memberInfo/sA", "members/sA/u1", "siteInvites/sA", "sites/sA", "userSites/u1/sA",
+        ]);
         assert.ok(Object.values(writes[0].paths).every((v) => v === null));
 
         const db = await dbState(page);
         assert.deepEqual(Object.keys(db.sites), ["sB"]);
-        assert.deepEqual(Object.keys(db.materials), ["m3"]);
+        assert.deepEqual(Object.keys(db.materials), ["sB"]);
         assert.equal(await page.locator("#siteList a.active").count(), 0, "deleted site must not stay selected");
         await context.close();
     });
@@ -212,7 +214,9 @@ describe("dashboard core behavior (Phase 0)", () => {
         await page.click("#siteDeleteConfirm");
         await page.waitForFunction(() => window.__nailit.writes.length > 0);
         const writes = await wrote(page);
-        assert.deepEqual(Object.keys(writes[0].paths).sort(), ["materials/m3", "sites/sB"]);
+        assert.deepEqual(Object.keys(writes[0].paths).sort(), [
+            "materials/sB", "memberInfo/sB", "members/sB/u1", "siteInvites/sB", "sites/sB", "userSites/u1/sB",
+        ]);
         await context.close();
     });
 
@@ -248,7 +252,8 @@ describe("dashboard core behavior (Phase 0)", () => {
 
         const [write] = await wrote(page);
         assert.strictEqual(write.value.quantity, 12.5);
-        assert.equal(write.value.siteId, "sA");
+        assert.equal(write.path, "materials/sA", "filed under its site");
+        assert.equal("siteId" in write.value, false, "a material no longer carries its site id");
         await context.close();
     });
 
@@ -284,7 +289,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await deleteMaterialButton(page, "Cement").click();
         await waitForRows(page, ["Sand"]);
         await toastLocator(page, "Deleted Cement.").locator("button", { hasText: "Undo" }).waitFor();
-        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/m1"]);
+        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/sA/m1"]);
         assert.deepEqual(state.dialogs, [], "no confirm dialog for a material");
         assert.equal(await page.locator("#deleteFormContainer").count(), 0, "the material delete modal is gone");
         await context.close();
@@ -392,7 +397,7 @@ describe("hardening: gaps found by the cold critic", () => {
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await editButton(page, "Cement").click();
-        await page.evaluate(() => window.__nailit.externalRemoveMaterial("m1"));
+        await page.evaluate(() => window.__nailit.externalRemoveMaterial("sA", "m1"));
         await waitForRows(page, ["Sand"]);
 
         await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
@@ -458,7 +463,7 @@ describe("hardening round 2: slow or missing signal", () => {
         await page.fill("#uQuantity", "12");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 2);
-        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/m1", "materials/m2"]);
+        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/sA/m1", "materials/sA/m2"]);
         await context.close();
     });
 
@@ -501,9 +506,9 @@ describe("hardening round 2: slow or missing signal", () => {
         await waitForRows(page, ["Cement", "Sand"]);
 
         const writes = await wrote(page);
-        assert.deepEqual(writes.map((w) => `${w.op} ${w.path}`), ["remove materials/m1", "set materials/m1"]);
-        assert.deepEqual(writes[1].value, { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" });
-        assert.deepEqual(Object.keys((await dbState(page)).materials).sort(), ["m1", "m2", "m3"]);
+        assert.deepEqual(writes.map((w) => `${w.op} ${w.path}`), ["remove materials/sA/m1", "set materials/sA/m1"]);
+        assert.deepEqual(writes[1].value, { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" });
+        assert.deepEqual(Object.keys((await dbState(page)).materials.sA).sort(), ["m1", "m2"]);
         await context.close();
     });
 
@@ -531,7 +536,7 @@ describe("hardening round 2: slow or missing signal", () => {
         await toastLocator(page, "no longer exists").waitFor();
 
         assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 0);
-        assert.equal((await dbState(page)).materials.m1, undefined);
+        assert.equal((await dbState(page)).materials.sA?.m1, undefined);
         await context.close();
     });
 
@@ -655,7 +660,8 @@ describe("eval: README walkthrough end to end", () => {
         const writes = await wrote(page);
         assert.deepEqual(junkPaths(writes), []);
         assert.equal(writes.filter((w) => w.op === "update").length, 1, "one edit, one update write");
-        assert.deepEqual(await dbState(page), { sites: {}, materials: {} });
+        const finalDb = await dbState(page);
+        assert.deepEqual({ sites: finalDb.sites, materials: finalDb.materials }, { sites: {}, materials: {} });
         assert.equal(await page.evaluate(() => window.__marker), "same-page");
         assert.deepEqual(state.pageErrors, []);
         assert.deepEqual(state.dialogs, [], "no alert, confirm or prompt anywhere");

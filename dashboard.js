@@ -1,4 +1,5 @@
 import * as data from "./src/data.js";
+import * as auth from "./src/auth.js";
 import {
     validateSite,
     validateMaterial,
@@ -11,6 +12,14 @@ import {
     UNITS,
     NO_SITE_MESSAGE,
 } from "./src/logic.js";
+import {
+    INVITE_ROLES,
+    canWriteMaterials,
+    canManageSite,
+    roleLabel,
+    emailKey,
+    validateInvite,
+} from "./src/roles.js";
 import { showToast } from "./src/toast.js";
 
 // DOM Elements
@@ -39,23 +48,51 @@ const siteDeletePhraseEl = document.getElementById('siteDeletePhrase');
 const siteDeleteInput = document.getElementById('siteDeleteInput');
 const siteDeleteCancel = document.getElementById('siteDeleteCancel');
 const siteDeleteConfirm = document.getElementById('siteDeleteConfirm');
+const userEmailEl = document.getElementById('userEmail');
+const signOutButton = document.getElementById('signOutButton');
+const verifyBanner = document.getElementById('verifyBanner');
+const verifyEmailEl = document.getElementById('verifyEmail');
+const resendVerificationBtn = document.getElementById('resendVerification');
+const checkVerifiedBtn = document.getElementById('checkVerified');
+const invitesPanel = document.getElementById('invitesPanel');
+const inviteList = document.getElementById('inviteList');
+const roleBadge = document.getElementById('roleBadge');
+const membersButton = document.getElementById('membersButton');
+const membersContainer = document.getElementById('membersContainer');
+const memberList = document.getElementById('memberList');
+const inviteSection = document.getElementById('inviteSection');
+const inviteForm = document.getElementById('inviteForm');
+const inviteEmailInput = document.getElementById('inviteEmail');
+const inviteRoleSelect = document.getElementById('inviteRole');
+const inviteSubmit = document.getElementById('inviteSubmit');
+const pendingInviteList = document.getElementById('pendingInviteList');
+const leaveSiteButton = document.getElementById('leaveSiteButton');
+const membersClose = document.getElementById('membersClose');
 
 // State. The ids live here and are read at submit time, never captured in a handler
 // that gets added more than once.
+let currentUser = null;              // { uid, email, emailVerified }, null until Firebase answers
+let sessionStarted = false;
+let stopInvites = null;
 let currentSiteId = null;
 let unsubscribeMaterials = null;
 let editingMaterialId = null;
+let editingSiteId = null;            // the site the edit form was opened for, even if the user moves on
 let editingLegacyUnit = null;        // the unit a legacy material had, if it is not in the dropdown
 let deletingSiteId = null;
 let deletingSite = false;            // the cascade delete is in flight
-let sitesById = {};                  // latest sites snapshot
+let sitesById = {};                  // latest sites snapshot, each with the user's role
 let currentMaterials = {};           // latest materials snapshot of the selected site
 let sitesLoaded = false;
 let materialsLoaded = false;
 let sitesError = null;
 let materialsError = null;
 let restoredLastSite = false;
-const unconfirmedSites = new Set();  // sites we just added whose first snapshot has not arrived
+let stopMembers = null;
+let membersSiteId = null;
+let leaveArmed = false;              // the first tap on "Leave site" arms it, the second leaves
+let leaveTimer = null;
+const unconfirmedSites = new Set();  // sites we just added or joined whose first snapshot has not arrived
 const savingMaterials = new Set();   // ids with an edit sent but not yet acknowledged
 
 const UNNAMED_SITE = "(unnamed site)";
@@ -63,6 +100,7 @@ const LAST_SITE_KEY = "nailit.lastSite";
 const NAMES_KEY = "nailit.materialNames";
 const MAX_REMEMBERED_NAMES = 200;
 const UNDO_MS = 8000;
+const LEAVE_ARM_MS = 4000;
 
 // localStorage can throw or be missing (private window, blocked site data). Every use
 // goes through these, and the app works the same without it.
@@ -121,24 +159,34 @@ function reportError(error) {
     showToast(error && error.message ? error.message : String(error), { kind: "error" });
 }
 
-function fillOptions(select, values, placeholder) {
+// The role of the signed-in user in the selected site, or undefined with no site selected.
+function currentRole() {
+    const site = sitesById[currentSiteId];
+    return site ? site.role : undefined;
+}
+
+// label turns a stored value into the text shown ("storekeeper" -> "Storekeeper").
+function fillOptions(select, values, placeholder, label = (value) => value) {
     select.replaceChildren();
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = placeholder;
-    select.appendChild(first);
+    if (placeholder) {
+        const first = document.createElement('option');
+        first.value = '';
+        first.textContent = placeholder;
+        select.appendChild(first);
+    }
     for (const value of values) {
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = value;
+        option.textContent = label(value);
         select.appendChild(option);
     }
 }
 
-// The dropdown lists come from src/logic.js, the same lists validation checks against.
+// The dropdown lists come from src/logic.js and src/roles.js, the same lists validation checks against.
 fillOptions(document.getElementById('buildingType'), BUILDING_TYPES, 'Choose type');
 fillOptions(document.getElementById('mUnits'), UNITS, 'Choose unit');
 fillOptions(document.getElementById('uUnits'), UNITS, 'Choose unit');
+fillOptions(inviteRoleSelect, INVITE_ROLES, null, roleLabel);
 
 function refreshNameSuggestions() {
     materialNames.replaceChildren();
@@ -164,6 +212,7 @@ function renderStatus() {
     sitesStatus.hidden = sitesStatus.textContent === "";
 
     const rows = Object.keys(currentMaterials).length;
+    const canWrite = canWriteMaterials(currentRole());
     if (!currentSiteId) {
         if (sitesError) {
             materialsStatus.textContent = "";
@@ -179,15 +228,149 @@ function renderStatus() {
     } else if (!materialsLoaded) {
         materialsStatus.textContent = "Loading materials...";
     } else if (rows === 0) {
-        materialsStatus.textContent = "No materials yet. Add your first material.";
+        materialsStatus.textContent = canWrite
+            ? "No materials yet. Add your first material."
+            : "No materials recorded in this site yet.";
     } else {
         materialsStatus.textContent = "";
     }
     materialsStatus.hidden = materialsStatus.textContent === "";
     materialsTable.hidden = !currentSiteId || !materialsLoaded || rows === 0;
+    materialsTable.classList.toggle('readonly', !canWrite);
 }
 
-// Event Listeners
+// What the buttons around the table offer depends on the role. The database refuses the same
+// writes anyway (database.rules.json); this only stops offering what would fail.
+function applyRole() {
+    const role = currentRole();
+    // With no site selected the button stays so that pressing it can say "Select a site first".
+    addMaterialButton.hidden = Boolean(currentSiteId) && !canWriteMaterials(role);
+    membersButton.hidden = !currentSiteId;
+    roleBadge.hidden = !currentSiteId;
+    roleBadge.textContent = currentSiteId ? `Your role: ${roleLabel(role)}` : '';
+}
+
+// ---- Session ------------------------------------------------------------------------
+
+function renderUser() {
+    userEmailEl.textContent = currentUser ? currentUser.email : '';
+    const unverified = Boolean(currentUser) && !currentUser.emailVerified;
+    verifyBanner.hidden = !unverified;
+    verifyEmailEl.textContent = unverified ? currentUser.email : '';
+}
+
+// Invitations can only be read with a verified email (database.rules.json), so listen only then.
+function syncInvites() {
+    const wanted = Boolean(currentUser) && currentUser.emailVerified;
+    if (wanted && !stopInvites) {
+        stopInvites = data.subscribeInvites(emailKey(currentUser.email), renderInvites, reportError);
+    } else if (!wanted && stopInvites) {
+        stopInvites();
+        stopInvites = null;
+        renderInvites({});
+    }
+}
+
+auth.onUser((user) => {
+    if (!user) {
+        location.replace('login.html'); // signed out here or in another tab: nothing to show
+        return;
+    }
+    if (sessionStarted && currentUser && currentUser.uid !== user.uid) {
+        location.reload(); // a different account signed in: start clean
+        return;
+    }
+    currentUser = user;
+    renderUser();
+    syncInvites();
+    if (!sessionStarted) {
+        sessionStarted = true;
+        // Fetch and display this user's sites in the sidebar
+        data.subscribeSites(user.uid, renderSites, (error) => {
+            sitesError = error;
+            renderStatus();
+            reportError(error);
+        });
+    }
+});
+
+signOutButton.addEventListener('click', () => {
+    Promise.resolve().then(() => auth.signOut()).catch(reportError);
+});
+
+resendVerificationBtn.addEventListener('click', () => {
+    Promise.resolve()
+        .then(() => auth.resendVerification())
+        .then(() => showToast(`Verification email sent to ${currentUser.email}`))
+        .catch(reportError);
+});
+
+checkVerifiedBtn.addEventListener('click', () => {
+    Promise.resolve()
+        .then(() => auth.refreshUser())
+        .then((user) => {
+            if (!user) {
+                return;
+            }
+            currentUser = user;
+            renderUser();
+            syncInvites();
+            showToast(user.emailVerified ? "Email verified" : "Not verified yet. Open the link in the email first.");
+        })
+        .catch(reportError);
+});
+
+// ---- Invitations for this account ---------------------------------------------------
+
+function renderInvites(invites) {
+    inviteList.replaceChildren();
+    const entries = Object.entries(invites);
+    invitesPanel.hidden = entries.length === 0;
+    for (const [siteId, invite] of entries) {
+        const item = document.createElement('li');
+        const text = document.createElement('span');
+        // Names and emails are other people's text: textContent only.
+        text.textContent = `${invite.invitedBy} invited you to ${invite.siteName} as ${roleLabel(invite.role)}`;
+        const accept = document.createElement('button');
+        accept.type = 'button';
+        accept.textContent = 'Accept';
+        accept.addEventListener('click', () => {
+            accept.disabled = true;
+            acceptInvite(siteId, invite);
+        });
+        const decline = document.createElement('button');
+        decline.type = 'button';
+        decline.textContent = 'Decline';
+        decline.addEventListener('click', () => {
+            decline.disabled = true;
+            Promise.resolve()
+                .then(() => data.declineInvite(siteId, emailKey(currentUser.email)))
+                .catch(reportError);
+        });
+        item.append(text, accept, decline);
+        inviteList.appendChild(item);
+    }
+}
+
+function acceptInvite(siteId, invite) {
+    unconfirmedSites.add(siteId);
+    Promise.resolve()
+        .then(() => data.acceptInvite(currentUser, siteId, emailKey(currentUser.email), invite.role))
+        .then(() => {
+            // Open the site only now. Listening to its materials before the membership is written
+            // would be refused by the database, and a refused listener does not come back.
+            // The site stays "unconfirmed" until its first snapshot arrives in renderSites.
+            selectSite(siteId);
+            showToast(`Joined ${invite.siteName} as ${roleLabel(invite.role)}`);
+        })
+        .catch((error) => {
+            unconfirmedSites.delete(siteId);
+            reportError(error);
+        });
+}
+
+// ---- Event listeners ----------------------------------------------------------------
+
 addSiteBtn.addEventListener('click', () => {
     addSiteContainer.style.display = 'block';
     document.getElementById('siteName').focus();
@@ -222,6 +405,7 @@ materialForm.addEventListener('submit', (event) => {
 
 updateCancelButton.addEventListener('click', () => {
     editingMaterialId = null;
+    editingSiteId = null;
     updateContainer.style.display = 'none';
     refreshModalButtons();
 });
@@ -239,6 +423,16 @@ siteDeleteForm.addEventListener('submit', (event) => {
     event.preventDefault();
     confirmSiteDelete();
 });
+
+membersButton.addEventListener('click', openMembers);
+membersClose.addEventListener('click', closeMembers);
+
+inviteForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    sendInvite();
+});
+
+leaveSiteButton.addEventListener('click', leaveSite);
 
 // The date defaults to today, so a delivery entered on the day needs no date typing.
 function openMaterialForm() {
@@ -261,7 +455,7 @@ function addNewSite() {
         showToast(result.error, { kind: "error" });
         return;
     }
-    const { id, done } = data.addSite(result.value);
+    const { id, done } = data.addSite(result.value, currentUser);
     unconfirmedSites.add(id);
     Promise.resolve(done)
         .then(() => unconfirmedSites.delete(id))
@@ -290,7 +484,7 @@ function addNewMaterial(another) {
         showToast(result.error, { kind: "error" });
         return;
     }
-    data.addMaterial(result.value).done.catch(reportError);
+    data.addMaterial(currentSiteId, result.value).done.catch(reportError);
     rememberName(result.value.name);
     showToast(`Added ${result.value.quantity} ${result.value.units} ${result.value.name}`);
     if (another) {
@@ -320,25 +514,36 @@ function buildSiteItem(siteId, site) {
         event.preventDefault();
         selectSite(siteId);
     });
+    item.append(link);
 
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'delete-site-btn';
-    deleteButton.dataset.siteId = siteId;
-    deleteButton.setAttribute('aria-label', `Delete site ${siteLabel(site)}`);
-    const icon = document.createElement('i');
-    icon.className = 'fas fa-trash-alt';
-    deleteButton.appendChild(icon);
-    deleteButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent triggering the site link click event
-        showDeleteSiteConfirmation(siteId);
-    });
+    if (site.role !== 'owner') {
+        // Next to the link, not inside it, so the link text stays exactly the site name.
+        const tag = document.createElement('span');
+        tag.className = 'role-tag';
+        tag.textContent = roleLabel(site.role);
+        item.append(' ', tag);
+    }
 
-    item.append(link, ' ', deleteButton);
+    if (canManageSite(site.role)) {
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-site-btn';
+        deleteButton.dataset.siteId = siteId;
+        deleteButton.setAttribute('aria-label', `Delete site ${siteLabel(site)}`);
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-trash-alt';
+        deleteButton.appendChild(icon);
+        deleteButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent triggering the site link click event
+            showDeleteSiteConfirmation(siteId);
+        });
+        item.append(' ', deleteButton);
+    }
     return item;
 }
 
 // Render the sidebar. The selected site stays highlighted across re-renders.
 function renderSites(sites) {
+    const previousRole = currentRole();
     sitesById = sites;
     sitesLoaded = true;
     sitesError = null;
@@ -357,6 +562,9 @@ function renderSites(sites) {
     if (deletingSiteId && !sites[deletingSiteId]) {
         closeSiteDelete();
     }
+    if (membersSiteId && !sites[membersSiteId]) {
+        closeMembers(); // removed from the site, or the site is gone
+    }
     if (!restoredLastSite) {
         restoredLastSite = true;
         const last = storageGet(LAST_SITE_KEY);
@@ -364,15 +572,12 @@ function renderSites(sites) {
             selectSite(last);
         }
     }
+    if (currentSiteId && currentRole() !== previousRole && materialsLoaded) {
+        renderMaterials(currentMaterials); // the role changed: show or hide the edit buttons
+    }
+    applyRole();
     renderStatus();
 }
-
-// Fetch and display sites in the sidebar
-data.subscribeSites(renderSites, (error) => {
-    sitesError = error;
-    renderStatus();
-    reportError(error);
-});
 
 function clearSelection() {
     if (unsubscribeMaterials) {
@@ -385,14 +590,17 @@ function clearSelection() {
     materialsError = null;
     tableBody.replaceChildren();
     closeMaterialModals();
+    closeMembers();
+    applyRole();
     renderStatus();
 }
 
-// An edit names one material. When the material is gone (deleted by someone else, or its
-// site was removed) the modal must close, or submitting it would make update() recreate
-// the material as an orphan node with no siteId.
+// An edit names one material in one site. When the material is gone (deleted by someone
+// else, or its site was removed) or the user moves to another site, the modal must close, or
+// submitting it would write into the wrong place.
 function closeMaterialModals() {
     editingMaterialId = null;
+    editingSiteId = null;
     updateContainer.style.display = 'none';
     refreshModalButtons();
 }
@@ -401,6 +609,10 @@ function closeMaterialModals() {
 function selectSite(siteId) {
     if (unsubscribeMaterials) {
         unsubscribeMaterials();
+    }
+    if (siteId !== currentSiteId) {
+        closeMaterialModals();
+        closeMembers();
     }
     currentSiteId = siteId;
     storageSet(LAST_SITE_KEY, siteId);
@@ -411,6 +623,7 @@ function selectSite(siteId) {
     currentMaterials = {};
     materialsLoaded = false;
     materialsError = null;
+    applyRole();
     renderStatus();
     unsubscribeMaterials = data.subscribeMaterials(siteId, (materials) => {
         if (siteId === currentSiteId) { // ignore a late callback from a site we left
@@ -429,9 +642,10 @@ function renderMaterials(materials) {
     currentMaterials = materials;
     materialsLoaded = true;
     materialsError = null;
+    const editable = canWriteMaterials(currentRole());
     tableBody.replaceChildren();
     for (const [materialId, material] of Object.entries(materials)) {
-        addMaterialRow(materialId, material);
+        addMaterialRow(materialId, material, editable);
     }
     if (editingMaterialId && !materials[editingMaterialId]) {
         closeMaterialModals();
@@ -442,8 +656,8 @@ function renderMaterials(materials) {
     renderStatus();
 }
 
-// Function to add a material row to the table
-function addMaterialRow(materialId, materialData) {
+// Function to add a material row to the table. A viewer gets no edit or delete buttons.
+function addMaterialRow(materialId, materialData, editable) {
     const newRow = document.createElement("tr");
 
     const nameCell = document.createElement("td");
@@ -456,17 +670,18 @@ function addMaterialRow(materialId, materialData) {
     lastUpdatedCell.textContent = materialData.lastUpdated;
 
     const updateCell = document.createElement("td");
-    updateCell.innerHTML = "<button aria-label='Edit material'><i class='fa-regular fa-pen-to-square'></i></button>";
     const deleteCell = document.createElement("td");
-    deleteCell.innerHTML = "<button aria-label='Delete material'><i class='fas fa-trash-alt'></i></button>";
-
-    updateCell.querySelector("button").addEventListener("click", () => {
-        showUpdateForm(materialId, materialData);
-    });
-    deleteCell.querySelector("button").addEventListener("click", (event) => {
-        event.currentTarget.disabled = true; // a second tap before the row disappears does nothing
-        deleteMaterial(materialId, materialData);
-    });
+    if (editable) {
+        updateCell.innerHTML = "<button aria-label='Edit material'><i class='fa-regular fa-pen-to-square'></i></button>";
+        deleteCell.innerHTML = "<button aria-label='Delete material'><i class='fas fa-trash-alt'></i></button>";
+        updateCell.querySelector("button").addEventListener("click", () => {
+            showUpdateForm(materialId, materialData);
+        });
+        deleteCell.querySelector("button").addEventListener("click", (event) => {
+            event.currentTarget.disabled = true; // a second tap before the row disappears does nothing
+            deleteMaterial(materialId, materialData);
+        });
+    }
 
     newRow.append(nameCell, quantityCell, unitsCell, lastUpdatedCell, updateCell, deleteCell);
     tableBody.appendChild(newRow);
@@ -492,6 +707,7 @@ function setEditUnits(units) {
 // Function to show the update form and populate it with material data
 function showUpdateForm(materialId, materialData) {
     editingMaterialId = materialId;
+    editingSiteId = currentSiteId;
     updateContainer.style.display = 'block';
     refreshNameSuggestions();
     // ?? "" so a legacy record with a missing field shows an empty input, not the text "undefined".
@@ -513,7 +729,8 @@ function refreshModalButtons() {
 // Function to update material data in Firebase
 function updateMaterial() {
     const materialId = editingMaterialId;
-    if (!materialId || savingMaterials.has(materialId)) {
+    const siteId = editingSiteId;
+    if (!materialId || !siteId || savingMaterials.has(materialId)) {
         return;
     }
     const result = validateMaterialEdit({
@@ -530,7 +747,7 @@ function updateMaterial() {
     refreshModalButtons();
     // Promise.resolve().then so a synchronous throw still reaches catch and finally.
     Promise.resolve()
-        .then(() => data.updateMaterial(materialId, result.value))
+        .then(() => data.updateMaterial(siteId, materialId, result.value))
         .then(() => {
             rememberName(result.value.name);
             showToast("Material updated");
@@ -538,6 +755,7 @@ function updateMaterial() {
             // the modal if it still belongs to the edit that was sent.
             if (editingMaterialId === materialId) {
                 editingMaterialId = null;
+                editingSiteId = null;
                 updateContainer.style.display = 'none';
             }
         })
@@ -560,7 +778,7 @@ function deleteMaterial(materialId, material) {
         onAction: () => undoDelete(materialId, copy, siteId),
     });
     Promise.resolve()
-        .then(() => data.removeMaterial(materialId))
+        .then(() => data.removeMaterial(siteId, materialId))
         .catch((error) => {
             toast.dismiss();
             reportError(error);
@@ -568,21 +786,29 @@ function deleteMaterial(materialId, material) {
 }
 
 function undoDelete(materialId, material, siteId) {
-    // Restoring into a site that was deleted meanwhile would create an orphan.
-    if (!sitesById[siteId]) {
+    // Restoring into a site that was deleted meanwhile would create an orphan, and a role that
+    // dropped to viewer meanwhile cannot write.
+    const site = sitesById[siteId];
+    if (!site) {
         showToast("That site no longer exists, so the material was not restored.", { kind: "error" });
         return;
     }
+    if (!canWriteMaterials(site.role)) {
+        showToast("You can no longer edit this site, so the material was not restored.", { kind: "error" });
+        return;
+    }
     Promise.resolve()
-        .then(() => data.restoreMaterial(materialId, material))
+        .then(() => data.restoreMaterial(siteId, materialId, material))
         .catch(reportError);
     showToast(`Restored ${material.name}`);
 }
 
-// The site name must be typed before the delete button works.
+// ---- Deleting a site ----------------------------------------------------------------
+
+// The site name must be typed before the delete button works. Only the owner gets here.
 function showDeleteSiteConfirmation(siteId) {
     const site = sitesById[siteId];
-    if (!site) {
+    if (!site || !canManageSite(site.role)) {
         return;
     }
     deletingSiteId = siteId;
@@ -609,13 +835,14 @@ function closeSiteDelete() {
 
 function confirmSiteDelete() {
     const site = sitesById[deletingSiteId];
-    if (deletingSite || !site || !phraseMatches(siteDeleteInput.value, deletePhrase(site))) {
+    if (deletingSite || !site || !canManageSite(site.role)
+        || !phraseMatches(siteDeleteInput.value, deletePhrase(site))) {
         return; // Enter in the input must not bypass the typed-name check
     }
     deleteSite(deletingSiteId, siteLabel(site));
 }
 
-// Function to delete a site and its associated materials in one atomic write
+// Function to delete a site and everything under it in one atomic write
 function deleteSite(siteId, label) {
     deletingSite = true;
     refreshSiteDeleteButton();
@@ -632,4 +859,179 @@ function deleteSite(siteId, label) {
             deletingSite = false;
             refreshSiteDeleteButton();
         });
+}
+
+// ---- Members ------------------------------------------------------------------------
+
+function openMembers() {
+    const site = sitesById[currentSiteId];
+    if (!site) {
+        return;
+    }
+    stopMembersListener();
+    membersSiteId = currentSiteId;
+    const manage = canManageSite(site.role);
+    inviteSection.hidden = !manage;
+    leaveSiteButton.hidden = manage; // the owner cannot leave; they delete the site
+    disarmLeave();
+    memberList.replaceChildren();
+    pendingInviteList.replaceChildren();
+    membersContainer.style.display = 'block';
+    stopMembers = data.subscribeMembers(membersSiteId, { withInvites: manage }, (state) => {
+        if (membersSiteId) {
+            renderMembers(state);
+        }
+    }, reportError);
+}
+
+function stopMembersListener() {
+    if (stopMembers) {
+        stopMembers();
+        stopMembers = null;
+    }
+}
+
+function closeMembers() {
+    stopMembersListener();
+    membersSiteId = null;
+    membersContainer.style.display = 'none';
+    disarmLeave();
+}
+
+function shortUid(uid) {
+    return `User ${String(uid).slice(0, 6)}`;
+}
+
+// Emails and ids are other people's text: textContent only.
+function renderMembers({ members, invites }) {
+    const site = sitesById[membersSiteId];
+    const manage = Boolean(site) && canManageSite(site.role);
+    memberList.replaceChildren();
+    for (const member of members) {
+        const item = document.createElement('li');
+        item.dataset.uid = member.uid;
+        const name = document.createElement('span');
+        name.className = 'member-name';
+        name.textContent = (member.email || shortUid(member.uid)) + (member.uid === currentUser.uid ? ' (you)' : '');
+        item.appendChild(name);
+
+        if (manage && member.role !== 'owner') {
+            const select = document.createElement('select');
+            select.setAttribute('aria-label', `Role of ${member.email || shortUid(member.uid)}`);
+            fillOptions(select, INVITE_ROLES, null, roleLabel);
+            select.value = member.role;
+            select.addEventListener('change', () => {
+                Promise.resolve()
+                    .then(() => data.changeRole(membersSiteId, member.uid, select.value))
+                    .then(() => showToast(`${member.email || shortUid(member.uid)} is now ${roleLabel(select.value)}`))
+                    .catch((error) => {
+                        select.value = member.role;
+                        reportError(error);
+                    });
+            });
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'remove-member';
+            remove.textContent = 'Remove';
+            remove.addEventListener('click', () => {
+                remove.disabled = true;
+                Promise.resolve()
+                    .then(() => data.removeMember(membersSiteId, member.uid))
+                    .then(() => showToast(`Removed ${member.email || shortUid(member.uid)}`))
+                    .catch((error) => {
+                        remove.disabled = false;
+                        reportError(error);
+                    });
+            });
+            item.append(select, remove);
+        } else {
+            const role = document.createElement('span');
+            role.className = 'member-role';
+            role.textContent = roleLabel(member.role);
+            item.appendChild(role);
+        }
+        memberList.appendChild(item);
+    }
+
+    pendingInviteList.replaceChildren();
+    if (manage && invites.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'hint';
+        empty.textContent = 'No pending invitations.';
+        pendingInviteList.appendChild(empty);
+    }
+    for (const invite of manage ? invites : []) {
+        const item = document.createElement('li');
+        item.dataset.key = invite.key;
+        const name = document.createElement('span');
+        name.className = 'member-name';
+        name.textContent = invite.email;
+        const role = document.createElement('span');
+        role.className = 'member-role';
+        role.textContent = roleLabel(invite.role);
+        const revoke = document.createElement('button');
+        revoke.type = 'button';
+        revoke.className = 'revoke-invite';
+        revoke.textContent = 'Revoke';
+        revoke.addEventListener('click', () => {
+            revoke.disabled = true;
+            Promise.resolve()
+                .then(() => data.revokeInvite(membersSiteId, invite.key))
+                .catch((error) => {
+                    revoke.disabled = false;
+                    reportError(error);
+                });
+        });
+        item.append(name, role, revoke);
+        pendingInviteList.appendChild(item);
+    }
+}
+
+function sendInvite() {
+    const site = sitesById[membersSiteId];
+    if (!site || !canManageSite(site.role)) {
+        return;
+    }
+    const result = validateInvite({ email: inviteEmailInput.value, role: inviteRoleSelect.value }, currentUser.email);
+    if (!result.ok) {
+        showToast(result.error, { kind: "error" });
+        return;
+    }
+    inviteSubmit.disabled = true;
+    Promise.resolve()
+        .then(() => data.inviteMember({ id: membersSiteId, name: siteLabel(site) }, currentUser, result.value))
+        .then(() => {
+            inviteForm.reset();
+            // Nothing is emailed from here. Say so, or the owner waits for a reply that cannot come.
+            showToast(`Invite saved for ${result.value.email}. Ask them to sign in with that email.`);
+        })
+        .catch(reportError)
+        .finally(() => { inviteSubmit.disabled = false; });
+}
+
+function disarmLeave() {
+    leaveArmed = false;
+    clearTimeout(leaveTimer);
+    leaveSiteButton.textContent = 'Leave site';
+}
+
+// Two taps: the first arms the button, the second leaves. There is no Undo for this, because
+// coming back needs a new invitation.
+function leaveSite() {
+    const siteId = membersSiteId;
+    const site = sitesById[siteId];
+    if (!site || canManageSite(site.role)) {
+        return;
+    }
+    if (!leaveArmed) {
+        leaveArmed = true;
+        leaveSiteButton.textContent = 'Tap again to leave';
+        leaveTimer = setTimeout(disarmLeave, LEAVE_ARM_MS);
+        return;
+    }
+    disarmLeave();
+    Promise.resolve()
+        .then(() => data.removeMember(siteId, currentUser.uid))
+        .then(() => showToast(`You left ${siteLabel(site)}`))
+        .catch(reportError);
 }

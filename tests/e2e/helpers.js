@@ -5,6 +5,7 @@ import { chromium } from "playwright-core";
 
 export const ROOT = path.resolve(import.meta.dirname, "../..");
 const FAKE_DATA = fs.readFileSync(path.join(import.meta.dirname, "fake-data.js"), "utf8");
+const FAKE_AUTH = fs.readFileSync(path.join(import.meta.dirname, "fake-auth.js"), "utf8");
 
 const TYPES = {
     ".html": "text/html",
@@ -46,8 +47,8 @@ export function launchBrowser() {
 
 export const SEED = {
     sites: {
-        sA: { name: "Mombasa", location: "Nyali", buildingType: "Residential", date: "2024-05-01" },
-        sB: { name: "Cape Town", location: "Bellville", buildingType: "Commercial", date: "2024-05-02" },
+        sA: { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1714521600000, ownerUid: "u1" },
+        sB: { name: "Cape Town", location: "Bellville", buildingType: "Commercial", createdAt: 1714608000000, ownerUid: "u1" },
     },
     materials: {
         m1: { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" },
@@ -56,20 +57,22 @@ export const SEED = {
     },
 };
 
-// Opens dashboard.html with the in-memory data layer. Any request to Firebase's CDN is
-// recorded and blocked: the tests must never reach the real database.
+// Opens a page with the in-memory data layer and the fake sign-in. Any request to Firebase's CDN is
+// recorded and blocked: the tests must never reach the real database or the real Auth service.
 // options.beforeLoad runs in the page before any page script, for example to set flags the
 // fake data layer reads or to break localStorage.
-export async function openDashboard(browser, baseUrl, seed = SEED, options = {}) {
+async function newPage(browser, seed, options) {
     const context = await browser.newContext();
     const page = await context.newPage();
     const state = { dialogs: [], toasts: [], blocked: [], pageErrors: [] };
 
     await page.route("**/src/data.js", (route) =>
         route.fulfill({ contentType: "text/javascript", body: FAKE_DATA }));
+    await page.route("**/src/auth.js", (route) =>
+        route.fulfill({ contentType: "text/javascript", body: FAKE_AUTH }));
     await page.route("**/kit.fontawesome.com/**", (route) =>
         route.fulfill({ contentType: "text/javascript", body: "" }));
-    await page.route(/gstatic\.com|firebaseio\.com|firebasedatabase\.app/, (route) => {
+    await page.route(/gstatic\.com|firebaseio\.com|firebasedatabase\.app|googleapis\.com|firebaseapp\.com/, (route) => {
         state.blocked.push(route.request().url());
         return route.abort();
     });
@@ -98,12 +101,33 @@ export async function openDashboard(browser, baseUrl, seed = SEED, options = {})
     if (options.beforeLoad) {
         await page.addInitScript(options.beforeLoad);
     }
+    return { context, page, state };
+}
+
+// Opens dashboard.html signed in (seed.user, default a verified foreman). With seed.user null the
+// page redirects to login.html, and this waits for that instead.
+export async function openDashboard(browser, baseUrl, seed = SEED, options = {}) {
+    const opened = await newPage(browser, seed, options);
+    const { page } = opened;
     await page.goto(`${baseUrl}/dashboard.html`);
+    if ("user" in seed && seed.user === null) {
+        await page.waitForURL(/login\.html/);
+        return opened;
+    }
     // Ready once dashboard.js has subscribed to sites; the seed may legitimately be empty.
     await page.waitForFunction(() =>
         window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
     await page.waitForTimeout(20);
-    return { context, page, state };
+    return opened;
+}
+
+// Opens login.html, signed out unless seed.user says otherwise.
+export async function openLogin(browser, baseUrl, seed = { user: null }, options = {}) {
+    const opened = await newPage(browser, seed, options);
+    await opened.page.goto(`${baseUrl}/login.html`);
+    await opened.page.waitForFunction(() => window.__auth !== undefined);
+    await opened.page.waitForTimeout(20);
+    return opened;
 }
 
 export function siteLink(page, name) {
@@ -147,9 +171,12 @@ export async function waitForRows(page, names) {
 export const wrote = (page) => page.evaluate(() => window.__nailit.writes);
 export const dbState = (page) => page.evaluate(() => window.__nailit.db);
 
-// Every write path must be sites/<id> or materials/<id> with a real-looking id.
+// Every path a write touches must be made of real-looking ids: no "[object PointerEvent]",
+// no spaces, no empty segments. A push's path is its collection ("sites", "materials/<siteId>").
 export function junkPaths(writeList) {
-    const valid = /^(sites|materials)\/[-A-Za-z0-9_]+$/;
-    const paths = writeList.flatMap((w) => (w.op === "multi" ? Object.keys(w.paths) : [w.path]));
-    return paths.filter((p) => p !== "sites" && p !== "materials" && !valid.test(p));
+    const segment = /^[-A-Za-z0-9_@,+]+$/;
+    const paths = writeList
+        .filter((w) => w.path !== undefined || w.op === "multi")
+        .flatMap((w) => (w.op === "multi" ? Object.keys(w.paths) : [w.path]));
+    return paths.filter((p) => !p.split("/").every((part) => segment.test(part)));
 }
