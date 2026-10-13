@@ -27,6 +27,27 @@ Hosted on Vercel at the moment.
 	9. Click on the Delete icon to delete the material.
 	10. And if you want to delete the entire site find the Delete icon next to the sitename, click on it and confirm Yes to delete a site and associated materials.
 
+## Development
+
+The site is static, there is no build step. `package.json` only holds the test tooling.
+
+```
+npm install              # once; installs playwright-core
+npm run test:unit        # pure logic, under a second, runs on every commit
+npm run test:e2e         # drives dashboard.html in Chrome against an in-memory fake database
+npm test                 # both
+git config core.hooksPath .githooks   # run the unit tests before every commit
+```
+
+How it is laid out:
+
+* `dashboard.js` wires the page. It talks to the database only through `src/data.js`.
+* `src/data.js` is the only file that imports Firebase.
+* `src/logic.js` holds validation and the cascade-delete builder, with no DOM and no Firebase.
+* `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
+
+The E2E tests use the system Chrome at `/usr/bin/google-chrome`. Set `CHROME_PATH` to use another one.
+
 ## Contributing
 
 A huge shout out to my guy @willykar for the Javascript code and advise especially in utilising Firebase as a beginner friendly database.
