@@ -38,11 +38,9 @@
         <!-- Sidebar with list of sites -->
         <div class="sidebar">
             <h2>Sites Dashboard</h2>
-            <ul id="siteList">
-                <!-- <li><a href="#">Mombasa <i class="fas fa-trash-alt"></i></a></li>
-                <li><a href="#">Cape Town <i class="fas fa-trash-alt"></i></a></li> -->
-            </ul>
             <button id="addSiteButton">Add Site</button>
+            <p id="sitesStatus" class="status" role="status">Loading sites...</p>
+            <ul id="siteList"></ul>
         </div>
         <!-- Main content section -->
         <div class="main-content">
@@ -50,7 +48,8 @@
                 <h1>Materials</h1>
                 <button id="addMaterialButton">Add Material</button>
             </div>
-            <table>
+            <p id="materialsStatus" class="status status-main" role="status">Loading...</p>
+            <table id="materialsTable" hidden>
                 <thead>
                     <tr>
                         <th>Material Name</th>
@@ -61,34 +60,22 @@
                         <th>Delete</th>
                     </tr>
                 </thead>
-                <tbody id="materialTableBody">                    
-                    <!-- <tr>
-                        <td>Wheelbarrows</td>
-                        <td>4</td>
-                        <td>Unit</td>
-                        <td>2024-05-25</td>
-                        <td><button><i class="fa-regular fa-pen-to-square"></i></button></td>
-                        <td><button><i class="fas fa-trash-alt"></i></button></td>
-                    </tr> -->
-                    <!-- Additional rows as needed -->
-                </tbody>
+                <tbody id="materialTableBody"></tbody>
             </table>
         </div>
     </div>
 
     <!-- Modal forms for adding and updating sites and materials -->
-    <!-- Add Site Form -->
+    <!-- Add Site Form. createdAt is stamped by the app; the building type options are filled by dashboard.js from src/logic.js -->
     <div id="siteFormContainer" class="site-form-container">
         <form id="siteForm" class="site-form">
             <h2>Add New Site</h2>
             <label for="siteName">Name:</label>
-            <input type="text" id="siteName" name="siteName" required>
+            <input type="text" id="siteName" name="siteName" autocomplete="off" required>
             <label for="siteLocation">Location:</label>
-            <input type="text" id="siteLocation" name="siteLocation" required>
+            <input type="text" id="siteLocation" name="siteLocation" autocomplete="off" required>
             <label for="buildingType">Type of Building:</label>
-            <input type="text" id="buildingType" name="buildingType" required>
-            <label for="metadataDate">Date:</label>
-            <input type="date" id="metadataDate" name="metadataDate" required>
+            <select id="buildingType" name="buildingType" required></select>
             <button type="button" id="cancelButton">Cancel</button>
             <button type="submit" id="add-site-btn">Add Site</button>
         </form>
@@ -99,11 +86,11 @@
         <form id="updateForm" class="update-form">
             <h2>Edit</h2>
             <label for="uMaterialName">Material Name:</label>
-            <input type="text" id="uMaterialName" name="materialName" required>
+            <input type="text" id="uMaterialName" name="materialName" list="materialNames" autocomplete="off" required>
             <label for="uQuantity">Quantity:</label>
-            <input type="number" id="uQuantity" name="quantity" min="0" step="any" required>
+            <input type="number" id="uQuantity" name="quantity" min="0" step="any" inputmode="decimal" required>
             <label for="uUnits">Units:</label>
-            <input type="text" id="uUnits" name="units" required>
+            <select id="uUnits" name="units" required></select>
             <label for="uLastUpdated">Date:</label>
             <input type="date" id="uLastUpdated" name="lastUpdated" required>
             <button type="button" id="updateCancelButton">Cancel</button>
@@ -111,29 +98,34 @@
         </form>
     </div>
 
-    <!-- NEW MATERIAL FORM -->
+    <!-- NEW MATERIAL FORM. Add closes the form; Add & another keeps it open for the next item. -->
     <div id="materialFormContainer" class="material-form-container">
         <form id="materialForm" class="material-form">
             <h2>New Material</h2>
             <label for="materialsName">Material Name:</label>
-            <input type="text" id="materialsName" name="materialName" required>
+            <input type="text" id="materialsName" name="materialName" list="materialNames" autocomplete="off" required>
             <label for="mQuantity">Quantity:</label>
-            <input type="number" id="mQuantity" name="quantity" min="0" step="any" required>
+            <input type="number" id="mQuantity" name="quantity" min="0" step="any" inputmode="decimal" required>
             <label for="mUnits">Units:</label>
-            <input type="text" id="mUnits" name="units" required>
+            <select id="mUnits" name="units" required></select>
             <label for="mLastUpdated">Date:</label>
             <input type="date" id="mLastUpdated" name="lastUpdated" required>
             <button type="button" id="materialCancelButton">Cancel</button>
-            <button type="submit" id="material-btn">Submit</button>
+            <button type="submit" id="material-btn">Add</button>
+            <button type="submit" id="material-another-btn">Add &amp; another</button>
         </form>
+        <datalist id="materialNames"></datalist>
     </div>
 
-    <!-- Delete material confirmation. Site deletion uses confirm() in dashboard.js. -->
-    <div id="deleteFormContainer" class="del-site-form-container">
-        <form id="deleteForm" class="delete-form">
-            <h3>Are you sure you want to delete?</h3>
-            <button type="button" id="delCancelButton">Cancel</button>
-            <button type="button" id="del-yes-btn">Yes</button>
+    <!-- Delete site confirmation: the site name must be typed. Deleting a material has no
+         dialog, it shows a "Deleted. Undo" toast instead. -->
+    <div id="siteDeleteContainer" class="del-site-form-container">
+        <form id="siteDeleteForm" class="delete-form">
+            <h3>Delete this site and all its materials?</h3>
+            <p>Type <strong id="siteDeletePhrase"></strong> to confirm.</p>
+            <input type="text" id="siteDeleteInput" autocomplete="off" aria-label="Type the site name to confirm">
+            <button type="button" id="siteDeleteCancel">Cancel</button>
+            <button type="submit" id="siteDeleteConfirm" disabled>Delete site</button>
         </form>
     </div>
 

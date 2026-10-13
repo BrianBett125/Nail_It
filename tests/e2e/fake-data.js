@@ -17,36 +17,45 @@ let counter = 0;
 
 function nextId() {
     counter += 1;
-    return `-Nfake${counter}`;
+    return `nfake${String(counter).padStart(3, "0")}`; // sorts after the seed ids m1..m3, like a newer push id
 }
 
 function emit(listener) {
     const snapshot = listener.kind === "sites"
         ? structuredClone(db.sites)
+        // Like orderByChild("siteId") + equalTo: ties come back in key order.
         : Object.fromEntries(
-            Object.entries(db.materials).filter(([, m]) => m && m.siteId === listener.siteId),
+            Object.entries(db.materials)
+                .filter(([, m]) => m && m.siteId === listener.siteId)
+                .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
         );
     listener.onData(structuredClone(snapshot));
 }
 
+// With holdSnapshots on, subscribers hear nothing until releaseSnapshots(): the loading state.
+const heldSnapshots = [];
+
+function deliver(listener) {
+    if (!listeners.has(listener)) {
+        return;
+    }
+    if (window.__nailit.holdSnapshots) {
+        heldSnapshots.push(listener);
+        return;
+    }
+    emit(listener);
+}
+
 function notify() {
     for (const listener of [...listeners]) {
-        setTimeout(() => {
-            if (listeners.has(listener)) {
-                emit(listener);
-            }
-        }, 0);
+        setTimeout(() => deliver(listener), 0);
     }
 }
 
 function subscribe(listener) {
     everSubscribed.push(listener);
     listeners.add(listener);
-    setTimeout(() => {
-        if (listeners.has(listener)) {
-            emit(listener);
-        }
-    }, 0);
+    setTimeout(() => deliver(listener), 0);
     return () => listeners.delete(listener);
 }
 
@@ -57,6 +66,14 @@ window.__nailit = {
     // A change made by somebody else, not through this page's own data layer.
     externalSetMaterial(id, material) {
         db.materials[id] = material;
+        notify();
+    },
+    releaseSnapshots() {
+        window.__nailit.holdSnapshots = false;
+        heldSnapshots.splice(0).forEach(deliver);
+    },
+    externalRemoveSite(id) {
+        delete db.sites[id];
         notify();
     },
     releaseAcks() {
@@ -77,6 +94,9 @@ window.__nailit = {
     },
 };
 
+// Flags a test set before load (window.__preset), for example holdSnapshots.
+Object.assign(window.__nailit, window.__preset || {});
+
 export function subscribeSites(onData, onError) {
     return subscribe({ kind: "sites", onData, onError });
 }
@@ -90,7 +110,17 @@ export function addSite(site) {
     writes.push({ op: "push", path: "sites", id, value: site });
     db.sites[id] = site;
     notify();
-    return { id, done: Promise.resolve() };
+    // failAdds: the server refuses the write (permission denied). Firebase has already shown
+    // the site locally by then, and then takes it back.
+    if (window.__nailit.failAdds) {
+        const done = Promise.reject(new Error("PERMISSION_DENIED"));
+        done.catch(() => {
+            delete db.sites[id];
+            notify();
+        });
+        return { id, done };
+    }
+    return { id, done: ack() };
 }
 
 export function addMaterial(material) {
@@ -98,7 +128,7 @@ export function addMaterial(material) {
     writes.push({ op: "push", path: "materials", id, value: material });
     db.materials[id] = material;
     notify();
-    return { id, done: Promise.resolve() };
+    return { id, done: ack() };
 }
 
 export function updateMaterial(materialId, fields) {
@@ -122,7 +152,17 @@ function ack() {
     return Promise.resolve();
 }
 
+export function restoreMaterial(materialId, material) {
+    writes.push({ op: "set", path: `materials/${materialId}`, value: material });
+    db.materials[materialId] = structuredClone(material);
+    notify();
+    return ack();
+}
+
 export function removeMaterial(materialId) {
+    if (window.__nailit.throwOnRemove) {
+        throw new Error("remove denied");
+    }
     writes.push({ op: "remove", path: `materials/${materialId}` });
     delete db.materials[materialId];
     notify();

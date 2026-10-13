@@ -6,9 +6,20 @@ import {
     validateMaterial,
     validateMaterialEdit,
     buildSiteDeleteUpdates,
+    normalizeName,
+    nameKey,
+    canonicalName,
+    suggestNames,
+    todayISO,
+    deletePhrase,
+    phraseMatches,
+    BUILDING_TYPES,
+    UNITS,
     NO_SITE_MESSAGE,
     REQUIRED_MESSAGE,
     QUANTITY_MESSAGE,
+    BUILDING_TYPE_MESSAGE,
+    UNITS_MESSAGE,
 } from "../../src/logic.js";
 
 test("parseQuantity accepts zero and positive numbers as numbers (B8)", () => {
@@ -26,22 +37,101 @@ test("parseQuantity rejects empty, negative, NaN and infinite input (B8)", () =>
     }
 });
 
-test("validateSite trims and requires every field", () => {
-    const ok = validateSite({ name: "  Mombasa ", location: "Nyali", buildingType: "Residential", date: "2024-05-25" });
+test("validateSite trims, stamps createdAt itself and has no date field", () => {
+    const ok = validateSite({ name: "  Mombasa ", location: "Nyali", buildingType: "Residential" }, 1700000000000);
     assert.deepEqual(ok, {
         ok: true,
-        value: { name: "Mombasa", location: "Nyali", buildingType: "Residential", date: "2024-05-25" },
+        value: { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1700000000000 },
     });
-    for (const field of ["name", "location", "buildingType", "date"]) {
-        const input = { name: "a", location: "b", buildingType: "c", date: "2024-01-01", [field]: "   " };
+    assert.equal("date" in ok.value, false);
+    for (const field of ["name", "location", "buildingType"]) {
+        const input = { name: "a", location: "b", buildingType: "Other", [field]: "   " };
         assert.deepEqual(validateSite(input), { ok: false, error: REQUIRED_MESSAGE }, `blank ${field}`);
     }
 });
 
+test("validateSite ignores a date the caller still sends", () => {
+    const result = validateSite({ name: "a", location: "b", buildingType: "Other", date: "2024-01-01" }, 5);
+    assert.deepEqual(result.value, { name: "a", location: "b", buildingType: "Other", createdAt: 5 });
+});
+
+test("validateSite accepts every dropdown building type and nothing else", () => {
+    for (const buildingType of BUILDING_TYPES) {
+        assert.equal(validateSite({ name: "a", location: "b", buildingType }).ok, true, buildingType);
+    }
+    assert.deepEqual(validateSite({ name: "a", location: "b", buildingType: "Castle" }), { ok: false, error: BUILDING_TYPE_MESSAGE });
+    assert.deepEqual(BUILDING_TYPES, ["Residential", "Commercial", "Industrial", "Road/Civil", "Other"]);
+});
+
 test("validateSite keeps markup as text, it never interprets it (S2)", () => {
     const name = "<img src=x onerror=alert(1)>";
-    const result = validateSite({ name, location: "l", buildingType: "t", date: "2024-01-01" });
+    const result = validateSite({ name, location: "l", buildingType: "Other" });
     assert.equal(result.value.name, name);
+});
+
+test("validateMaterial accepts every dropdown unit and rejects others", () => {
+    const base = { name: "Cement", quantity: "1", lastUpdated: "2024-05-25" };
+    assert.deepEqual(UNITS, ["kg", "tonnes", "bags", "pieces", "metres", "litres", "bundles", "sheets"]);
+    for (const units of UNITS) {
+        assert.equal(validateMaterial({ ...base, units }, "s").ok, true, units);
+    }
+    assert.deepEqual(validateMaterial({ ...base, units: "cubits" }, "s"), { ok: false, error: UNITS_MESSAGE });
+});
+
+test("validateMaterial lets an edit keep a legacy unit that is not in the dropdown", () => {
+    const input = { name: "Nails", quantity: "4", units: "kgs", lastUpdated: "2024-05-25" };
+    assert.equal(validateMaterialEdit(input).ok, false);
+    assert.equal(validateMaterialEdit(input, { legacyUnit: "kgs" }).ok, true);
+    assert.equal(validateMaterialEdit({ ...input, units: "cubits" }, { legacyUnit: "kgs" }).ok, false);
+});
+
+test("normalizeName trims and collapses inner whitespace, nameKey ignores case", () => {
+    assert.equal(normalizeName("  Cement \t mix  "), "Cement mix");
+    assert.equal(normalizeName(undefined), "");
+    assert.equal(normalizeName(42), "");
+    assert.equal(nameKey("  CEMENT   Mix"), nameKey("cement mix"));
+    assert.notEqual(nameKey("Cement"), nameKey("Cemnt"));
+});
+
+test("canonicalName reuses the existing spelling", () => {
+    assert.equal(canonicalName("cement", ["Sand", "Cement"]), "Cement");
+    assert.equal(canonicalName("  CEMENT ", ["Cement"]), "Cement");
+    assert.equal(canonicalName("Gravel", ["Cement"]), "Gravel");
+    assert.equal(canonicalName("Gravel"), "Gravel");
+    assert.equal(canonicalName("   ", ["Cement"]), "");
+});
+
+test("validateMaterial stores the canonical spelling of a known name", () => {
+    const result = validateMaterial(
+        { name: "cement", quantity: "2", units: "bags", lastUpdated: "2024-05-25" },
+        "s",
+        { knownNames: ["Cement"] },
+    );
+    assert.equal(result.value.name, "Cement");
+});
+
+test("suggestNames dedupes by key, keeps the first spelling and sorts", () => {
+    assert.deepEqual(suggestNames(["sand", "Cement", "Sand", " cement ", "", "Nails"]), ["Cement", "Nails", "sand"]);
+    assert.deepEqual(suggestNames([]), []);
+});
+
+test("todayISO is the local calendar date, zero padded", () => {
+    assert.equal(todayISO(new Date(2024, 0, 5, 23, 59)), "2024-01-05");
+    assert.equal(todayISO(new Date(2024, 11, 31, 0, 0)), "2024-12-31");
+});
+
+test("deletePhrase is the site name, or 'delete' when the name is blank", () => {
+    assert.equal(deletePhrase({ name: "  Mombasa  Yard " }), "Mombasa Yard");
+    assert.equal(deletePhrase({ name: "   " }), "delete");
+    assert.equal(deletePhrase({}), "delete");
+    assert.equal(deletePhrase(undefined), "delete");
+});
+
+test("phraseMatches needs the exact name, case included", () => {
+    assert.equal(phraseMatches(" Mombasa ", "Mombasa"), true);
+    assert.equal(phraseMatches("mombasa", "Mombasa"), false);
+    assert.equal(phraseMatches("", "Mombasa"), false);
+    assert.equal(phraseMatches("Momb", "Mombasa"), false);
 });
 
 test("validateMaterial without a selected site says so, not 'fill all fields' (B9)", () => {

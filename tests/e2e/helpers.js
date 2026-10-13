@@ -58,10 +58,12 @@ export const SEED = {
 
 // Opens dashboard.html with the in-memory data layer. Any request to Firebase's CDN is
 // recorded and blocked: the tests must never reach the real database.
-export async function openDashboard(browser, baseUrl, seed = SEED) {
+// options.beforeLoad runs in the page before any page script, for example to set flags the
+// fake data layer reads or to break localStorage.
+export async function openDashboard(browser, baseUrl, seed = SEED, options = {}) {
     const context = await browser.newContext();
     const page = await context.newPage();
-    const state = { dialogs: [], blocked: [], pageErrors: [] };
+    const state = { dialogs: [], toasts: [], blocked: [], pageErrors: [] };
 
     await page.route("**/src/data.js", (route) =>
         route.fulfill({ contentType: "text/javascript", body: FAKE_DATA }));
@@ -72,6 +74,20 @@ export async function openDashboard(browser, baseUrl, seed = SEED) {
         return route.abort();
     });
 
+    // Toasts disappear on their own, so record each one the moment it is added to the page.
+    await page.exposeFunction("__recordToast", (text) => state.toasts.push(text));
+    await page.addInitScript(() => {
+        const seen = new WeakSet();
+        new MutationObserver(() => {
+            document.querySelectorAll(".toast").forEach((toast) => {
+                if (!seen.has(toast)) {
+                    seen.add(toast);
+                    window.__recordToast(toast.querySelector(".toast-text").textContent);
+                }
+            });
+        }).observe(document, { childList: true, subtree: true });
+    });
+
     page.on("dialog", (dialog) => {
         state.dialogs.push(dialog.message());
         dialog.accept();
@@ -79,6 +95,9 @@ export async function openDashboard(browser, baseUrl, seed = SEED) {
     page.on("pageerror", (error) => state.pageErrors.push(error.message));
 
     await page.addInitScript((s) => { window.__seed = s; }, seed);
+    if (options.beforeLoad) {
+        await page.addInitScript(options.beforeLoad);
+    }
     await page.goto(`${baseUrl}/dashboard.html`);
     // Ready once dashboard.js has subscribed to sites; the seed may legitimately be empty.
     await page.waitForFunction(() =>
@@ -93,6 +112,21 @@ export function siteLink(page, name) {
 
 export async function selectSite(page, name) {
     await siteLink(page, name).click();
+}
+
+// Opens the delete-site dialog for a site and types `typed` (default: its name) into it.
+export async function openSiteDelete(page, siteName, typed = siteName) {
+    await page.locator("#siteList li", { hasText: siteName }).locator(".delete-site-btn").click();
+    await page.fill("#siteDeleteInput", typed);
+}
+
+export async function deleteSiteViaUi(page, siteName) {
+    await openSiteDelete(page, siteName);
+    await page.click("#siteDeleteConfirm");
+}
+
+export function toastLocator(page, text) {
+    return page.locator(".toast", { hasText: text });
 }
 
 export function rowTexts(page) {

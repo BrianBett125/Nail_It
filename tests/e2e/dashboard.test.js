@@ -6,6 +6,9 @@ import {
     openDashboard,
     selectSite,
     siteLink,
+    openSiteDelete,
+    deleteSiteViaUi,
+    toastLocator,
     waitForRows,
     rowTexts,
     wrote,
@@ -32,8 +35,7 @@ async function fillSiteForm(page, name) {
     await page.click("#addSiteButton");
     await page.fill("#siteName", name);
     await page.fill("#siteLocation", "Nairobi");
-    await page.fill("#buildingType", "Residential");
-    await page.fill("#metadataDate", "2024-06-01");
+    await page.selectOption("#buildingType", "Residential");
     await page.click("#add-site-btn");
 }
 
@@ -41,7 +43,7 @@ async function fillMaterialForm(page, { name, quantity }) {
     await page.click("#addMaterialButton");
     await page.fill("#materialsName", name);
     await page.fill("#mQuantity", quantity);
-    await page.fill("#mUnits", "bags");
+    await page.selectOption("#mUnits", "bags");
     await page.fill("#mLastUpdated", "2024-06-02");
     await page.click("#material-btn");
 }
@@ -94,7 +96,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await context.close();
     });
 
-    it("B2: adding a site does not reload the page, and the selected site stays selected", async () => {
+    it("B2: adding a site does not reload the page, and the new site is opened", async () => {
         const { context, page, state } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
@@ -104,10 +106,11 @@ describe("dashboard core behavior (Phase 0)", () => {
         await siteLink(page, "Kisumu").waitFor();
 
         assert.equal(await page.evaluate(() => window.__marker), "same-page", "page reloaded");
-        assert.equal(await siteLink(page, "Mombasa").getAttribute("class"), "active");
-        assert.deepEqual(await rowTexts(page), ["Cement", "Sand"]);
+        assert.equal(await siteLink(page, "Kisumu").getAttribute("class"), "active");
+        assert.equal(await siteLink(page, "Mombasa").getAttribute("class"), null);
         assert.equal(await page.inputValue("#siteName"), "", "form should be cleared after a successful add");
-        assert.ok(state.dialogs.includes("Added successfully!"));
+        assert.ok(state.toasts.includes('Site "Kisumu" added'), JSON.stringify(state.toasts));
+        assert.deepEqual(state.dialogs, [], "no native alert");
         await context.close();
     });
 
@@ -180,7 +183,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
 
-        await page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn").click();
+        await deleteSiteViaUi(page, "Mombasa");
         await page.waitForFunction(() => window.__nailit.writes.length > 0);
         await waitForRows(page, []);
 
@@ -205,6 +208,8 @@ describe("dashboard core behavior (Phase 0)", () => {
         await page.locator("#siteList li", { hasText: "Cape Town" })
             .locator(".delete-site-btn i")
             .evaluate((icon) => icon.click());
+        await page.fill("#siteDeleteInput", "Cape Town");
+        await page.click("#siteDeleteConfirm");
         await page.waitForFunction(() => window.__nailit.writes.length > 0);
         const writes = await wrote(page);
         assert.deepEqual(Object.keys(writes[0].paths).sort(), ["materials/m3", "sites/sB"]);
@@ -222,12 +227,14 @@ describe("dashboard core behavior (Phase 0)", () => {
         await context.close();
     });
 
-    it("B9: adding a material with no site selected says 'Select a site first' and writes nothing", async () => {
+    it("B9: Add Material with no site selected says 'Select a site first', opens no form and writes nothing", async () => {
         const { context, page, state } = await openDashboard(browser, baseUrl);
-        await fillMaterialForm(page, { name: "Cement", quantity: "5" });
-        await page.waitForFunction(() => true);
+        await page.click("#addMaterialButton");
+        await toastLocator(page, "Select a site first").waitFor();
 
-        assert.deepEqual(state.dialogs, ["Select a site first"]);
+        assert.deepEqual(state.toasts, ["Select a site first"]);
+        assert.deepEqual(state.dialogs, []);
+        assert.notEqual(await page.evaluate(() => document.getElementById("materialFormContainer").style.display), "block");
         assert.deepEqual(await wrote(page), []);
         await context.close();
     });
@@ -253,7 +260,8 @@ describe("dashboard core behavior (Phase 0)", () => {
         await fillMaterialForm(page, { name: "Gravel", quantity: "-5" });
         await page.waitForFunction(() => true);
 
-        assert.deepEqual(state.dialogs, ["Quantity must be a number, zero or more"]);
+        assert.deepEqual(state.toasts, ["Quantity must be a number, zero or more"]);
+        assert.deepEqual(state.dialogs, []);
         assert.deepEqual(await wrote(page), []);
         await context.close();
     });
@@ -268,19 +276,17 @@ describe("dashboard core behavior (Phase 0)", () => {
         await context.close();
     });
 
-    it("deleting a material uses the confirm modal and removes only that row", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl);
+    it("deleting a material removes only that row at once and offers Undo", async () => {
+        const { context, page, state } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
 
         await deleteMaterialButton(page, "Cement").click();
-        await page.click("#delCancelButton");
-        assert.deepEqual(await wrote(page), [], "cancel must not delete");
-
-        await deleteMaterialButton(page, "Cement").click();
-        await page.click("#del-yes-btn");
         await waitForRows(page, ["Sand"]);
+        await toastLocator(page, "Deleted Cement.").locator("button", { hasText: "Undo" }).waitFor();
         assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/m1"]);
+        assert.deepEqual(state.dialogs, [], "no confirm dialog for a material");
+        assert.equal(await page.locator("#deleteFormContainer").count(), 0, "the material delete modal is gone");
         await context.close();
     });
 });
@@ -344,7 +350,7 @@ describe("hardening: gaps found by the cold critic", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        await page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn").click();
+        await deleteSiteViaUi(page, "Mombasa");
         await waitForRows(page, []);
         await page.waitForTimeout(50);
 
@@ -353,17 +359,18 @@ describe("hardening: gaps found by the cold critic", () => {
         await context.close();
     });
 
-    it("cancelling the delete confirmation forgets the material", async () => {
+    it("cancelling the site delete dialog forgets the site, so a stray confirm writes nothing", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        await deleteMaterialButton(page, "Cement").click();
-        await page.click("#delCancelButton");
-        // Fire Yes while the modal is hidden, as a stray event or a script would.
-        await page.evaluate(() => document.getElementById("del-yes-btn").click());
+        await openSiteDelete(page, "Mombasa");
+        await page.click("#siteDeleteCancel");
+        // A stray submit while the dialog is hidden, as a script or a stuck key would send it.
+        await page.evaluate(() => document.getElementById("siteDeleteForm").requestSubmit());
         await page.waitForTimeout(50);
 
         assert.deepEqual(await wrote(page), []);
+        assert.equal(await page.locator("#siteDeleteContainer").evaluate((el) => el.style.display), "none");
         await context.close();
     });
 
@@ -395,15 +402,12 @@ describe("hardening: gaps found by the cold critic", () => {
         await context.close();
     });
 
-    it("a delete confirmation closes when its material is already gone", async () => {
+    it("the site delete dialog closes when the site is already gone, and writes nothing", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
-        await selectSite(page, "Mombasa");
-        await waitForRows(page, ["Cement", "Sand"]);
-        await deleteMaterialButton(page, "Cement").click();
-        await page.evaluate(() => window.__nailit.externalRemoveMaterial("m1"));
-        await waitForRows(page, ["Sand"]);
-
-        await page.waitForFunction(() => document.querySelector("#deleteFormContainer").style.display === "none");
+        await openSiteDelete(page, "Cape Town");
+        await page.evaluate(() => window.__nailit.externalRemoveSite("sB"));
+        await page.waitForFunction(() => document.querySelector("#siteDeleteContainer").style.display === "none");
+        assert.deepEqual(await wrote(page), []);
         await context.close();
     });
 
@@ -474,39 +478,78 @@ describe("hardening round 2: slow or missing signal", () => {
         await context.close();
     });
 
-    it("pressing Yes again before the server answers does not delete twice", async () => {
+    it("tapping the delete icon several times deletes the material once", async () => {
         const { context, page } = await openMombasa();
-        await page.evaluate(() => { window.__nailit.holdAcks = true; });
-        await deleteMaterialButton(page, "Cement").click();
         await page.evaluate(() => {
-            const yes = document.getElementById("del-yes-btn");
-            yes.click();
-            yes.click();
-            yes.click();
+            const button = document.querySelector("#materialTableBody tr button[aria-label='Delete material']");
+            button.click();
+            button.click();
+            button.click();
         });
         await page.waitForTimeout(50);
         assert.equal((await wrote(page)).filter((w) => w.op === "remove").length, 1);
-
-        await page.evaluate(() => window.__nailit.releaseAcks());
-        await page.waitForFunction(() => document.querySelector("#deleteFormContainer").style.display === "none");
-        assert.equal(await page.locator("#del-yes-btn").textContent(), "Yes");
-        assert.equal(await page.locator("#del-yes-btn").isDisabled(), false);
+        assert.equal(await page.locator(".toast", { hasText: "Deleted Cement." }).count(), 1);
         await context.close();
     });
 
-    it("a late delete ack does not close the confirmation of a different material", async () => {
+    it("with no signal the Undo toast is still there, and Undo restores the same id and data", async () => {
         const { context, page } = await openMombasa();
-        await page.evaluate(() => { window.__nailit.holdAcks = true; });
+        await page.evaluate(() => { window.__nailit.holdAcks = true; }); // the server never answers
         await deleteMaterialButton(page, "Cement").click();
-        await page.click("#del-yes-btn");
-        // Firebase applies the delete locally at once, so the Cement row and its modal go away
-        // while the ack is still on its way. Open the next confirmation before the ack lands.
         await waitForRows(page, ["Sand"]);
-        await deleteMaterialButton(page, "Sand").click();
-        await page.evaluate(() => window.__nailit.releaseAcks());
-        await page.waitForTimeout(100);
+        await toastLocator(page, "Deleted Cement.").locator("button", { hasText: "Undo" }).click();
+        await waitForRows(page, ["Cement", "Sand"]);
 
-        assert.equal(await page.evaluate(() => document.querySelector("#deleteFormContainer").style.display), "block");
+        const writes = await wrote(page);
+        assert.deepEqual(writes.map((w) => `${w.op} ${w.path}`), ["remove materials/m1", "set materials/m1"]);
+        assert.deepEqual(writes[1].value, { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" });
+        assert.deepEqual(Object.keys((await dbState(page)).materials).sort(), ["m1", "m2", "m3"]);
+        await context.close();
+    });
+
+    it("Undo runs once even if the button is pressed twice", async () => {
+        const { context, page } = await openMombasa();
+        await deleteMaterialButton(page, "Cement").click();
+        await waitForRows(page, ["Sand"]);
+        await page.evaluate(() => {
+            const undo = document.querySelector(".toast-action");
+            undo.click();
+            undo.click();
+        });
+        await waitForRows(page, ["Cement", "Sand"]);
+        assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 1);
+        await context.close();
+    });
+
+    it("Undo does not recreate a material inside a site that was deleted meanwhile", async () => {
+        const { context, page } = await openMombasa();
+        await deleteMaterialButton(page, "Cement").click();
+        await waitForRows(page, ["Sand"]);
+        await page.evaluate(() => window.__nailit.externalRemoveSite("sA"));
+        await page.waitForFunction(() => document.querySelectorAll("#siteList li").length === 1);
+        await page.locator(".toast-action").click();
+        await toastLocator(page, "no longer exists").waitFor();
+
+        assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 0);
+        assert.equal((await dbState(page)).materials.m1, undefined);
+        await context.close();
+    });
+
+    it("the Undo toast goes away by itself", async () => {
+        const { context, page } = await openMombasa();
+        await deleteMaterialButton(page, "Cement").click();
+        await toastLocator(page, "Deleted Cement.").waitFor();
+        await page.waitForFunction(() => document.querySelectorAll(".toast").length === 0, null, { timeout: 12000 });
+        await context.close();
+    });
+
+    it("a failed delete takes the Undo toast back and reports the error", async () => {
+        const { context, page, state } = await openMombasa();
+        await page.evaluate(() => { window.__nailit.throwOnRemove = true; });
+        await deleteMaterialButton(page, "Cement").click();
+        await toastLocator(page, "remove denied").waitFor();
+        assert.equal(await page.locator(".toast", { hasText: "Deleted Cement." }).count(), 0);
+        assert.ok(state.toasts.includes("remove denied"));
         await context.close();
     });
 
@@ -534,7 +577,8 @@ describe("hardening round 2: slow or missing signal", () => {
         await page.click("#update-material-btn");
         await page.waitForFunction(() => !document.getElementById("update-material-btn").disabled);
 
-        assert.ok(state.dialogs.includes("boom"), `dialogs: ${JSON.stringify(state.dialogs)}`);
+        assert.ok(state.toasts.includes("boom"), `toasts: ${JSON.stringify(state.toasts)}`);
+        assert.deepEqual(state.dialogs, []);
         assert.equal(await page.locator("#update-material-btn").textContent(), "Update");
 
         await page.evaluate(() => { window.__nailit.throwOnWrite = false; });
@@ -582,13 +626,12 @@ describe("hardening round 2: slow or missing signal", () => {
 });
 
 describe("eval: README walkthrough end to end", () => {
-    it("add site, add material, edit it, delete it, delete the site: clean database, no reloads, no errors", async () => {
+    it("add site, add material, edit it, delete it (Undo), delete the site by name: clean database, no reloads, no native dialogs", async () => {
         const { context, page, state } = await openDashboard(browser, baseUrl, { sites: {}, materials: {} });
         await page.evaluate(() => { window.__marker = "same-page"; });
 
         await fillSiteForm(page, "Eldoret");
         await siteLink(page, "Eldoret").waitFor();
-        await selectSite(page, "Eldoret");
         await fillMaterialForm(page, { name: "Cement", quantity: "20" });
         await waitForRows(page, ["Cement"]);
 
@@ -598,12 +641,15 @@ describe("eval: README walkthrough end to end", () => {
         await page.waitForFunction(() => document.querySelector("#materialTableBody td:nth-child(2)").textContent === "15");
 
         await deleteMaterialButton(page, "Cement").click();
-        await page.click("#del-yes-btn");
+        await waitForRows(page, []);
+        await page.locator(".toast-action").click();
+        await waitForRows(page, ["Cement"]);
+        await deleteMaterialButton(page, "Cement").click();
         await waitForRows(page, []);
 
         await fillMaterialForm(page, { name: "Sand", quantity: "4" });
         await waitForRows(page, ["Sand"]);
-        await page.locator("#siteList li", { hasText: "Eldoret" }).locator(".delete-site-btn").click();
+        await deleteSiteViaUi(page, "Eldoret");
         await page.waitForFunction(() => document.querySelectorAll("#siteList li").length === 0);
 
         const writes = await wrote(page);
@@ -612,6 +658,7 @@ describe("eval: README walkthrough end to end", () => {
         assert.deepEqual(await dbState(page), { sites: {}, materials: {} });
         assert.equal(await page.evaluate(() => window.__marker), "same-page");
         assert.deepEqual(state.pageErrors, []);
+        assert.deepEqual(state.dialogs, [], "no alert, confirm or prompt anywhere");
         assert.deepEqual(state.blocked, [], "the page tried to reach Firebase's CDN or database");
         await context.close();
     });
