@@ -65,7 +65,7 @@
       "$emailKey": {
         ".read": "auth != null && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $emailKey",
         "$siteId": {
-          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
           ".validate": "newData.hasChildren(['role', 'siteName', 'invitedBy'])",
           "role": {
             ".validate": "newData.isString() && (newData.val() === 'storekeeper' || newData.val() === 'viewer')"
@@ -74,7 +74,7 @@
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
           },
           "invitedBy": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 254"
+            ".validate": "newData.isString() && newData.val() === auth.token.email"
           },
           "$other": {
             ".validate": false
@@ -87,7 +87,7 @@
         ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
         ".write": "auth != null && !newData.exists() && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
         "$emailKey": {
-          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || (!newData.exists() && auth.token.email_verified === true && auth.token.email.toLowerCase().replace('.', ',') === $emailKey))",
           ".validate": "(newData.val() === 'storekeeper' || newData.val() === 'viewer')"
         }
       }

@@ -58,6 +58,15 @@ describe("sending an invite", () => {
             await assertFails(update(ref(as(env, "owner1")), { [`userInvites/${KEY}/s1`]: bad }));
         }
     });
+    it("cannot forge who the invitation is from: invitedBy must be the inviter's own email", async () => {
+        for (const invitedBy of ["ceo@bigcorp.com", "keeper1@example.com", "OWNER1@example.com", "", " owner1@example.com"]) {
+            await assertFails(update(ref(as(env, "owner1")), {
+                [`userInvites/${KEY}/s1`]: { ...inviteRecord("viewer"), invitedBy },
+                [`siteInvites/s1/${KEY}`]: "viewer",
+            }));
+        }
+        assert.equal(await raw(env, `userInvites/${KEY}/s1`), null);
+    });
     it("cannot invite with an invalid role", async () => {
         await assertFails(update(ref(as(env, "owner1")), invite("admin")));
         await assertFails(update(ref(as(env, "owner1")), invite(true)));
@@ -184,6 +193,11 @@ describe("declining an invite", () => {
         await assertSucceeds(update(ref(sam()), { [`userInvites/${KEY}/s1`]: null, [`siteInvites/s1/${KEY}`]: null }));
         await assertFails(update(ref(sam()), invite("storekeeper")));
         await assertFails(update(ref(sam()), invite("viewer")));
+    });
+    it("an unverified account registered with that address cannot delete (or decline) it", async () => {
+        await ownerInvites("viewer");
+        await assertFails(update(ref(sam({ email_verified: false })), { [`userInvites/${KEY}/s1`]: null, [`siteInvites/s1/${KEY}`]: null }));
+        assert.equal((await raw(env, `userInvites/${KEY}/s1`)).role, "viewer");
     });
     it("somebody else cannot delete it", async () => {
         await ownerInvites("viewer");
