@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "description": "Construction site stock taking. Static site, no build step. This file only holds the test tooling.",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
