@@ -58,6 +58,7 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
     const activityPanel = $("activityPanel");
     const activityList = $("activityList");
     const activityEmpty = $("activityEmpty");
+    const activityToggle = $("activityToggle");
 
     // record: the sheet is open for this material and action, or null.
     // history: the history sheet is open for this material, with the movements heard so far.
@@ -226,15 +227,22 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         const value = parseAmount(amountInput.value);
         const stock = typeof material.quantity === "number" ? material.quantity : 0;
 
-        submitBtn.textContent = value === null ? `Record ${verb}` : `Record ${verb}: ${formatQuantity(value)} ${units}`.trim();
+        // More than is in stock: the button says so instead of looking ready to record it. It stays
+        // pressable, because pressing it is how the full refusal appears.
+        const over = record.action === "used" && value !== null && value > stock;
+        submitBtn.classList.toggle("sheet-submit-over", over);
+        if (over) {
+            submitBtn.textContent = `Only ${formatQuantity(stock)} ${units} in stock`.trim();
+        } else {
+            submitBtn.textContent = value === null ? `Record ${verb}` : `Record ${verb}: ${formatQuantity(value)} ${units}`.trim();
+        }
 
         afterEl.classList.remove("sheet-after-bad");
-        if (value === null) {
+        if (over) {
+            // Say what to do, not only that it is refused: the "All" chip is one tap away.
+            afterEl.textContent = stock > 0 ? `Tap All ${formatQuantity(stock)} to use what is left.` : "";
+        } else if (value === null) {
             afterEl.textContent = "";
-        } else if (record.action === "used" && value > stock) {
-            // The refusal after a tap says the same thing in full: do not say it twice.
-            afterEl.textContent = !errorEl.hidden ? "" : `More than the ${formatQuantity(stock)} ${units} in stock`.trim();
-            afterEl.classList.add("sheet-after-bad");
         } else {
             const left = record.action === "used" ? stock - value : stock + value;
             afterEl.textContent = `Stock after: ${formatQuantity(left)} ${units}`.trim();
@@ -417,7 +425,7 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             historyTitle.textContent = `${history.name} history`;
         }
         historySummary.textContent = material
-            ? `In stock: ${formatQuantity(quantity)} ${history.units}`.trim()
+            ? `In stock: ${formatQuantity(quantity)} ${history.units}. Oldest first, newest at the bottom.`
             : "This material was deleted";
 
         historyStatus.textContent = history.error ? "Could not load the history." : history.movements ? "" : "Loading history...";
@@ -515,6 +523,13 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             }
         });
     }
+
+    // On a phone the feed is one line until it is opened (CSS does the folding, this is the switch).
+    activityToggle.addEventListener("click", () => {
+        const open = activityPanel.classList.toggle("activity-open");
+        activityToggle.setAttribute("aria-expanded", String(open));
+        activityToggle.textContent = open ? "Show less" : "Show all";
+    });
 
     // Newest first, one line each. The sign is a second cue next to the colour.
     function renderFeed() {

@@ -83,7 +83,11 @@
 
             <!-- Latest movements on the selected site, newest first. Filled by src/ui-movements.js -->
             <section id="activityPanel" class="activity-panel" aria-labelledby="activityTitle" hidden>
-                <h2 id="activityTitle">Recent activity</h2>
+                <div class="activity-head">
+                    <h2 id="activityTitle">Recent activity</h2>
+                    <!-- Phones only: the feed shows its latest line and opens on tap, so the materials stay first -->
+                    <button type="button" id="activityToggle" class="activity-toggle" aria-expanded="false" aria-controls="activityList">Show all</button>
+                </div>
                 <p id="activityEmpty" class="activity-empty" hidden>No activity yet. Stock that is received or used shows up here.</p>
                 <ul id="activityList" class="activity-list"></ul>
             </section>
@@ -195,6 +199,7 @@
                 <button type="button" class="chip" data-add="1">+1</button>
                 <button type="button" class="chip" data-add="5">+5</button>
                 <button type="button" class="chip" data-add="10">+10</button>
+                <button type="button" class="chip" data-add="20">+20</button>
                 <button type="button" class="chip chip-all" id="movementAll" hidden></button>
             </div>
             <p id="movementAfter" class="sheet-after"></p>

@@ -82,12 +82,14 @@ describe("variant A: the Received / Used sheet", () => {
         await page.click(".chip[data-add='10']");
         assert.equal(await page.inputValue("#movementAmount"), "16");
         assert.equal(await page.evaluate(() => document.activeElement.id), "movementAmount", "typing can go on after a chip");
-        assert.match(await page.textContent("#movementAfter"), /More than the 10 tonnes in stock/);
-        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used: 16 tonnes");
+        assert.equal((await page.textContent("#movementAfter")).trim(), "Tap All 10 to use what is left.", "says what to do");
+        assert.equal((await page.textContent("#movementSubmit")).trim(), "Only 10 tonnes in stock");
+        assert.equal(await page.locator("#movementSubmit").evaluate((el) => el.classList.contains("sheet-submit-over")), true);
 
         await page.click("#movementAll");
         assert.equal(await page.inputValue("#movementAmount"), "10");
         assert.match(await page.textContent("#movementAfter"), /Stock after: 0 tonnes/);
+        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used: 10 tonnes", "the button is back to normal");
         await page.click("#movementSubmit");
         await closed(page, "#movementContainer");
         assert.equal((await row(page, "Sand").locator("td").nth(1).textContent()).trim(), "0");
@@ -109,17 +111,19 @@ describe("variant A: the Received / Used sheet", () => {
         await context.close();
     });
 
-    it("the over-use message replaces the live line instead of repeating it, and goes when the amount changes", async () => {
+    it("over-use: the button says only N are in stock, pressing it shows the full refusal, and both go when the amount changes", async () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
         await page.fill("#movementAmount", "9");
-        assert.match(await page.textContent("#movementAfter"), /More than the 5 bags/);
+        assert.equal((await page.textContent("#movementSubmit")).trim(), "Only 5 bags in stock");
+        assert.equal((await page.textContent("#movementAfter")).trim(), "Tap All 5 to use what is left.");
         await page.click("#movementSubmit");
         await page.locator("#movementError").waitFor({ state: "visible" });
         assert.equal((await page.textContent("#movementAfter")).trim(), "");
         await page.fill("#movementAmount", "4");
         assert.equal(await page.locator("#movementError").isVisible(), false);
         assert.match(await page.textContent("#movementAfter"), /Stock after: 1 bags/);
+        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used: 4 bags");
         await context.close();
     });
 
@@ -325,6 +329,30 @@ describe("variant A: a 375px phone", () => {
         assert.equal(metrics.rowDisplay, "grid");
         assert.ok(metrics.scrollWidth <= metrics.clientWidth, `sideways scroll: ${metrics.scrollWidth} > ${metrics.clientWidth}`);
         assert.deepEqual(metrics.small, []);
+        await context.close();
+    });
+
+    it("the activity feed is one line until opened, so the materials stay first; the toggle says so to a screen reader", async () => {
+        const { context, page } = await open(SEEDED, phone());
+        const visibleItems = () => page.locator("#activityList .activity-item:visible").count();
+        assert.equal(await visibleItems(), 1, "only the latest line");
+        const materialsTop = await page.locator("#materialTableBody tr").first().evaluate((el) => el.getBoundingClientRect().top);
+        assert.ok(materialsTop < 600, `the first material starts at ${materialsTop}px, on the first screen`);
+        assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "false");
+        await page.click("#activityToggle");
+        assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "true");
+        assert.equal(await visibleItems(), 2);
+        assert.equal((await page.textContent("#activityToggle")).trim(), "Show less");
+        await page.click("#activityToggle");
+        assert.equal(await visibleItems(), 1);
+        await context.close();
+    });
+
+    it("the +20 chip is there, so 20 bags is one tap", async () => {
+        const { context, page } = await open(SEEDED, phone());
+        await row(page, "Cement").locator(".btn-receive").click();
+        await page.click(".chip[data-add='20']");
+        assert.equal(await page.inputValue("#movementAmount"), "20");
         await context.close();
     });
 

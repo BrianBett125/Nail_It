@@ -1412,3 +1412,104 @@ td .btn-delete:hover {
 
     .activity-panel { margin-top: 8px; }
 }
+
+/* ---- review fixes: what the blind critic of the Phase 3 sheets asked for ---- */
+
+/* History pills: solid, centred, readable in glare. The word is the primary cue, the colour the second. */
+.history-type {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 12px;
+    line-height: 1;
+    color: #fff;
+}
+
+.history-in .history-type { background: var(--in); color: #fff; }
+.history-out .history-type { background: var(--out); color: #fff; }
+
+/* An impossible amount: the big button says so instead of looking ready to record it. */
+.sheet-submit-over {
+    border: 2px solid var(--out);
+    background: #fff;
+    color: var(--out);
+}
+
+/* No dead gap when there is no "after" line. */
+.sheet-after:empty {
+    min-height: 0;
+    margin: 0;
+}
+
+/* Delete is the one action that must not look like Use: neutral until it is pointed at. */
+td .btn-delete { color: var(--ink); }
+td .btn-delete:hover { background: var(--out); border-color: var(--out); color: #fff; }
+
+@media (max-width: 700px) {
+    /* What happened lately comes before the long list of materials, not after it. */
+    .main-content { display: flex; flex-direction: column; }
+    .main-content > .verify-banner { order: -1; }
+    .main-content > .content-header { order: 0; }
+    .main-content > #materialsStatus { order: 1; }
+    .main-content > .activity-panel { order: 2; margin: 0 0 12px; }
+    .main-content > #materialsTable { order: 3; }
+
+    .activity-list { max-height: 11rem; overflow-y: auto; }
+
+    /* Edit and Delete sit apart from the three primary buttons, so a thumb aimed at Use cannot land on Delete. */
+    #materialsTable .cell-manage { margin-top: 10px; gap: 16px; }
+}
+
+/* ---- review fixes, round 2 ---- */
+
+.activity-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.activity-toggle { display: none; }
+
+/* A hint that the history scrolls: the top edge fades instead of cutting a card in half. */
+.history-body {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+}
+
+/* Edit and Delete are quiet text buttons, so they never compete with Receive / Use / History. */
+td .btn-edit,
+td .btn-delete {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    text-decoration: underline;
+}
+
+td .btn-edit:hover,
+td .btn-delete:hover {
+    text-decoration: none;
+}
+
+@media (max-width: 700px) {
+    /* One line of activity until opened: the materials stay the first thing on the screen. */
+    .activity-toggle {
+        display: inline-block;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .activity-panel:not(.activity-open) .activity-list {
+        max-height: none;
+        overflow: hidden;
+    }
+
+    .activity-panel:not(.activity-open) .activity-item:nth-child(n + 2) { display: none; }
+    .activity-panel.activity-open .activity-list { max-height: 16rem; overflow-y: auto; }
+}
