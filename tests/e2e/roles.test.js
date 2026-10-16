@@ -104,9 +104,12 @@ describe("viewer (engineer, QS, architect)", () => {
         assert.equal(await page.locator("#addMaterialButton").isHidden(), true);
         assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         assert.equal(await siteDeleteBtn(page, "Mombasa").count(), 0);
-        assert.equal(await page.locator("#materialTableBody td:nth-child(5)").first().isHidden(), true, "the Update column is hidden");
-        assert.equal(await page.locator("#materialsTable thead th:nth-child(5)").isHidden(), true);
+        assert.equal(await page.locator("#materialTableBody td:nth-child(6)").first().isHidden(), true, "the Edit column is hidden");
         assert.equal(await page.locator("#materialsTable thead th:nth-child(6)").isHidden(), true);
+        // Phase 3: column 5 (Stock) stays for a viewer, and holds History and nothing else.
+        assert.equal(await page.locator("#materialsTable thead th:nth-child(5)").isVisible(), true);
+        assert.equal(await page.locator("#materialTableBody td:nth-child(5) button").count(), 2);
+        assert.equal(await page.locator("#materialTableBody td:nth-child(5) button.btn-history").count(), 2);
         await context.close();
     });
 
@@ -115,7 +118,9 @@ describe("viewer (engineer, QS, architect)", () => {
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         const row = await page.locator("#materialTableBody tr").first().locator("td:visible").allTextContents();
-        assert.deepEqual(row, ["Cement", "5", "bags", "2024-05-03"]);
+        assert.deepEqual(row.slice(0, 4), ["Cement", "5", "bags", "2024-05-03"]);
+        assert.equal(row[4].trim(), "History", "Phase 3: the only other thing in the row is the History button");
+        assert.equal(row.length, 5);
         await context.close();
     });
 
@@ -187,7 +192,10 @@ describe("a role that changes while the page is open", () => {
         await waitForRows(page, ["Cement", "Sand"]);
         assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         await page.evaluate(() => window.__nailit.externalSetRole("sA", "storekeeper"));
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody button").length === 4);
+        // Phase 3: per row, History + Receive + Use for stock, Edit + Delete for the material (5 x 2 rows).
+        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody button").length === 10);
+        assert.equal(await page.locator("#materialTableBody .btn-edit, #materialTableBody .btn-delete").count(), 4);
+        assert.equal(await page.locator("#materialTableBody .btn-receive, #materialTableBody .btn-use").count(), 4);
         assert.equal(await page.locator("#addMaterialButton").isVisible(), true);
         await context.close();
     });

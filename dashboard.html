@@ -74,12 +74,19 @@
                         <th>In stock</th>
                         <th>Units</th>
                         <th>Last Updated</th>
-                        <th>Update</th>
-                        <th>Delete</th>
+                        <th>Stock</th>
+                        <th>Edit</th>
                     </tr>
                 </thead>
                 <tbody id="materialTableBody"></tbody>
             </table>
+
+            <!-- Latest movements on the selected site, newest first. Filled by src/ui-movements.js -->
+            <section id="activityPanel" class="activity-panel" aria-labelledby="activityTitle" hidden>
+                <h2 id="activityTitle">Recent activity</h2>
+                <p id="activityEmpty" class="activity-empty" hidden>No activity yet. Stock that is received or used shows up here.</p>
+                <ul id="activityList" class="activity-list"></ul>
+            </section>
         </div>
     </div>
 
@@ -169,6 +176,57 @@
                 <button type="button" id="membersClose">Close</button>
             </div>
         </div>
+    </div>
+
+    <!-- Received / Used. A bottom sheet on phones, a centred card on larger screens.
+         Filled and driven by src/ui-movements.js. -->
+    <div id="movementContainer" class="sheet-backdrop">
+        <form id="movementForm" class="sheet sheet-record" role="dialog" aria-modal="true" aria-labelledby="movementTitle" novalidate>
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <h2 id="movementTitle"></h2>
+            <p id="movementStock" class="sheet-stock" aria-live="polite"></p>
+
+            <label for="movementAmount" class="sheet-label">Amount</label>
+            <div class="amount-row">
+                <input type="text" id="movementAmount" name="amount" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0">
+                <span id="movementUnits" class="amount-units"></span>
+            </div>
+            <div class="chips" role="group" aria-label="Quick amounts, each adds to the amount">
+                <button type="button" class="chip" data-add="1">+1</button>
+                <button type="button" class="chip" data-add="5">+5</button>
+                <button type="button" class="chip" data-add="10">+10</button>
+                <button type="button" class="chip chip-all" id="movementAll" hidden></button>
+            </div>
+            <p id="movementAfter" class="sheet-after"></p>
+
+            <p id="movementError" class="sheet-error" role="alert" hidden></p>
+
+            <label for="movementNote" class="sheet-label sheet-label-note">Note (optional)</label>
+            <input type="text" id="movementNote" name="note" class="note-input" maxlength="200" autocomplete="off" placeholder="Delivery note, who it was for...">
+
+            <button type="submit" id="movementSubmit" class="sheet-primary">Record</button>
+            <button type="button" id="movementCancel" class="sheet-secondary">Cancel</button>
+        </form>
+    </div>
+
+    <!-- History of one material: a timeline, oldest first, ending at today's stock. -->
+    <div id="historyContainer" class="sheet-backdrop">
+        <section class="sheet sheet-history" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="history-head">
+                <div class="history-heading">
+                    <h2 id="historyTitle"></h2>
+                    <p id="historySummary" class="sheet-stock"></p>
+                </div>
+                <button type="button" id="historyClose" class="sheet-close">Close</button>
+            </div>
+            <div class="history-body" id="historyBody">
+                <p id="historyStatus" class="history-status" role="status"></p>
+                <p id="historyBefore" class="history-before" hidden></p>
+                <p id="historyEmpty" class="history-empty" hidden>No movements recorded yet.</p>
+                <ol id="historyList" class="history-list"></ol>
+            </div>
+        </section>
     </div>
 
     <script src="dashboard.js" type="module"></script>

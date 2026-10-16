@@ -605,9 +605,9 @@ td button:hover {
     font-size: 12px;
 }
 
-/* A viewer sees the table without the Update and Delete columns. */
-table.readonly th:nth-child(n+5),
-table.readonly td:nth-child(n+5) {
+/* A viewer sees the table without the Edit column. The Stock column stays: History is for everyone. */
+table.readonly th:nth-child(n+6),
+table.readonly td:nth-child(n+6) {
     display: none;
 }
 
@@ -719,4 +719,696 @@ table.readonly td:nth-child(n+5) {
 .member-list button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ==== Phase 3: Received / Used, history, activity ======================================
+   Variant "Sheet": modal dialogs that are a bottom sheet on phones and a centred card on
+   larger screens. Colours are picked for glare: dark text on white, white on deep green/red,
+   and every colour also has a sign or a word next to it. */
+:root {
+    --ink: #17212b;
+    --muted: #4a5866;
+    --line: #c9d1d9;
+    --in: #14693a;
+    --in-soft: #def5e6;
+    --out: #a8201a;
+    --out-soft: #fde7e5;
+    --focus: #0b57d0;
+}
+
+.row-btn:focus-visible,
+.sheet button:focus-visible,
+.sheet input:focus-visible,
+td button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+body.sheet-open {
+    overflow: hidden;
+}
+
+/* Table cells that hold buttons */
+.cell-stock,
+.cell-manage {
+    padding-left: 8px;
+    padding-right: 8px;
+    white-space: nowrap;
+}
+
+.cell-stock {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.row-btn,
+td .btn-edit,
+td .btn-delete {
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 2px 4px 2px 0;
+    padding: 0 14px;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+td .btn-edit,
+td .btn-delete {
+    border-color: var(--line);
+    font-weight: normal;
+}
+
+td .btn-delete {
+    color: var(--out);
+}
+
+.row-btn-sign {
+    margin-right: 6px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+td .row-btn-receive {
+    border-color: var(--in);
+    background: var(--in);
+    color: #fff;
+}
+
+td .row-btn-use {
+    border-color: var(--out);
+    background: var(--out);
+    color: #fff;
+}
+
+td .row-btn-receive:hover {
+    background: #0e4f2b;
+    border-color: #0e4f2b;
+}
+
+td .row-btn-use:hover {
+    background: #85150f;
+    border-color: #85150f;
+}
+
+td .row-btn-history:hover,
+td .btn-edit:hover,
+td .btn-delete:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+}
+
+/* ---- the sheets ---- */
+.sheet-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 30;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(12, 20, 28, 0.62);
+}
+
+.sheet {
+    --accent: var(--ink);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 480px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-top: 6px solid var(--accent);
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+    color: var(--ink);
+    text-align: left;
+    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.4);
+    animation: sheet-up 0.16s ease-out;
+}
+
+.sheet-received { --accent: var(--in); }
+.sheet-used { --accent: var(--out); }
+
+@keyframes sheet-up {
+    from { transform: translateY(24px); opacity: 0.4; }
+    to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet { animation: none; }
+}
+
+.sheet-grip {
+    width: 44px;
+    height: 5px;
+    margin: 4px auto 10px;
+    border-radius: 3px;
+    background: var(--line);
+}
+
+.sheet h2 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.sheet-stock {
+    margin: 4px 0 12px;
+    color: var(--muted);
+    font-size: 17px;
+}
+
+.sheet-label {
+    display: block;
+    margin: 4px 0 6px;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.amount-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.amount-row:focus-within {
+    border-color: var(--accent);
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* The ring is on the row, so the bare input shows none of its own. */
+.sheet .amount-row input {
+    flex: 1;
+    min-width: 0;
+    height: 64px;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.sheet .amount-row input::placeholder {
+    color: #8a96a3;
+}
+
+.amount-units {
+    color: var(--muted);
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.chip {
+    box-sizing: border-box;
+    min-width: 64px;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 2px solid var(--ink);
+    border-radius: 24px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.chip:active {
+    background: var(--ink);
+    color: #fff;
+}
+
+.chip-all {
+    border-style: dashed;
+}
+
+.sheet-after {
+    min-height: 22px;
+    margin: 10px 0 8px;
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.sheet-after-bad {
+    color: var(--out);
+    font-weight: bold;
+}
+
+.sheet-error {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border-left: 5px solid var(--out);
+    border-radius: 4px;
+    background: var(--out-soft);
+    color: #6e130f;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+/* The note is there, but the amount is the star. */
+.sheet-label-note {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.sheet .note-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 44px;
+    margin: 0 0 14px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f6f8fa;
+    color: var(--ink);
+    font-size: 16px;
+}
+
+.sheet-primary,
+.sheet-secondary {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.sheet-primary {
+    min-height: 60px;
+    padding: 0 16px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.sheet-primary:active {
+    filter: brightness(0.85);
+}
+
+.sheet-secondary {
+    min-height: 48px;
+    margin-top: 8px;
+    border: 2px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 17px;
+    font-weight: bold;
+}
+
+/* ---- history ---- */
+.sheet-history {
+    display: flex;
+    flex-direction: column;
+    height: 92%;
+    max-height: 92%;
+    overflow: hidden;
+}
+
+.history-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.history-heading {
+    min-width: 0;
+}
+
+.sheet-close {
+    flex: none;
+    min-width: 72px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.history-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 2px 8px;
+}
+
+.history-status,
+.history-empty {
+    margin: 16px 0;
+    color: var(--muted);
+    font-size: 17px;
+}
+
+.history-before {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0 12px;
+    padding: 10px 12px;
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 17px;
+}
+
+.history-before span {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.history-list {
+    margin: 0 0 0 12px;
+    padding: 0 0 0 20px;
+    list-style: none;
+    border-left: 3px solid var(--line);
+}
+
+.history-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    row-gap: 4px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.history-row::before {
+    content: "";
+    position: absolute;
+    left: -31px;
+    top: 16px;
+    width: 13px;
+    height: 13px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--in);
+    box-sizing: content-box;
+}
+
+.history-out::before {
+    background: var(--out);
+}
+
+.history-type {
+    justify-self: start;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.history-in .history-type { background: var(--in-soft); color: #0b4a28; }
+.history-out .history-type { background: var(--out-soft); color: #7a1510; }
+
+.history-delta {
+    text-align: right;
+    font-size: 22px;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-in .history-delta { color: var(--in); }
+.history-out .history-delta { color: var(--out); }
+
+.history-who {
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.history-balance {
+    text-align: right;
+    color: var(--ink);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-when {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.history-note {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #f1f4f7;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+/* ---- activity feed ---- */
+.activity-panel {
+    margin-top: 24px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+}
+
+.activity-panel h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.activity-empty {
+    margin: 4px 0;
+    color: var(--muted);
+}
+
+.activity-list {
+    list-style: none;
+}
+
+.activity-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid #e3e8ed;
+    font-size: 16px;
+}
+
+.activity-sign {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    font-weight: bold;
+    line-height: 22px;
+}
+
+.activity-in .activity-sign { background: var(--in-soft); color: var(--in); }
+.activity-out .activity-sign { background: var(--out-soft); color: var(--out); }
+
+.activity-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.activity-time {
+    flex: none;
+    color: var(--muted);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* ---- larger screens: a centred card instead of a bottom sheet ---- */
+@media (min-width: 601px) {
+    .sheet-backdrop {
+        align-items: center;
+    }
+
+    .sheet {
+        padding: 22px 26px 26px;
+        border-top-width: 8px;
+        border-radius: 14px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    .sheet-grip {
+        display: none;
+    }
+
+    .sheet-history {
+        height: auto;
+        max-height: 86%;
+        min-height: 360px;
+        max-width: 560px;
+    }
+}
+
+/* With the sidebar beside the content (wider than a phone) the dimmed area covers the content
+   only, so another site can still be picked while a sheet is open. That closes the sheet. */
+@media (min-width: 701px) {
+    .sheet-backdrop {
+        left: 220px;
+        width: calc(100% - 220px);
+    }
+}
+
+/* ---- phones ----
+   Not the full mobile rewrite (that is a later phase): just enough that the materials list is
+   usable at 375px. The sidebar stacks above the content and each material becomes a card. */
+@media (max-width: 700px) {
+    body { height: auto; }
+
+    header {
+        position: static;
+        box-sizing: border-box; /* width 100% plus padding made the whole page wider than the phone */
+        padding: 8px 12px;
+    }
+
+    .nav-bar {
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        width: 100%;
+    }
+
+    .nav-links { margin-left: 0; }
+    .nav-links a { margin: 0 12px 0 0; }
+    .search-container { display: none; }
+    .user-area { margin-left: auto; }
+    .user-area #userEmail { max-width: 45vw; }
+
+    .dashboard {
+        display: block;
+        margin-top: 0;
+        height: auto;
+    }
+
+    .sidebar {
+        position: static;
+        width: auto;
+        max-width: none;
+        height: auto;
+        overflow: visible;
+    }
+
+    .sidebar ul {
+        display: flex;
+        flex: none;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .sidebar ul li { margin-bottom: 0; flex: none; }
+    .sidebar ul li a { min-height: 24px; align-items: center; }
+
+    .main-content {
+        height: auto;
+        margin-left: 0;
+        padding: 12px;
+        overflow: visible;
+    }
+
+    .content-header { flex-wrap: wrap; }
+    #addMaterialButton, #membersButton { min-height: 44px; }
+
+    #materialsTable,
+    #materialsTable tbody {
+        display: block;
+        background: transparent;
+    }
+
+    #materialsTable thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    #materialsTable tr {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: baseline;
+        column-gap: 6px;
+        margin-bottom: 12px;
+        padding: 12px 12px 8px;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    #materialsTable td {
+        padding: 0;
+        border-bottom: 0;
+    }
+
+    #materialsTable td:nth-child(1) { grid-column: 1; font-size: 19px; font-weight: bold; overflow-wrap: anywhere; }
+    #materialsTable td:nth-child(2) { grid-column: 2; font-size: 30px; font-weight: bold; text-align: right; }
+    #materialsTable td:nth-child(3) { grid-column: 3; color: var(--muted); font-size: 16px; }
+    #materialsTable td:nth-child(4) { grid-column: 1 / -1; margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
+    #materialsTable td:nth-child(4)::before { content: "Updated "; }
+
+    #materialsTable .cell-stock {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 8px;
+        padding: 0;
+    }
+
+    #materialsTable .cell-stock .row-btn {
+        flex: 1;
+        min-height: 52px;
+        margin: 0;
+        padding: 0 6px;
+        font-size: 16px;
+    }
+
+    #materialsTable .cell-manage {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0;
+    }
+
+    #materialsTable .cell-manage:empty { display: none; }
+
+    #materialsTable .cell-manage button {
+        margin: 6px 0 0;
+    }
+
+    .activity-panel { margin-top: 8px; }
 }
