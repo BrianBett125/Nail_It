@@ -53,6 +53,7 @@ test("B4: deleteSiteCascade reads members and invites, then makes exactly one up
     assert.deepEqual(updates[0].args[1], {
         "sites/A": null,
         "materials/A": null,
+        "movements/A": null,
         "memberInfo/A": null,
         "siteInvites/A": null,
         "members/A/u1": null,
@@ -67,7 +68,7 @@ test("B4: deleteSiteCascade of a site nobody else is in still removes everything
     sdk.getValues = { "members/A": { u1: "owner" } };
     await data.deleteSiteCascade("A");
     assert.deepEqual(Object.keys(calls("update")[0].args[1]).sort(), [
-        "materials/A", "memberInfo/A", "members/A/u1", "siteInvites/A", "sites/A", "userSites/u1/A",
+        "materials/A", "memberInfo/A", "members/A/u1", "movements/A", "siteInvites/A", "sites/A", "userSites/u1/A",
     ]);
 });
 
@@ -207,35 +208,149 @@ test("B3: subscribeMaterials listens on one site's node and returns the SDK's un
     assert.deepEqual(seen, [{ m1: { name: "Cement" } }, {}], "null snapshots become {}");
 });
 
-test("addMaterial pushes into the site's node and hands back the new key", async () => {
-    const material = data.addMaterial("A", { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" });
-    assert.deepEqual(calls("push").map((c) => [c.args[0].path, c.args[1]]), [
-        ["materials/A", { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" }],
+const USER = { uid: "u1", email: "foreman@example.com" };
+const TIMESTAMP = { ".sv": "timestamp" };
+const only = (name) => {
+    assert.equal(calls(name).length, 1, `exactly one ${name}()`);
+    return calls(name)[0];
+};
+
+test("addMaterial with stock is ONE update at the root: the material and its opening movement", async () => {
+    const { id, done } = data.addMaterial("A", { name: "Cement", units: "bags", quantity: 5 }, USER);
+    await done;
+
+    assert.match(id, /^-Nstub/);
+    const update = only("update");
+    assert.deepEqual(update.args[0], { kind: "ref", path: "" });
+    const writes = update.args[1];
+    const movementPath = Object.keys(writes).find((p) => p.startsWith("movements/A/"));
+    const movementId = movementPath.split("/")[2];
+    assert.deepEqual(writes[`materials/A/${id}`], {
+        name: "Cement", units: "bags", quantity: 5, updatedAt: TIMESTAMP, lastMovementId: movementId,
+    });
+    assert.deepEqual(writes[movementPath], {
+        materialId: id, materialName: "Cement", units: "bags", delta: 5, type: "opening",
+        byUid: "u1", byEmail: "foreman@example.com", at: TIMESTAMP,
+    });
+    assert.equal(Object.keys(writes).length, 2);
+    assert.equal(calls("set").length, 0, "no separate set()");
+});
+
+test("addMaterial with no stock writes the material alone", async () => {
+    const { id, done } = data.addMaterial("A", { name: "Sand", units: "tonnes", quantity: 0 }, USER);
+    await done;
+    assert.deepEqual(Object.keys(only("update").args[1]), [`materials/A/${id}`]);
+});
+
+test("recordMovement increments the quantity and writes the movement in the same update", async () => {
+    const { id, done } = data.recordMovement(
+        "A", "m1", { name: "Cement", units: "bags" }, { type: "used", delta: -20, note: "Slab pour" }, USER,
+    );
+    await done;
+
+    assert.match(id, /^-Nstub/);
+    const writes = only("update").args[1];
+    assert.deepEqual(writes, {
+        [`movements/A/${id}`]: {
+            materialId: "m1", materialName: "Cement", units: "bags", delta: -20, type: "used",
+            byUid: "u1", byEmail: "foreman@example.com", at: TIMESTAMP, note: "Slab pour",
+        },
+        "materials/A/m1/quantity": { ".sv": { increment: -20 } },
+        "materials/A/m1/lastMovementId": id,
+        "materials/A/m1/updatedAt": TIMESTAMP,
+    });
+});
+
+test("recordMovement never sends a quantity the phone computed", async () => {
+    await data.recordMovement("A", "m1", { name: "Cement", units: "bags", quantity: 5 }, { type: "received", delta: 3 }, USER).done;
+    assert.equal(typeof only("update").args[1]["materials/A/m1/quantity"], "object");
+});
+
+test("B1: updateMaterial writes only the given fields and the update time, never the quantity", async () => {
+    await data.updateMaterial("A", "m1", { name: "Cement 42.5", minLevel: 2 });
+    const update = only("update");
+    assert.deepEqual(update.args[0], { kind: "ref", path: "" });
+    assert.deepEqual(update.args[1], {
+        "materials/A/m1/updatedAt": TIMESTAMP,
+        "materials/A/m1/name": "Cement 42.5",
+        "materials/A/m1/minLevel": 2,
+    });
+    assert.throws(() => data.updateMaterial("A", "m1", { quantity: 99 }), /movements/);
+});
+
+test("removeMaterial deletes the material and takes its stock out in a 'removed' movement, in one update", async () => {
+    await data.removeMaterial("A", "m1", { name: "Cement", units: "bags", quantity: 5 }, USER);
+    assert.equal(calls("remove").length, 0, "no separate remove()");
+    const writes = only("update").args[1];
+    assert.equal(writes["materials/A/m1"], null);
+    const [movement] = Object.entries(writes).filter(([p]) => p.startsWith("movements/A/")).map(([, v]) => v);
+    assert.equal(movement.type, "removed");
+    assert.equal(movement.delta, -5);
+    assert.equal(movement.materialId, "m1");
+});
+
+test("restoreMaterial brings it back at its original key with an opening movement (Undo)", async () => {
+    await data.restoreMaterial("A", "m1", { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" }, USER);
+    assert.equal(calls("set").length, 0);
+    const writes = only("update").args[1];
+    assert.deepEqual(
+        { ...writes["materials/A/m1"], lastMovementId: "-" },
+        { name: "Cement", units: "bags", quantity: 5, updatedAt: TIMESTAMP, lastMovementId: "-" },
+    );
+    const [movement] = Object.entries(writes).filter(([p]) => p.startsWith("movements/A/")).map(([, v]) => v);
+    assert.equal(movement.type, "opening");
+    assert.equal(movement.delta, 5);
+    assert.equal(movement.note, "Restored after delete");
+});
+
+test("subscribeMovements for a material asks for that material's movements only, newest 100", () => {
+    const seen = [];
+    data.subscribeMovements("A", { materialId: "m1" }, (list) => seen.push(list), () => {});
+    const { target } = sdk.listeners[0];
+    assert.equal(target.kind, "query");
+    assert.equal(target.base.path, "movements/A");
+    assert.deepEqual(target.constraints, [
+        { constraint: "orderByChild", field: "materialId" },
+        { constraint: "equalTo", value: "m1" },
+        { constraint: "limitToLast", count: 100 },
     ]);
-    assert.match(material.id, /^-Nstub/);
-    await material.done;
-    assert.equal(typeof material.done.catch, "function");
 });
 
-test("B1: updateMaterial writes only the given fields to that material's path", async () => {
-    await data.updateMaterial("A", "m1", { quantity: 8 });
-    assert.deepEqual(calls("update").map((c) => [c.args[0].path, c.args[1]]), [
-        ["materials/A/m1", { quantity: 8 }],
+test("subscribeMovements for the site is ordered by time and limited", () => {
+    data.subscribeMovements("A", { limit: 30 }, () => {}, () => {});
+    assert.deepEqual(sdk.listeners[0].target.constraints, [
+        { constraint: "orderByChild", field: "at" },
+        { constraint: "limitToLast", count: 30 },
     ]);
 });
 
-test("removeMaterial removes exactly that material", async () => {
-    await data.removeMaterial("A", "m1");
-    assert.deepEqual(paths("remove"), ["materials/A/m1"]);
+test("subscribeMovements hands back a list with each id, oldest first, and passes errors on", () => {
+    const seen = [];
+    const onError = () => {};
+    const stop = data.subscribeMovements("A", {}, (list) => seen.push(list), onError);
+    const children = [["b", { at: 200, delta: 1 }], ["a", { at: 100, delta: 2 }]];
+    sdk.listeners[0].onData({
+        forEach: (callback) => { for (const [key, value] of children) { callback({ key, val: () => value }); } },
+    });
+    assert.deepEqual(seen, [[{ id: "a", at: 100, delta: 2 }, { id: "b", at: 200, delta: 1 }]]);
+    assert.equal(sdk.listeners[0].onError, onError);
+    stop();
+    assert.equal(calls("unsubscribe").length, 1);
 });
 
-test("restoreMaterial writes the whole material back at its original key (Undo)", async () => {
-    const material = { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" };
-    await data.restoreMaterial("A", "m1", material);
-    assert.deepEqual(paths("set"), ["materials/A/m1"]);
-    assert.deepEqual(calls("set")[0].args[1], material);
-    assert.equal(calls("update").length, 0);
-    assert.equal(calls("push").length, 0);
+test("subscribeMovements reads every child even though the SDK stops forEach on a truthy return", () => {
+    const seen = [];
+    data.subscribeMovements("A", {}, (list) => seen.push(list), () => {});
+    let stoppedEarly = false;
+    sdk.listeners[0].onData({
+        forEach: (callback) => {
+            for (const key of ["a", "b", "c"]) {
+                if (callback({ key, val: () => ({ at: 1 }) })) { stoppedEarly = true; break; }
+            }
+        },
+    });
+    assert.equal(stoppedEarly, false);
+    assert.equal(seen[0].length, 3);
 });
 
 // ---- members and invites -----------------------------------------------------------

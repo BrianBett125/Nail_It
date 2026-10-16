@@ -5,6 +5,7 @@ export const REQUIRED_MESSAGE = "Please fill in all required fields";
 export const QUANTITY_MESSAGE = "Quantity must be a number, zero or more";
 export const BUILDING_TYPE_MESSAGE = "Choose a building type from the list";
 export const UNITS_MESSAGE = "Choose a unit from the list";
+export const LOW_STOCK_MESSAGE = "Low-stock level must be a number, zero or more, or left empty";
 
 // The dropdown options. Stored values are exactly these strings.
 export const BUILDING_TYPES = ["Residential", "Commercial", "Industrial", "Road/Civil", "Other"];
@@ -91,38 +92,76 @@ export function validateSite(input, now = Date.now()) {
     return { ok: true, value };
 }
 
-// siteId may be null: the caller has not selected a site yet. That is a different
-// problem from an empty field, so it gets its own message. The material itself carries no
-// siteId: it is stored under /materials/<siteId>/, and the database rules refuse the field.
+// Blank means "no level set". Anything else must be a number, zero or more.
+function parseMinLevel(raw) {
+    if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")) {
+        return { ok: true, value: null };
+    }
+    const value = parseQuantity(raw);
+    return value === null ? { ok: false } : { ok: true, value };
+}
+
+// Checks the name and unit shared by adding and editing a material.
 // options.knownNames: names already on the site, to reuse their spelling.
 // options.legacyUnit: a unit the material already has that is not in the dropdown
 // (records from before the dropdown), so editing it does not force a change.
+function checkNameAndUnits(input, options) {
+    const name = canonicalName(input.name, options.knownNames);
+    const units = clean(input.units);
+    if (!name || !units) {
+        return { error: REQUIRED_MESSAGE };
+    }
+    if (!UNITS.includes(units) && units !== options.legacyUnit) {
+        return { error: UNITS_MESSAGE };
+    }
+    return { name, units };
+}
+
+// A new material. siteId may be null: the caller has not selected a site yet. That is a different
+// problem from an empty field, so it gets its own message. The material itself carries no
+// siteId: it is stored under /materials/<siteId>/, and the database rules refuse the field.
+// `quantity` is the opening balance: the stock on site right now. The date is not asked for:
+// the database stamps the time (updatedAt) when the material is written.
+// `minLevel` is the low-stock level, optional.
 export function validateMaterial(input, siteId, options = {}) {
     if (!siteId) {
         return { ok: false, error: NO_SITE_MESSAGE };
     }
-    const name = canonicalName(input.name, options.knownNames);
-    const units = clean(input.units);
-    const lastUpdated = clean(input.lastUpdated);
-    if (!name || !units || !lastUpdated) {
-        return { ok: false, error: REQUIRED_MESSAGE };
-    }
-    if (!UNITS.includes(units) && units !== options.legacyUnit) {
-        return { ok: false, error: UNITS_MESSAGE };
+    const checked = checkNameAndUnits(input, options);
+    if (checked.error) {
+        return { ok: false, error: checked.error };
     }
     const quantity = parseQuantity(input.quantity);
     if (quantity === null) {
         return { ok: false, error: QUANTITY_MESSAGE };
     }
-    return { ok: true, value: { name, quantity, units, lastUpdated } };
+    const minLevel = parseMinLevel(input.minLevel);
+    if (!minLevel.ok) {
+        return { ok: false, error: LOW_STOCK_MESSAGE };
+    }
+    const value = { name: checked.name, quantity, units: checked.units };
+    if (minLevel.value !== null) {
+        value.minLevel = minLevel.value;
+    }
+    return { ok: true, value };
 }
 
-// Same checks as validateMaterial, for a material that already lives in a site.
+// Editing a material that already lives in a site: name, unit and low-stock level. Never the
+// quantity: that changes only by recording a movement (src/movements.js). minLevel is null when
+// the level is cleared, which removes it from the database.
 export function validateMaterialEdit(input, options = {}) {
-    return validateMaterial(input, "edit", options);
+    const checked = checkNameAndUnits(input, options);
+    if (checked.error) {
+        return { ok: false, error: checked.error };
+    }
+    const minLevel = parseMinLevel(input.minLevel);
+    if (!minLevel.ok) {
+        return { ok: false, error: LOW_STOCK_MESSAGE };
+    }
+    return { ok: true, value: { name: checked.name, units: checked.units, minLevel: minLevel.value } };
 }
 
-// One multi-path update that removes a site and everything that hangs off it: its materials,
+// One multi-path update that removes a site and everything that hangs off it: its materials, its movements,
 // its members, each member's entry in their own site list, the member info, and every pending
 // invite (both copies). Applied with a single update(), so it all happens or none of it does,
 // and the rules only accept it as a whole: the memberships must go in the same update as the site.
@@ -132,6 +171,7 @@ export function buildSiteDeleteUpdates(siteId, memberUids = [], inviteKeys = [])
     const updates = {
         [`sites/${siteId}`]: null,
         [`materials/${siteId}`]: null,
+        [`movements/${siteId}`]: null,
         [`memberInfo/${siteId}`]: null,
         [`siteInvites/${siteId}`]: null,
     };

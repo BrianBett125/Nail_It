@@ -19,7 +19,7 @@
 // it BEFORE the new rules are deployed: they do not allow reading the old flat layout.
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { getDatabase, ref, get, update } from "firebase/database";
+import { getDatabase, ref, get, update, serverTimestamp, increment } from "firebase/database";
 import { firebaseConfig, isConfigured } from "../src/firebase-config.js";
 import { runMigration } from "./migrate-lib.js";
 
@@ -61,6 +61,7 @@ try {
         ref,
         get,
         update,
+        sv: { timestamp: serverTimestamp, increment },
         user: { uid: user.uid, email: user.email },
         apply,
         outDir,

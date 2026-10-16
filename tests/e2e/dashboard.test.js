@@ -14,6 +14,9 @@ import {
     wrote,
     dbState,
     junkPaths,
+    materialsTouched,
+    deletesOf,
+    restoresOf,
     SEED,
 } from "./helpers.js";
 
@@ -44,7 +47,6 @@ async function fillMaterialForm(page, { name, quantity }) {
     await page.fill("#materialsName", name);
     await page.fill("#mQuantity", quantity);
     await page.selectOption("#mUnits", "bags");
-    await page.fill("#mLastUpdated", "2024-06-02");
     await page.click("#material-btn");
 }
 
@@ -63,15 +65,16 @@ describe("dashboard core behavior (Phase 0)", () => {
         await waitForRows(page, ["Cement", "Sand"]);
 
         await editButton(page, "Cement").click();
-        await page.fill("#uQuantity", "8");
+        await page.fill("#uMinLevel", "8");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
 
         const writes = await wrote(page);
         assert.equal(writes.length, 1, `expected one write, got ${JSON.stringify(writes)}`);
-        assert.equal(writes[0].path, "materials/sA/m1");
-        assert.equal(writes[0].value.quantity, 8);
-        assert.equal(typeof writes[0].value.quantity, "number");
+        assert.deepEqual(materialsTouched(writes[0]), ["materials/sA/m1"]);
+        assert.equal(writes[0].paths["materials/sA/m1/minLevel"], 8);
+        assert.equal(typeof writes[0].paths["materials/sA/m1/minLevel"], "number");
+        assert.ok(!Object.keys(writes[0].paths).some((p) => p.endsWith("/quantity")), "an edit never touches the quantity");
         assert.deepEqual(junkPaths(writes), []);
         assert.deepEqual(Object.keys((await dbState(page)).materials.sA).sort(), ["m1", "m2"]);
         assert.deepEqual(state.pageErrors, []);
@@ -84,15 +87,15 @@ describe("dashboard core behavior (Phase 0)", () => {
         await waitForRows(page, ["Cement", "Sand"]);
 
         await editButton(page, "Cement").click();
-        await page.fill("#uQuantity", "6");
+        await page.fill("#uMinLevel", "6");
         await page.click("#update-material-btn");
         await editButton(page, "Sand").click();
-        await page.fill("#uQuantity", "11");
+        await page.fill("#uMinLevel", "11");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length >= 2);
 
         const writes = await wrote(page);
-        assert.deepEqual(writes.map((w) => w.path), ["materials/sA/m1", "materials/sA/m2"]);
+        assert.deepEqual(writes.map((w) => materialsTouched(w)), [["materials/sA/m1"], ["materials/sA/m2"]]);
         await context.close();
     });
 
@@ -191,7 +194,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         assert.equal(writes.length, 1, "cascade must be a single write");
         assert.equal(writes[0].op, "multi");
         assert.deepEqual(Object.keys(writes[0].paths).sort(), [
-            "materials/sA", "memberInfo/sA", "members/sA/u1", "siteInvites/sA", "sites/sA", "userSites/u1/sA",
+            "materials/sA", "memberInfo/sA", "members/sA/u1", "movements/sA", "siteInvites/sA", "sites/sA", "userSites/u1/sA",
         ]);
         assert.ok(Object.values(writes[0].paths).every((v) => v === null));
 
@@ -215,7 +218,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await page.waitForFunction(() => window.__nailit.writes.length > 0);
         const writes = await wrote(page);
         assert.deepEqual(Object.keys(writes[0].paths).sort(), [
-            "materials/sB", "memberInfo/sB", "members/sB/u1", "siteInvites/sB", "sites/sB", "userSites/u1/sB",
+            "materials/sB", "memberInfo/sB", "members/sB/u1", "movements/sB", "siteInvites/sB", "sites/sB", "userSites/u1/sB",
         ]);
         await context.close();
     });
@@ -251,9 +254,10 @@ describe("dashboard core behavior (Phase 0)", () => {
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
 
         const [write] = await wrote(page);
-        assert.strictEqual(write.value.quantity, 12.5);
-        assert.equal(write.path, "materials/sA", "filed under its site");
-        assert.equal("siteId" in write.value, false, "a material no longer carries its site id");
+        const [path, created] = Object.entries(write.paths).find(([p]) => /^materials\/sA\/[^/]+$/.test(p));
+        assert.strictEqual(created.quantity, 12.5);
+        assert.match(path, /^materials\/sA\//, "filed under its site");
+        assert.equal("siteId" in created, false, "a material no longer carries its site id");
         await context.close();
     });
 
@@ -289,7 +293,8 @@ describe("dashboard core behavior (Phase 0)", () => {
         await deleteMaterialButton(page, "Cement").click();
         await waitForRows(page, ["Sand"]);
         await toastLocator(page, "Deleted Cement.").locator("button", { hasText: "Undo" }).waitFor();
-        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/sA/m1"]);
+        assert.equal(deletesOf(await wrote(page), "materials/sA/m1").length, 1);
+        assert.equal((await wrote(page)).length, 1, "one write for the delete");
         assert.deepEqual(state.dialogs, [], "no confirm dialog for a material");
         assert.equal(await page.locator("#deleteFormContainer").count(), 0, "the material delete modal is gone");
         await context.close();
@@ -422,7 +427,7 @@ describe("hardening: gaps found by the cold critic", () => {
         await waitForRows(page, ["Cement", "Sand"]);
         await page.evaluate(() => { window.__nailit.holdAcks = true; });
         await editButton(page, "Cement").click();
-        await page.fill("#uQuantity", "9");
+        await page.fill("#uMinLevel", "9");
 
         await page.evaluate(() => {
             const form = document.getElementById("updateForm");
@@ -451,7 +456,7 @@ describe("hardening round 2: slow or missing signal", () => {
         const { context, page } = await openMombasa();
         await page.evaluate(() => { window.__nailit.holdAcks = true; });
         await editButton(page, "Cement").click();
-        await page.fill("#uQuantity", "9");
+        await page.fill("#uMinLevel", "9");
         await page.click("#update-material-btn");
         await page.click("#updateCancelButton");
         await editButton(page, "Sand").click();
@@ -460,10 +465,10 @@ describe("hardening round 2: slow or missing signal", () => {
         await page.waitForTimeout(100);
         assert.equal(await page.evaluate(() => document.querySelector("#updateFormContainer").style.display), "block");
 
-        await page.fill("#uQuantity", "12");
+        await page.fill("#uMinLevel", "12");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 2);
-        assert.deepEqual((await wrote(page)).map((w) => w.path), ["materials/sA/m1", "materials/sA/m2"]);
+        assert.deepEqual((await wrote(page)).map((w) => materialsTouched(w)), [["materials/sA/m1"], ["materials/sA/m2"]]);
         await context.close();
     });
 
@@ -492,7 +497,7 @@ describe("hardening round 2: slow or missing signal", () => {
             button.click();
         });
         await page.waitForTimeout(50);
-        assert.equal((await wrote(page)).filter((w) => w.op === "remove").length, 1);
+        assert.equal(deletesOf(await wrote(page), "materials/sA/m1").length, 1);
         assert.equal(await page.locator(".toast", { hasText: "Deleted Cement." }).count(), 1);
         await context.close();
     });
@@ -506,8 +511,12 @@ describe("hardening round 2: slow or missing signal", () => {
         await waitForRows(page, ["Cement", "Sand"]);
 
         const writes = await wrote(page);
-        assert.deepEqual(writes.map((w) => `${w.op} ${w.path}`), ["remove materials/sA/m1", "set materials/sA/m1"]);
-        assert.deepEqual(writes[1].value, { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" });
+        assert.equal(deletesOf(writes, "materials/sA/m1").length, 1);
+        assert.equal(restoresOf(writes, "materials/sA/m1").length, 1);
+        assert.equal(writes.length, 2, "delete, then restore");
+        const { lastMovementId, ...restored } = writes[1].paths["materials/sA/m1"];
+        assert.deepEqual(restored, { name: "Cement", units: "bags", quantity: 5, updatedAt: { ".sv": "timestamp" } });
+        assert.equal(writes[1].paths[`movements/sA/${lastMovementId}`].type, "opening");
         assert.deepEqual(Object.keys((await dbState(page)).materials.sA).sort(), ["m1", "m2"]);
         await context.close();
     });
@@ -522,7 +531,7 @@ describe("hardening round 2: slow or missing signal", () => {
             undo.click();
         });
         await waitForRows(page, ["Cement", "Sand"]);
-        assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 1);
+        assert.equal(restoresOf(await wrote(page), "materials/sA/m1").length, 1);
         await context.close();
     });
 
@@ -535,7 +544,7 @@ describe("hardening round 2: slow or missing signal", () => {
         await page.locator(".toast-action").click();
         await toastLocator(page, "no longer exists").waitFor();
 
-        assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 0);
+        assert.equal(restoresOf(await wrote(page), "materials/sA/m1").length, 0);
         assert.equal((await dbState(page)).materials.sA?.m1, undefined);
         await context.close();
     });
@@ -612,7 +621,7 @@ describe("hardening round 2: slow or missing signal", () => {
         await waitForRows(page, ["Old stock"]);
         await editButton(page, "Old stock").click();
 
-        for (const id of ["uQuantity", "uUnits", "uLastUpdated"]) {
+        for (const id of ["uUnits", "uMinLevel"]) {
             assert.equal(await page.inputValue(`#${id}`), "", id);
         }
         await context.close();
@@ -641,9 +650,10 @@ describe("eval: README walkthrough end to end", () => {
         await waitForRows(page, ["Cement"]);
 
         await editButton(page, "Cement").click();
-        await page.fill("#uQuantity", "15");
+        await page.fill("#uMinLevel", "15");
         await page.click("#update-material-btn");
-        await page.waitForFunction(() => document.querySelector("#materialTableBody td:nth-child(2)").textContent === "15");
+        await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
+        assert.equal(await page.locator("#materialTableBody td:nth-child(2)").textContent(), "20", "an edit does not change the stock");
 
         await deleteMaterialButton(page, "Cement").click();
         await waitForRows(page, []);
@@ -659,9 +669,14 @@ describe("eval: README walkthrough end to end", () => {
 
         const writes = await wrote(page);
         assert.deepEqual(junkPaths(writes), []);
-        assert.equal(writes.filter((w) => w.op === "update").length, 1, "one edit, one update write");
+        const edits = writes.filter((w) => w.op === "multi" && Object.keys(w.paths).some((p) => p.endsWith("/minLevel")));
+        assert.equal(edits.length, 1, "one edit, one update write");
         const finalDb = await dbState(page);
-        assert.deepEqual({ sites: finalDb.sites, materials: finalDb.materials }, { sites: {}, materials: {} });
+        assert.deepEqual(
+            { sites: finalDb.sites, materials: finalDb.materials, movements: finalDb.movements },
+            { sites: {}, materials: {}, movements: {} },
+            "deleting the site leaves no movements behind",
+        );
         assert.equal(await page.evaluate(() => window.__marker), "same-page");
         assert.deepEqual(state.pageErrors, []);
         assert.deepEqual(state.dialogs, [], "no alert, confirm or prompt anywhere");

@@ -25,6 +25,19 @@ export function equalTo(value) {
     return { constraint: "equalTo", value };
 }
 
+export function limitToLast(count) {
+    return { constraint: "limitToLast", count };
+}
+
+// Markers, like the SDK's: the value the server fills in, not a number the client computed.
+export function increment(delta) {
+    return { ".sv": { increment: delta } };
+}
+
+export function serverTimestamp() {
+    return { ".sv": "timestamp" };
+}
+
 export function query(base, ...constraints) {
     return { kind: "query", base, constraints };
 }

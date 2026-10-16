@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-    startEnv, raw, as, anonymous, ref, get, set, update, assertSucceeds, assertFails,
+    startEnv, raw, as, anonymous, ref, get, set, update, assertSucceeds, assertFails, SV, receive, addMaterial,
 } from "./helpers.js";
 import { runMigration } from "../../scripts/migrate-lib.js";
 
@@ -44,7 +44,7 @@ const quiet = () => {};
 async function migrate({ apply, dir = outDir() }) {
     let result;
     await env.withSecurityRulesDisabled(async (context) => {
-        result = await runMigration({ db: context.database(), ref, get, update, user: BOSS, apply, outDir: dir, log: quiet });
+        result = await runMigration({ db: context.database(), ref, get, update, user: BOSS, apply, outDir: dir, log: quiet, sv: SV });
     });
     return result;
 }
@@ -78,8 +78,20 @@ describe("migration on the emulator", () => {
             materialsToCopy: 5, materialsAlreadyMigrated: 0, materialsSkipped: 2, junkNodes: 1, // m1 m2 m3 m6 m7 copied; m4 m5 skipped
         });
         assert.deepEqual(Object.keys(await raw(env, "materials/sA")).sort(), ["m1", "m2"]);
-        assert.deepEqual(await raw(env, "materials/sB"), { m3: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05" } });
+        const nails = (await raw(env, "materials/sB")).m3;
+        assert.deepEqual(
+            { name: nails.name, quantity: nails.quantity, units: nails.units, lastUpdated: nails.lastUpdated },
+            { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05" },
+        );
         assert.equal((await raw(env, "materials/sA/m2")).quantity, 10, "the text quantity became a number");
+        // Phase 3: every migrated stock has an opening movement, so quantity = sum of movements from day one.
+        for (const [siteId, materialId, quantity] of [["sA", "m1", 5], ["sA", "m2", 10], ["sB", "m3", 40], ["sC", "m6", 500], ["sD", "m7", 3]]) {
+            const movements = Object.values((await raw(env, `movements/${siteId}`)) || {}).filter((m) => m.materialId === materialId);
+            assert.equal(movements.length, 1, `${materialId} has one opening movement`);
+            assert.equal(movements[0].type, "opening");
+            assert.equal(movements[0].delta, quantity);
+            assert.equal(movements[0].byUid, "boss");
+        }
         assert.equal(await raw(env, "userSites/boss/sA"), "owner");
         assert.equal(await raw(env, "members/sD/boss"), "owner");
     });
@@ -167,8 +179,11 @@ describe("after the migration, under the real rules", () => {
 
     it("the migrated owner can use the app: edit stock, add stock, invite", async () => {
         const db = boss();
-        await assertSucceeds(update(ref(db, "materials/sA/m1"), { quantity: 6 }));
-        await assertSucceeds(set(ref(db, "materials/sA/new"), { name: "Gravel", quantity: 1, units: "tonnes", lastUpdated: "2026-10-14" }));
+        const cement = await raw(env, "materials/sA/m1");
+        await assertSucceeds(receive(db, "boss", "sA", "m1", cement, { type: "received", delta: 1 }));
+        assert.equal((await raw(env, "materials/sA/m1")).quantity, 6);
+        await assertFails(update(ref(db, "materials/sA/m1"), { quantity: 7 }));
+        await assertSucceeds(addMaterial(db, "boss", "sA", "new", { name: "Gravel", quantity: 1, units: "tonnes" }));
         await assertSucceeds(update(ref(db), {
             "userInvites/sam@example,com/sA": { role: "viewer", siteName: "Mombasa", invitedBy: "boss@example.com" },
             "siteInvites/sA/sam@example,com": "viewer",
@@ -198,7 +213,7 @@ describe("after the migration, under the real rules", () => {
 // owner signed in, and the old data read from somewhere else. No rules switched off.
 describe("copy into an empty project with the real rules active", () => {
     const readSource = async () => structuredClone(LEGACY);
-    const copy = (apply, dir = outDir()) => runMigration({ db: boss(), ref, get, update, user: BOSS, apply, outDir: dir, log: quiet, readSource });
+    const copy = (apply, dir = outDir()) => runMigration({ db: boss(), ref, get, update, user: BOSS, apply, outDir: dir, log: quiet, readSource, sv: SV });
 
     beforeEach(async () => {
         await env.clearDatabase();
@@ -235,11 +250,12 @@ describe("copy into an empty project with the real rules active", () => {
 
     it("a second run changes nothing, and does not undo an edit made in the new project", async () => {
         await copy(true);
-        await assertSucceeds(update(ref(boss(), "materials/sA/m1"), { quantity: 99 }));
+        await assertSucceeds(update(ref(boss(), "materials/sA/m1"), { name: "Cement 42.5" }));
         const before = await raw(env, "/");
         const second = await copy(true);
         assert.equal(second.verified, true);
         assert.deepEqual(await raw(env, "/"), before);
+        assert.equal((await raw(env, "materials/sA/m1")).name, "Cement 42.5");
     });
 
     it("a re-run after a crash between the two steps fills in the missing materials", async () => {
@@ -256,7 +272,7 @@ describe("copy into an empty project with the real rules active", () => {
 
     it("someone who is not signed in cannot run it: the rules refuse the first read", async () => {
         await assert.rejects(runMigration({
-            db: anonymous(env), ref, get, update, user: BOSS, apply: true, outDir: outDir(), log: quiet, readSource,
+            db: anonymous(env), ref, get, update, user: BOSS, apply: true, outDir: outDir(), log: quiet, readSource, sv: SV,
         }));
         assert.equal(await raw(env, "/"), null);
     });

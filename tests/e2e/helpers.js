@@ -180,3 +180,16 @@ export function junkPaths(writeList) {
         .flatMap((w) => (w.op === "multi" ? Object.keys(w.paths) : [w.path]));
     return paths.filter((p) => !p.split("/").every((part) => segment.test(part)));
 }
+
+// The material nodes (materials/<siteId>/<materialId>) a multi-path write touches, in order.
+export function materialsTouched(write) {
+    const nodes = Object.keys(write.paths || {})
+        .filter((p) => p.startsWith("materials/"))
+        .map((p) => p.split("/").slice(0, 3).join("/"));
+    return [...new Set(nodes)];
+}
+
+// Writes that delete a material, or put one back (Undo): a multi-path update that sets the node itself.
+export const deletesOf = (writes, node) => writes.filter((w) => w.op === "multi" && w.paths[node] === null);
+export const restoresOf = (writes, node) =>
+    writes.filter((w) => w.op === "multi" && w.paths[node] && typeof w.paths[node] === "object");

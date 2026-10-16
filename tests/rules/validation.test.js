@@ -12,14 +12,16 @@ after(async () => { await env.cleanup(); });
 beforeEach(async () => { await reset(env); });
 
 const owner = () => as(env, "owner1");
-const newMaterial = (patch) => ({ ...MATERIAL, ...patch });
+// A new material starts at zero: stock arrives through movements (tests/rules/movements.test.js).
+const newMaterial = (patch) => ({ ...MATERIAL, quantity: 0, ...patch });
 
 describe("material validation", () => {
-    it("accepts a normal material, with or without minLevel", async () => {
-        await assertSucceeds(set(ref(owner(), "materials/s1/a"), MATERIAL));
+    it("accepts a normal material, with or without minLevel, with or without the old typed date", async () => {
+        await assertSucceeds(set(ref(owner(), "materials/s1/a"), newMaterial()));
         await assertSucceeds(set(ref(owner(), "materials/s1/b"), newMaterial({ minLevel: 10 })));
-        await assertSucceeds(set(ref(owner(), "materials/s1/c"), newMaterial({ quantity: 0, minLevel: 0 })));
-        await assertSucceeds(set(ref(owner(), "materials/s1/d"), newMaterial({ quantity: 12.5 })));
+        await assertSucceeds(set(ref(owner(), "materials/s1/c"), newMaterial({ minLevel: 0 })));
+        await assertSucceeds(set(ref(owner(), "materials/s1/d"), newMaterial({ minLevel: 12.5 })));
+        await assertSucceeds(set(ref(owner(), "materials/s1/e"), { name: "Sand", quantity: 0, units: "tonnes" }));
     });
 
     const bad = {
@@ -39,6 +41,9 @@ describe("material validation", () => {
         "minLevel as a string": { minLevel: "5" },
         "an unknown field": { color: "red" },
         "the old siteId field": { siteId: "s1" },
+        "an updatedAt that is not the server's time": { updatedAt: 1700000000000 },
+        "a starting quantity with no movement behind it": { quantity: 5 },
+        "a lastMovementId that points at nothing": { quantity: 5, lastMovementId: "nothing" },
     };
     for (const [label, patch] of Object.entries(bad)) {
         it(`rejects ${label}`, async () => {
@@ -48,8 +53,8 @@ describe("material validation", () => {
     }
 
     it("rejects a material missing a required field", async () => {
-        for (const field of ["name", "quantity", "units", "lastUpdated"]) {
-            const { [field]: _removed, ...rest } = MATERIAL;
+        for (const field of ["name", "quantity", "units"]) {
+            const { [field]: _removed, ...rest } = newMaterial();
             await assertFails(set(ref(owner(), "materials/s1/x"), rest));
         }
     });

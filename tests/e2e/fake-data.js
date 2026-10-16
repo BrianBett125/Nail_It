@@ -6,7 +6,8 @@
 //
 // Seed (window.__seed), all optional:
 //   sites       { siteId: { name, location, buildingType, ... } }
-//   materials   { materialId: { name, quantity, units, lastUpdated, siteId } }  (flat; filed under its site)
+//   materials   { materialId: { name, quantity, units, updatedAt?, lastUpdated?, minLevel?, siteId } }  (flat; filed under its site)
+//   movements   { movementId: { siteId, materialId, materialName, units, delta, type, byUid, byEmail, at, note? } }  (flat; filed under its site)
 //   roles       { siteId: "owner" | "storekeeper" | "viewer" }  the signed-in user's role, default "owner"
 //   members     { siteId: [{ uid, role, email }] }              default: just the signed-in user
 //   siteInvites { siteId: [{ key, email, role }] }              pending invites, as the owner sees them
@@ -14,14 +15,22 @@
 //   hiddenSites [siteId]                                        exist, but the user is not in them yet (invited)
 import { buildSiteDeleteUpdates } from "/src/logic.js";
 import { emailFromKey } from "/src/roles.js";
+import {
+    buildMovementUpdates,
+    buildAddMaterialUpdates,
+    buildRemoveMaterialUpdates,
+    buildRestoreMaterialUpdates,
+    buildEditMaterialUpdates,
+    sortMovements,
+} from "/src/movements.js";
 
 const seed = window.__seed || {};
 const me = () => (window.__auth && window.__auth.user) || { uid: "u1", email: "foreman@example.com" };
 
-function fileMaterials(flat) {
+function fileBySite(flat) {
     const bySite = {};
-    for (const [id, material] of Object.entries(flat || {})) {
-        const { siteId, ...rest } = structuredClone(material);
+    for (const [id, value] of Object.entries(flat || {})) {
+        const { siteId, ...rest } = structuredClone(value);
         (bySite[siteId] ||= {})[id] = rest;
     }
     return bySite;
@@ -29,7 +38,8 @@ function fileMaterials(flat) {
 
 const db = {
     sites: structuredClone(seed.sites || {}),
-    materials: fileMaterials(seed.materials),
+    materials: fileBySite(seed.materials),
+    movements: fileBySite(seed.movements),
     roles: structuredClone(seed.roles || {}),
     members: structuredClone(seed.members || {}),
     siteInvites: structuredClone(seed.siteInvites || {}),
@@ -61,6 +71,13 @@ function snapshotFor(listener) {
     if (listener.kind === "materials") {
         // Like a push-id keyed node: ties come back in key order.
         return Object.fromEntries(Object.entries(db.materials[listener.siteId] || {}).sort(byKey));
+    }
+    if (listener.kind === "movements") {
+        let list = Object.entries(db.movements[listener.siteId] || {}).map(([id, movement]) => ({ id, ...movement }));
+        if (listener.materialId) {
+            list = list.filter((movement) => movement.materialId === listener.materialId);
+        }
+        return sortMovements(list).slice(-listener.limit);
     }
     if (listener.kind === "members") {
         const members = db.members[listener.siteId]
@@ -133,7 +150,25 @@ window.__nailit = {
     externalRemoveSite(id) {
         delete db.sites[id];
         delete db.materials[id];
+        delete db.movements[id];
         notify();
+    },
+    // Somebody else records a movement (their phone, not this page): quantity and history move together.
+    externalMovement(siteId, materialId, { type, delta, note, byUid = "u2", byEmail = "other@example.com" }) {
+        const material = db.materials[siteId][materialId];
+        const id = nextId();
+        const record = {
+            materialId, materialName: material.name, units: material.units, delta, type, byUid, byEmail, at: clock(),
+        };
+        if (note) {
+            record.note = note;
+        }
+        (db.movements[siteId] ||= {})[id] = record;
+        material.quantity += delta;
+        material.updatedAt = record.at;
+        material.lastMovementId = id;
+        notify();
+        return id;
     },
     externalSetRole(siteId, role) {
         db.roles[siteId] = role;
@@ -196,43 +231,116 @@ export function addSite(site, user) {
     return { id, done: ack() };
 }
 
-export function addMaterial(siteId, material) {
-    const id = nextId();
-    writes.push({ op: "push", path: `materials/${siteId}`, id, value: material });
-    (db.materials[siteId] ||= {})[id] = material;
+// ---- Stock: materials and movements ---------------------------------------------------
+// Every write is built by the same functions src/data.js uses (src/movements.js), recorded as one
+// multi-path update, then applied the way Firebase applies it: deep paths, null deletes, server
+// timestamps and increments filled in. database.rules.json is tested on the emulator; the one
+// rule the page must live with here is that stock can never go below zero.
+
+const sv = {
+    timestamp: () => ({ ".sv": "timestamp" }),
+    increment: (n) => ({ ".sv": { increment: n } }),
+};
+const clock = () => (window.__nailit.now ? window.__nailit.now() : Date.now());
+
+function fill(value, current) {
+    if (value && typeof value === "object" && ".sv" in value) {
+        if (value[".sv"] === "timestamp") {
+            return clock();
+        }
+        return (typeof current === "number" ? current : 0) + value[".sv"].increment;
+    }
+    if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, fill(v, current && current[key])]));
+    }
+    return value;
+}
+
+function walk(root, parts) {
+    return parts.reduce((node, part) => (node == null ? undefined : node[part]), root);
+}
+
+function applyPaths(tree, updates) {
+    for (const [path, value] of Object.entries(updates)) {
+        const parts = path.split("/");
+        const last = parts.pop();
+        let node = tree;
+        for (const part of parts) {
+            node = node[part] ??= {};
+        }
+        if (value === null) {
+            delete node[last];
+        } else {
+            node[last] = fill(value, node[last]);
+        }
+    }
+}
+
+// Applies the update the way the server would, or refuses the whole thing.
+function writeStock(updates) {
+    const tree = { materials: structuredClone(db.materials), movements: structuredClone(db.movements) };
+    applyPaths(tree, updates);
+    for (const materials of Object.values(tree.materials)) {
+        for (const material of Object.values(materials || {})) {
+            if (material && typeof material.quantity === "number" && material.quantity < 0) {
+                writes.push({ op: "multi", paths: updates, rejected: true });
+                return Promise.reject(new Error("PERMISSION_DENIED: stock cannot go below zero"));
+            }
+        }
+    }
+    writes.push({ op: "multi", paths: updates });
+    db.materials = tree.materials;
+    db.movements = tree.movements;
     notify();
-    return { id, done: ack() };
+    // A slow or offline server: the write is queued but not acknowledged yet.
+    return ack();
+}
+
+export function addMaterial(siteId, material, user) {
+    const id = nextId();
+    const done = writeStock(buildAddMaterialUpdates({
+        siteId, materialId: id, movementId: nextId(), material, user, sv,
+    }));
+    return { id, done };
+}
+
+export function recordMovement(siteId, materialId, material, movement, user) {
+    if (window.__nailit.throwOnWrite) {
+        throw new Error("boom");
+    }
+    const id = nextId();
+    const done = writeStock(buildMovementUpdates({
+        siteId, materialId, movementId: id, material, movement, user, sv,
+    }));
+    return { id, done };
 }
 
 export function updateMaterial(siteId, materialId, fields) {
     if (window.__nailit.throwOnWrite) {
         throw new Error("boom");
     }
-    writes.push({ op: "update", path: `materials/${siteId}/${materialId}`, value: fields });
-    // Like Firebase, update() on a path that does not exist creates it. That is how the
+    // Like Firebase, an update below a path that does not exist creates it. That is how the
     // old double-click bug left junk nodes behind.
-    const materials = (db.materials[siteId] ||= {});
-    materials[materialId] = { ...(materials[materialId] || {}), ...fields };
-    notify();
-    // A slow or offline server: the write is queued but not acknowledged yet.
-    return ack();
+    return writeStock(buildEditMaterialUpdates({ siteId, materialId, fields, sv }));
 }
 
-export function restoreMaterial(siteId, materialId, material) {
-    writes.push({ op: "set", path: `materials/${siteId}/${materialId}`, value: material });
-    (db.materials[siteId] ||= {})[materialId] = structuredClone(material);
-    notify();
-    return ack();
-}
-
-export function removeMaterial(siteId, materialId) {
+export function removeMaterial(siteId, materialId, material, user) {
     if (window.__nailit.throwOnRemove) {
         throw new Error("remove denied");
     }
-    writes.push({ op: "remove", path: `materials/${siteId}/${materialId}` });
-    delete (db.materials[siteId] || {})[materialId];
-    notify();
-    return ack();
+    return writeStock(buildRemoveMaterialUpdates({
+        siteId, materialId, movementId: nextId(), material, user, sv,
+    }));
+}
+
+export function restoreMaterial(siteId, materialId, material, user) {
+    return writeStock(buildRestoreMaterialUpdates({
+        siteId, materialId, movementId: nextId(), material, user, sv,
+    }));
+}
+
+export function subscribeMovements(siteId, { materialId = null, limit = 100 } = {}, onData, onError) {
+    return subscribe({ kind: "movements", siteId, materialId, limit, onData, onError });
 }
 
 export async function deleteSiteCascade(siteId) {
@@ -245,6 +353,7 @@ export async function deleteSiteCascade(siteId) {
     writes.push({ op: "multi", paths });
     delete db.sites[siteId];
     delete db.materials[siteId];
+    delete db.movements[siteId];
     delete db.members[siteId];
     delete db.siteInvites[siteId];
     notify();
