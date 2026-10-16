@@ -26,7 +26,7 @@ describe("creating a site", () => {
         await assertSucceeds(createSite(db, "newbie", "n1"));
         await assertSucceeds(get(ref(db, "sites/n1")));
         await assertSucceeds(get(ref(db, "userSites/newbie")));
-        await assertSucceeds(set(ref(db, "materials/n1/m1"), MATERIAL));
+        await assertSucceeds(set(ref(db, "materials/n1/m1"), { ...MATERIAL, quantity: 0 }));
         assert.equal(await raw(env, "members/n1/newbie"), "owner");
     });
 
@@ -85,7 +85,7 @@ describe("the owner manages members", () => {
     it("changes a member's role: members and the site list together", async () => {
         const db = as(env, "owner1");
         await assertSucceeds(update(ref(db), { "members/s1/viewer1": "storekeeper", "userSites/viewer1/s1": "storekeeper" }));
-        await assertSucceeds(set(ref(as(env, "viewer1"), "materials/s1/m9"), MATERIAL)); // new powers apply at once
+        await assertSucceeds(set(ref(as(env, "viewer1"), "materials/s1/m9"), { ...MATERIAL, quantity: 0 })); // new powers apply at once
     });
 
     it("refuses a role change that leaves the site list out of step", async () => {

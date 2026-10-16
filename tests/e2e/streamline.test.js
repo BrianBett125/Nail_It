@@ -125,8 +125,11 @@ describe("auto-select and remember the last site", () => {
         await fillMaterial(page, { name: "Cement", quantity: "20", units: "bags" });
         await page.click("#material-btn");
         await waitForRows(page, ["Cement"]);
-        const [, second] = await wrote(page);
-        assert.equal(second.path, `materials/${(await wrote(page))[0].id}`, "filed under the new site");
+        const [first, second] = await wrote(page);
+        assert.ok(
+            Object.keys(second.paths).some((path) => path.startsWith(`materials/${first.id}/`)),
+            "filed under the new site",
+        );
         await context.close();
     });
 
@@ -201,10 +204,11 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await context.close();
     });
 
-    it("the quantity field asks phones for the number pad", async () => {
+    it("the number fields ask phones for the number pad", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         assert.equal(await page.getAttribute("#mQuantity", "inputmode"), "decimal");
-        assert.equal(await page.getAttribute("#uQuantity", "inputmode"), "decimal");
+        assert.equal(await page.getAttribute("#mMinLevel", "inputmode"), "decimal");
+        assert.equal(await page.getAttribute("#uMinLevel", "inputmode"), "decimal");
         await context.close();
     });
 
@@ -220,17 +224,12 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await context.close();
     });
 
-    it("the date in the add form defaults to today, and a legacy edit keeps its own date", async () => {
+    it("nobody types a date any more: the add and edit forms have none, the database stamps the time", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await openMaterialForm(page);
-        const expected = await page.evaluate(() => {
-            const d = new Date();
-            const pad = (n) => String(n).padStart(2, "0");
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-        });
-        assert.equal(await page.inputValue("#mLastUpdated"), expected);
+        assert.equal(await page.locator("#mLastUpdated, #uLastUpdated").count(), 0);
         await context.close();
     });
 
@@ -240,12 +239,13 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await waitForRows(page, ["Nails"]);
         await page.locator("#materialTableBody tr").locator("button[aria-label='Edit material']").click();
         assert.equal(await page.inputValue("#uUnits"), "kgs");
-        await page.fill("#uQuantity", "41");
+        await page.fill("#uMinLevel", "41");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
         const [write] = await wrote(page);
-        assert.equal(write.value.units, "kgs");
-        assert.equal(write.value.quantity, 41);
+        assert.equal(write.paths["materials/sB/m3/units"], "kgs");
+        assert.equal(write.paths["materials/sB/m3/minLevel"], 41);
+        assert.equal((await dbState(page)).materials.sB.m3.quantity, 40, "an edit leaves the stock alone");
         await context.close();
     });
 
@@ -290,7 +290,8 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await page.click("#material-btn");
         await waitForRows(page, ["Cement", "Sand", "Cement"]);
         const [write] = await wrote(page);
-        assert.equal(write.value.name, "Cement");
+        const created = Object.entries(write.paths).find(([path]) => /^materials\/sA\/[^/]+$/.test(path))[1];
+        assert.equal(created.name, "Cement");
         await context.close();
     });
 
@@ -302,7 +303,7 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await page.fill("#uMaterialName", "CEMENT");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
-        assert.equal((await wrote(page))[0].value.name, "Cement");
+        assert.equal((await wrote(page))[0].paths["materials/sA/m2/name"], "Cement");
         await context.close();
     });
 
@@ -318,12 +319,11 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await context.close();
     });
 
-    it("Add & another saves, keeps the form open, clears name and quantity, keeps unit and date, focuses the name", async () => {
+    it("Add & another saves, keeps the form open, clears name and quantity, keeps the unit, focuses the name", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await openMaterialForm(page);
-        const date = await page.inputValue("#mLastUpdated");
         await fillMaterial(page, { name: "Gravel", quantity: "3", units: "tonnes" });
         await page.click("#material-another-btn");
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
@@ -332,7 +332,6 @@ describe("dropdown units, autocomplete, Add & another", () => {
         assert.equal(await page.inputValue("#materialsName"), "");
         assert.equal(await page.inputValue("#mQuantity"), "");
         assert.equal(await page.inputValue("#mUnits"), "tonnes");
-        assert.equal(await page.inputValue("#mLastUpdated"), date);
         assert.equal(await page.evaluate(() => document.activeElement.id), "materialsName");
         await context.close();
     });

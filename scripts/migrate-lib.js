@@ -16,6 +16,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { planMigration, reportCsv } from "./migration-plan.js";
+import { buildAddMaterialUpdates } from "../src/movements.js";
 
 // Firebase hands objects back with their keys sorted, so compare by content, not by key order.
 function canonical(value) {
@@ -29,6 +30,36 @@ function canonical(value) {
 }
 
 export const sameData = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+
+// Phase 3 adds these two to every material that has stock. The plan does not know them, so the
+// read-back ignores them when it compares a material with the plan.
+const ADDED_BY_MOVEMENTS = ["updatedAt", "lastMovementId"];
+function withoutMovementFields(value) {
+    if (value === null || typeof value !== "object") {
+        return value;
+    }
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !ADDED_BY_MOVEMENTS.includes(key)));
+}
+
+// Since Phase 3 the database refuses stock that no movement explains. A material with a
+// quantity is therefore written together with an "opening" movement for that quantity, so its
+// history starts complete. The movement key is derived from the material key, so it is the same
+// on every run.
+function withOpeningMovements(updates, user, sv) {
+    const out = {};
+    for (const [pathName, value] of Object.entries(updates)) {
+        const [root, siteId, materialId] = pathName.split("/");
+        if (root !== "materials" || !materialId || !value || !(value.quantity > 0)) {
+            out[pathName] = value;
+            continue;
+        }
+        Object.assign(out, buildAddMaterialUpdates({
+            siteId, materialId, movementId: `mig-${materialId}`, user, sv, material: value,
+            note: "Migrated opening balance",
+        }));
+    }
+    return out;
+}
 
 // What the owner already has in the target: their sites and those sites' materials.
 async function readTargetExisting({ db, ref, get, uid }) {
@@ -51,7 +82,8 @@ const stamp = (now) => new Date(now).toISOString().replaceAll(":", "-").replace(
 
 // db, ref, get, update: the Firebase Realtime Database functions and instance.
 // user: { uid, email }. apply: false is a dry run and writes nothing to the database.
-export async function runMigration({ db, ref, get, update, user, apply = false, outDir, now = Date.now(), log = console.log, readSource = null }) {
+// sv: { timestamp, increment }, the SDK's serverTimestamp and increment (needed to apply).
+export async function runMigration({ db, ref, get, update, user, apply = false, outDir, now = Date.now(), log = console.log, readSource = null, sv = null }) {
     fs.mkdirSync(outDir, { recursive: true });
     const progressFile = path.join(outDir, "progress.log");
     const say = (line) => {
@@ -99,13 +131,18 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
     // only accept together. Then the materials, which the rules only accept from a site's owner,
     // so the owner entry has to exist before them. A failure leaves a site without materials, never
     // materials without a site, and a re-run fills in what is missing.
+    if (!sv) {
+        throw new Error("runMigration needs sv ({ timestamp, increment }) to write opening movements");
+    }
     const bySite = new Map();
-    for (const [pathName, value] of Object.entries(updates)) {
+    for (const [pathName, value] of Object.entries(withOpeningMovements(updates, user, sv))) {
         const siteId = pathName.startsWith("userSites/") ? pathName.split("/")[2] : pathName.split("/")[1];
         if (!bySite.has(siteId)) {
             bySite.set(siteId, { site: {}, materials: {} });
         }
-        bySite.get(siteId)[pathName.startsWith("materials/") ? "materials" : "site"][pathName] = value;
+        // A material's opening movement is written in the same step as the material.
+        const inMaterialsStep = pathName.startsWith("materials/") || pathName.startsWith("movements/");
+        bySite.get(siteId)[inMaterialsStep ? "materials" : "site"][pathName] = value;
     }
     let done = 0;
     for (const [siteId, { site, materials }] of bySite) {
@@ -124,7 +161,8 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
     const failures = [];
     for (const [pathName, expected] of Object.entries(updates)) {
         const actual = (await get(ref(db, pathName))).val();
-        if (!sameData(actual, expected)) {
+        const compared = pathName.startsWith("materials/") ? withoutMovementFields(actual) : actual;
+        if (!sameData(compared, expected)) {
             failures.push({ path: pathName, expected, actual });
         }
     }

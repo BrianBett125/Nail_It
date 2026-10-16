@@ -6,7 +6,8 @@
 //   /members/<siteId>/<uid>         "owner" | "storekeeper" | "viewer"
 //   /userSites/<uid>/<siteId>       the same role, so a user can list their own sites
 //   /memberInfo/<siteId>/<uid>      { email }, to show who is who
-//   /materials/<siteId>/<materialId>
+//   /materials/<siteId>/<materialId>  { name, units, quantity, minLevel?, updatedAt, lastMovementId }
+//   /movements/<siteId>/<movementId>  { materialId, materialName, units, delta, type, byUid, byEmail, at, note? }
 //   /userInvites/<emailKey>/<siteId>  { role, siteName, invitedBy }, read by the invited person
 //   /siteInvites/<siteId>/<emailKey>  role, read by the owner
 // Every change that spans several paths is ONE update(), so the rules can check the result as
@@ -20,12 +21,33 @@ import {
     update,
     remove,
     get,
+    query,
+    orderByChild,
+    equalTo,
+    limitToLast,
+    increment,
+    serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { app } from "./firebase-app.js";
 import { buildSiteDeleteUpdates } from "./logic.js";
+import {
+    buildMovementUpdates,
+    buildAddMaterialUpdates,
+    buildRemoveMaterialUpdates,
+    buildRestoreMaterialUpdates,
+    buildEditMaterialUpdates,
+    sortMovements,
+} from "./movements.js";
 import { emailFromKey } from "./roles.js";
 
 const db = getDatabase(app);
+
+// What a server timestamp and an increment are, for the pure builders in movements.js.
+const sv = { timestamp: serverTimestamp, increment };
+
+// A key for a movement, made on this device. It sorts by creation time and is unique, so the
+// movement and the material that points at it can be written in one update before the server answers.
+const newMovementId = (siteId) => push(ref(db, `movements/${siteId}`)).key;
 
 // Each subscribe returns its unsubscribe function. Callers must keep it and call it
 // before subscribing again, or listeners pile up.
@@ -117,23 +139,64 @@ export function addSite(site, user) {
     return { id, done };
 }
 
-export function addMaterial(siteId, material) {
-    const newRef = push(ref(db, `materials/${siteId}`), material);
-    return { id: newRef.key, done: newRef };
+// Every function below that changes stock is ONE multi-path update that writes the material and
+// its movement together. database.rules.json refuses a quantity that no movement explains.
+// `user` is { uid, email }, copied into the movement as who did it. `done` settles when the
+// server acknowledges the write; the change shows locally at once.
+
+// A new material. With a starting quantity it also gets an "opening" movement.
+export function addMaterial(siteId, material, user) {
+    const id = push(ref(db, `materials/${siteId}`)).key;
+    const done = update(ref(db), buildAddMaterialUpdates({
+        siteId, materialId: id, movementId: newMovementId(siteId), material, user, sv,
+    }));
+    return { id, done };
 }
 
+// Received (+) or Used (-). `movement` is { type, delta, note? } from movements.planMovement.
+// `material` is the material as the page shows it: its name and units are copied into the history.
+export function recordMovement(siteId, materialId, material, movement, user) {
+    const id = newMovementId(siteId);
+    const done = update(ref(db), buildMovementUpdates({
+        siteId, materialId, movementId: id, material, movement, user, sv,
+    }));
+    return { id, done };
+}
+
+// Name, unit or low-stock level. The quantity cannot be set here.
 export function updateMaterial(siteId, materialId, fields) {
-    return update(ref(db, `materials/${siteId}/${materialId}`), fields);
+    return update(ref(db), buildEditMaterialUpdates({ siteId, materialId, fields, sv }));
 }
 
-export function removeMaterial(siteId, materialId) {
-    return remove(ref(db, `materials/${siteId}/${materialId}`));
+// Deleting takes the remaining stock out in a "removed" movement, so history still adds up.
+export function removeMaterial(siteId, materialId, material, user) {
+    return update(ref(db), buildRemoveMaterialUpdates({
+        siteId, materialId, movementId: newMovementId(siteId), material, user, sv,
+    }));
 }
 
-// Undo for a delete: write the material back at its original key, so nothing that
-// pointed at the id (Phase 3 movements) loses its target.
-export function restoreMaterial(siteId, materialId, material) {
-    return set(ref(db, `materials/${siteId}/${materialId}`), material);
+// Undo for a delete: the material comes back at its original key with its old quantity, and an
+// "opening" movement says so, so nothing that pointed at the id loses its target.
+export function restoreMaterial(siteId, materialId, material, user) {
+    return update(ref(db), buildRestoreMaterialUpdates({
+        siteId, materialId, movementId: newMovementId(siteId), material, user, sv,
+    }));
+}
+
+// The latest `limit` movements, oldest first, each with its id. With materialId: that material's
+// history. Without: the whole site, for the activity feed. Both lists are indexed in the rules.
+export function subscribeMovements(siteId, { materialId = null, limit = 100 } = {}, onData, onError) {
+    const base = ref(db, `movements/${siteId}`);
+    const source = materialId
+        ? query(base, orderByChild("materialId"), equalTo(materialId), limitToLast(limit))
+        : query(base, orderByChild("at"), limitToLast(limit));
+    return onValue(source, (snapshot) => {
+        const list = [];
+        snapshot.forEach((child) => {
+            list.push({ id: child.key, ...child.val() }); // no return: a truthy return would stop forEach
+        });
+        onData(sortMovements(list));
+    }, onError);
 }
 
 export const OFFLINE_MESSAGE = "Could not reach the database. Check your connection and try again.";

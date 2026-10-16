@@ -3,9 +3,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { ref, get, set, update, remove } from "firebase/database";
+import { ref, get, set, update, remove, push, increment, serverTimestamp } from "firebase/database";
+import {
+    buildMovementUpdates, buildAddMaterialUpdates, buildRemoveMaterialUpdates, buildRestoreMaterialUpdates,
+    buildEditMaterialUpdates,
+} from "../../src/movements.js";
 
-export { ref, get, set, update, remove, assertSucceeds, assertFails };
+export { ref, get, set, update, remove, push, increment, serverTimestamp, assertSucceeds, assertFails };
+
+// How the page tells src/movements.js what a server timestamp and an increment are.
+export const SV = { timestamp: serverTimestamp, increment };
 
 export const RULES_PATH = path.resolve(import.meta.dirname, "../../database.rules.json");
 
@@ -71,3 +78,43 @@ export function as(env, uid, claims = {}) {
 export function anonymous(env) {
     return env.unauthenticatedContext().database();
 }
+
+// The same writes the page makes: src/movements.js builds them, tests send them to the rules.
+// `db` is a signed-in database from as(); the user is read from it so the movement carries the right uid.
+export function userOf(uid) {
+    return { uid, email: `${uid}@example.com` };
+}
+
+function newId(db, siteId) {
+    return push(ref(db, `movements/${siteId}`)).key;
+}
+
+export function receive(db, uid, siteId, materialId, material, movement) {
+    return update(ref(db), buildMovementUpdates({
+        siteId, materialId, movementId: newId(db, siteId), material, movement, user: userOf(uid), sv: SV,
+    }));
+}
+
+export function addMaterial(db, uid, siteId, materialId, material) {
+    return update(ref(db), buildAddMaterialUpdates({
+        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
+    }));
+}
+
+export function removeMaterial(db, uid, siteId, materialId, material) {
+    return update(ref(db), buildRemoveMaterialUpdates({
+        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
+    }));
+}
+
+export function restoreMaterial(db, uid, siteId, materialId, material) {
+    return update(ref(db), buildRestoreMaterialUpdates({
+        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
+    }));
+}
+
+export function editMaterial(db, siteId, materialId, fields) {
+    return update(ref(db), buildEditMaterialUpdates({ siteId, materialId, fields, sv: SV }));
+}
+
+export { newId };

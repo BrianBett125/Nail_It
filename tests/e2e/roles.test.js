@@ -13,6 +13,8 @@ import {
     waitForRows,
     wrote,
     dbState,
+    materialsTouched,
+    restoresOf,
     SEED,
 } from "./helpers.js";
 
@@ -78,15 +80,15 @@ describe("storekeeper", () => {
         await context.close();
     });
 
-    it("records stock for real: an edit writes to the site's own path", async () => {
+    it("an edit writes to the site's own path", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, seed());
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await editBtn(page, "Cement").click();
-        await page.fill("#uQuantity", "9");
+        await page.fill("#uMinLevel", "9");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
-        assert.equal((await wrote(page))[0].path, "materials/sA/m1");
+        assert.deepEqual(materialsTouched((await wrote(page))[0]), ["materials/sA/m1"]);
         await context.close();
     });
 });
@@ -100,7 +102,7 @@ describe("viewer (engineer, QS, architect)", () => {
         await waitForRows(page, ["Cement", "Sand"]);
         assert.equal(await page.locator("#roleBadge").textContent(), "Your role: Viewer");
         assert.equal(await page.locator("#addMaterialButton").isHidden(), true);
-        assert.equal(await page.locator("#materialTableBody button").count(), 0);
+        assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         assert.equal(await siteDeleteBtn(page, "Mombasa").count(), 0);
         assert.equal(await page.locator("#materialTableBody td:nth-child(5)").first().isHidden(), true, "the Update column is hidden");
         assert.equal(await page.locator("#materialsTable thead th:nth-child(5)").isHidden(), true);
@@ -160,7 +162,7 @@ describe("viewer (engineer, QS, architect)", () => {
         assert.equal(await deleteBtn(page, "Nails").count(), 1);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        assert.equal(await page.locator("#materialTableBody button").count(), 0);
+        assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         await context.close();
     });
 });
@@ -173,7 +175,7 @@ describe("a role that changes while the page is open", () => {
         await page.evaluate(() => { window.__marker = "same-page"; });
         await page.evaluate(() => window.__nailit.externalSetRole("sA", "viewer"));
         await page.waitForFunction(() => document.getElementById("roleBadge").textContent === "Your role: Viewer");
-        assert.equal(await page.locator("#materialTableBody button").count(), 0);
+        assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         assert.equal(await page.locator("#addMaterialButton").isHidden(), true);
         assert.equal(await page.evaluate(() => window.__marker), "same-page");
         await context.close();
@@ -183,7 +185,7 @@ describe("a role that changes while the page is open", () => {
         const { context, page } = await openDashboard(browser, baseUrl, withRoles({ sA: "viewer" }));
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        assert.equal(await page.locator("#materialTableBody button").count(), 0);
+        assert.equal(await page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
         await page.evaluate(() => window.__nailit.externalSetRole("sA", "storekeeper"));
         await page.waitForFunction(() => document.querySelectorAll("#materialTableBody button").length === 4);
         assert.equal(await page.locator("#addMaterialButton").isVisible(), true);
@@ -200,7 +202,7 @@ describe("a role that changes while the page is open", () => {
         await page.waitForFunction(() => document.getElementById("roleBadge").textContent === "Your role: Viewer");
         await page.locator(".toast-action").click();
         await toastLocator(page, "no longer edit this site").waitFor();
-        assert.equal((await wrote(page)).filter((w) => w.op === "set").length, 0);
+        assert.equal(restoresOf(await wrote(page), "materials/sA/m1").length, 0);
         await context.close();
     });
 });
@@ -231,12 +233,12 @@ describe("an edit never lands in the wrong site", () => {
         await waitForRows(page, ["Cement", "Sand"]);
         await page.evaluate(() => { window.__nailit.holdAcks = true; });
         await editBtn(page, "Cement").click();
-        await page.fill("#uQuantity", "8");
+        await page.fill("#uMinLevel", "8");
         await page.click("#update-material-btn");
         await domSelectSite(page, "Cape Town");
         await waitForRows(page, ["Nails"]);
         const [write] = await wrote(page);
-        assert.equal(write.path, "materials/sA/m1");
+        assert.deepEqual(materialsTouched(write), ["materials/sA/m1"]);
         assert.equal((await dbState(page)).materials.sB.m3.name, "Nails", "Cape Town untouched");
         await context.close();
     });
@@ -589,15 +591,15 @@ describe("eval: the roles as one story", () => {
         await waitForRows(kip.page, ["Cement", "Sand"]);
         assert.equal(await kip.page.locator("#roleBadge").textContent(), "Your role: Storekeeper");
         await kip.page.locator("#materialTableBody tr", { hasText: "Cement" }).locator("button[aria-label='Edit material']").click();
-        await kip.page.fill("#uQuantity", "7");
+        await kip.page.fill("#uMinLevel", "7");
         await kip.page.click("#update-material-btn");
-        await kip.page.waitForFunction(() => window.__nailit.writes.some((w) => w.op === "update"));
+        await kip.page.waitForFunction(() => window.__nailit.writes.some((w) => w.op === "multi"));
 
         // A viewer's page
         const viewer = await openDashboard(browser, baseUrl, { ...SEED, roles: { sA: "viewer" } });
         await selectSite(viewer.page, "Mombasa");
         await waitForRows(viewer.page, ["Cement", "Sand"]);
-        assert.equal(await viewer.page.locator("#materialTableBody button").count(), 0);
+        assert.equal(await viewer.page.locator("#materialTableBody button:not(.btn-history)").count(), 0);
 
         for (const { state } of [owner, kip, viewer]) {
             assert.deepEqual(state.dialogs, []);

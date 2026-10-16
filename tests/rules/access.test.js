@@ -118,8 +118,8 @@ describe("storekeeper (foreman): records stock, nothing else", () => {
     });
     it("adds, edits and deletes materials", async () => {
         const db = as(env, "keeper1");
-        await assertSucceeds(set(ref(db, "materials/s1/m9"), { ...MATERIAL, name: "Sand" }));
-        await assertSucceeds(update(ref(db, "materials/s1/m1"), { quantity: 9 }));
+        await assertSucceeds(set(ref(db, "materials/s1/m9"), { ...MATERIAL, name: "Sand", quantity: 0 }));
+        await assertSucceeds(update(ref(db, "materials/s1/m1"), { name: "Cement 42.5" }));
         await assertSucceeds(update(ref(db, "materials/s1/m1"), { minLevel: 2 }));
         await assertSucceeds(remove(ref(db, "materials/s1/m9")));
     });
@@ -152,8 +152,8 @@ describe("owner: everything on their own site", () => {
     });
     it("adds, edits and deletes materials, one or all", async () => {
         const db = as(env, "owner1");
-        await assertSucceeds(set(ref(db, "materials/s1/m9"), MATERIAL));
-        await assertSucceeds(update(ref(db, "materials/s1/m1"), { quantity: 0 }));
+        await assertSucceeds(set(ref(db, "materials/s1/m9"), { ...MATERIAL, quantity: 0 }));
+        await assertSucceeds(update(ref(db, "materials/s1/m1"), { name: "Cement 42.5" }));
         await assertSucceeds(remove(ref(db, "materials/s1/m9")));
         await assertSucceeds(remove(ref(db, "materials/s1")));
     });

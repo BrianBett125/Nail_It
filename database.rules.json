@@ -98,7 +98,7 @@
         ".write": "auth != null && root.child('members').child($siteId).child(auth.uid).val() === 'owner'",
         "$materialId": {
           ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || root.child('members').child($siteId).child(auth.uid).val() === 'storekeeper')",
-          ".validate": "newData.hasChildren(['name', 'quantity', 'units', 'lastUpdated'])",
+          ".validate": "newData.hasChildren(['name', 'quantity', 'units']) && ((data.exists() && newData.child('quantity').val() === data.child('quantity').val()) || (!data.exists() && newData.child('quantity').val() === 0) || (newData.child('lastMovementId').isString() && newData.parent().parent().parent().child('movements').child($siteId).child(newData.child('lastMovementId').val()).exists() && !root.child('movements').child($siteId).child(newData.child('lastMovementId').val()).exists() && newData.parent().parent().parent().child('movements').child($siteId).child(newData.child('lastMovementId').val()).child('materialId').val() === $materialId && newData.child('quantity').val() === (data.exists() ? data.child('quantity').val() : 0) + newData.parent().parent().parent().child('movements').child($siteId).child(newData.child('lastMovementId').val()).child('delta').val()))",
           "name": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
           },
@@ -111,8 +111,58 @@
           "lastUpdated": {
             ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
           },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && data.val() === newData.val()))"
+          },
+          "lastMovementId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+          },
           "minLevel": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "movements": {
+      "$siteId": {
+        ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
+        ".indexOn": [
+          "materialId",
+          "at"
+        ],
+        ".write": "auth != null && !newData.exists() && root.child('members').child($siteId).child(auth.uid).val() === 'owner' && !newData.parent().parent().child('sites').child($siteId).exists()",
+        "$movementId": {
+          ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || root.child('members').child($siteId).child(auth.uid).val() === 'storekeeper') && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['materialId', 'materialName', 'units', 'delta', 'type', 'byUid', 'byEmail', 'at']) && ((newData.child('type').val() === 'received' && newData.child('delta').val() > 0 && root.child('materials').child($siteId).child(newData.child('materialId').val()).exists() && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('lastMovementId').val() === $movementId && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() === root.child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() + newData.child('delta').val()) || (newData.child('type').val() === 'used' && newData.child('delta').val() < 0 && root.child('materials').child($siteId).child(newData.child('materialId').val()).exists() && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('lastMovementId').val() === $movementId && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() === root.child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() + newData.child('delta').val()) || (newData.child('type').val() === 'opening' && newData.child('delta').val() > 0 && !root.child('materials').child($siteId).child(newData.child('materialId').val()).exists() && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('lastMovementId').val() === $movementId && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() === 0 + newData.child('delta').val()) || (newData.child('type').val() === 'opening' && root.child('materials').child($siteId).child(newData.child('materialId').val()).exists() && !root.child('materials').child($siteId).child(newData.child('materialId').val()).child('lastMovementId').exists() && newData.child('delta').val() === root.child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('lastMovementId').val() === $movementId && newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val() === 0 + newData.child('delta').val()) || (newData.child('type').val() === 'removed' && root.child('materials').child($siteId).child(newData.child('materialId').val()).exists() && !newData.parent().parent().parent().child('materials').child($siteId).child(newData.child('materialId').val()).exists() && newData.child('delta').val() === -root.child('materials').child($siteId).child(newData.child('materialId').val()).child('quantity').val()))",
+          "materialId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+          },
+          "materialName": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "units": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+          },
+          "delta": {
+            ".validate": "newData.isNumber() && newData.val() !== 0 && newData.val() >= -1000000000 && newData.val() <= 1000000000"
+          },
+          "type": {
+            ".validate": "newData.isString() && (newData.val() === 'received' || newData.val() === 'used' || newData.val() === 'opening' || newData.val() === 'removed')"
+          },
+          "note": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "byUid": {
+            ".validate": "newData.isString() && newData.val() === auth.uid"
+          },
+          "byEmail": {
+            ".validate": "newData.isString() && newData.val() === auth.token.email && newData.val().length <= 254"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() === now"
           },
           "$other": {
             ".validate": false

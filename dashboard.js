@@ -5,7 +5,6 @@ import {
     validateMaterial,
     validateMaterialEdit,
     suggestNames,
-    todayISO,
     deletePhrase,
     phraseMatches,
     BUILDING_TYPES,
@@ -20,6 +19,7 @@ import {
     emailKey,
     validateInvite,
 } from "./src/roles.js";
+import { lastUpdatedLabel } from "./src/movements.js";
 import { showToast } from "./src/toast.js";
 
 // DOM Elements
@@ -434,11 +434,7 @@ inviteForm.addEventListener('submit', (event) => {
 
 leaveSiteButton.addEventListener('click', leaveSite);
 
-// The date defaults to today, so a delivery entered on the day needs no date typing.
 function openMaterialForm() {
-    if (!document.getElementById('mLastUpdated').value) {
-        document.getElementById('mLastUpdated').value = todayISO();
-    }
     refreshNameSuggestions();
     materialContainer.style.display = 'block';
     materialNameInput.focus();
@@ -478,19 +474,20 @@ function addNewMaterial(another) {
         name: materialNameInput.value,
         quantity: document.getElementById('mQuantity').value,
         units: document.getElementById('mUnits').value,
-        lastUpdated: document.getElementById('mLastUpdated').value,
+        minLevel: document.getElementById('mMinLevel').value,
     }, currentSiteId, { knownNames: knownMaterialNames() });
     if (!result.ok) {
         showToast(result.error, { kind: "error" });
         return;
     }
-    data.addMaterial(currentSiteId, result.value).done.catch(reportError);
+    data.addMaterial(currentSiteId, result.value, currentUser).done.catch(reportError);
     rememberName(result.value.name);
     showToast(`Added ${result.value.quantity} ${result.value.units} ${result.value.name}`);
     if (another) {
-        // Keep unit and date: a delivery is usually several items of the same kind, same day.
+        // Keep the unit: a delivery is usually several items of the same kind.
         materialNameInput.value = '';
         document.getElementById('mQuantity').value = '';
+        document.getElementById('mMinLevel').value = '';
         refreshNameSuggestions();
         materialNameInput.focus();
     } else {
@@ -659,6 +656,7 @@ function renderMaterials(materials) {
 // Function to add a material row to the table. A viewer gets no edit or delete buttons.
 function addMaterialRow(materialId, materialData, editable) {
     const newRow = document.createElement("tr");
+    newRow.dataset.materialId = materialId;
 
     const nameCell = document.createElement("td");
     nameCell.textContent = materialData.name;
@@ -667,13 +665,13 @@ function addMaterialRow(materialId, materialData, editable) {
     const unitsCell = document.createElement("td");
     unitsCell.textContent = materialData.units;
     const lastUpdatedCell = document.createElement("td");
-    lastUpdatedCell.textContent = materialData.lastUpdated;
+    lastUpdatedCell.textContent = lastUpdatedLabel(materialData);
 
     const updateCell = document.createElement("td");
     const deleteCell = document.createElement("td");
     if (editable) {
-        updateCell.innerHTML = "<button aria-label='Edit material'><i class='fa-regular fa-pen-to-square'></i></button>";
-        deleteCell.innerHTML = "<button aria-label='Delete material'><i class='fas fa-trash-alt'></i></button>";
+        updateCell.innerHTML = "<button class='btn-edit' aria-label='Edit material'><i class='fa-regular fa-pen-to-square'></i></button>";
+        deleteCell.innerHTML = "<button class='btn-delete' aria-label='Delete material'><i class='fas fa-trash-alt'></i></button>";
         updateCell.querySelector("button").addEventListener("click", () => {
             showUpdateForm(materialId, materialData);
         });
@@ -712,9 +710,8 @@ function showUpdateForm(materialId, materialData) {
     refreshNameSuggestions();
     // ?? "" so a legacy record with a missing field shows an empty input, not the text "undefined".
     document.getElementById('uMaterialName').value = materialData.name ?? "";
-    document.getElementById('uQuantity').value = materialData.quantity ?? "";
     setEditUnits(materialData.units);
-    document.getElementById('uLastUpdated').value = materialData.lastUpdated ?? "";
+    document.getElementById('uMinLevel').value = materialData.minLevel ?? "";
     refreshModalButtons();
 }
 
@@ -735,9 +732,8 @@ function updateMaterial() {
     }
     const result = validateMaterialEdit({
         name: document.getElementById('uMaterialName').value,
-        quantity: document.getElementById('uQuantity').value,
         units: document.getElementById('uUnits').value,
-        lastUpdated: document.getElementById('uLastUpdated').value,
+        minLevel: document.getElementById('uMinLevel').value,
     }, { knownNames: knownMaterialNames(), legacyUnit: editingLegacyUnit });
     if (!result.ok) {
         showToast(result.error, { kind: "error" });
@@ -778,7 +774,7 @@ function deleteMaterial(materialId, material) {
         onAction: () => undoDelete(materialId, copy, siteId),
     });
     Promise.resolve()
-        .then(() => data.removeMaterial(siteId, materialId))
+        .then(() => data.removeMaterial(siteId, materialId, copy, currentUser))
         .catch((error) => {
             toast.dismiss();
             reportError(error);
@@ -798,7 +794,7 @@ function undoDelete(materialId, material, siteId) {
         return;
     }
     Promise.resolve()
-        .then(() => data.restoreMaterial(siteId, materialId, material))
+        .then(() => data.restoreMaterial(siteId, materialId, material, currentUser))
         .catch(reportError);
     showToast(`Restored ${material.name}`);
 }
