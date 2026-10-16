@@ -86,6 +86,20 @@ test("planMovement: a material with no stock cannot be used, even for 0.001", ()
     assert.equal(planMovement({ action: "used", amount: "1" }, { ...empty, quantity: undefined }).ok, false);
 });
 
+test("planMovement: using what the page shows as the whole stock takes exactly all of it, no float dust left", () => {
+    // 0.1 + 0.2 is 0.30000000000000004 in floating point. Using "0.3" must leave 0, not 5.5e-17 that shows
+    // as "0" but can never be used up.
+    const dusty = { name: "Paint", units: "litres", quantity: 0.1 + 0.2 };
+    const result = planMovement({ action: "used", amount: "0.3" }, dusty);
+    assert.equal(result.ok, true);
+    assert.equal(dusty.quantity + result.value.delta, 0);
+    // A real remainder is left alone.
+    const partial = planMovement({ action: "used", amount: "0.25" }, dusty);
+    assert.equal(partial.value.delta, -0.25);
+    // And a typed amount that is genuinely more than the stock is still refused.
+    assert.equal(planMovement({ action: "used", amount: "0.301" }, dusty).ok, false);
+});
+
 test("planMovement rejects a bad amount, too many decimals, a long note and an unknown action", () => {
     assert.deepEqual(planMovement({ action: "used", amount: "" }, CEMENT), { ok: false, error: AMOUNT_MESSAGE });
     assert.deepEqual(planMovement({ action: "used", amount: "-3" }, CEMENT), { ok: false, error: AMOUNT_MESSAGE });

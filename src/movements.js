@@ -26,6 +26,8 @@ export const ACTIONS = ["received", "used"];
 export const MAX_QUANTITY = 1_000_000_000;
 export const MAX_NOTE_LENGTH = 200;
 export const MAX_DECIMALS = 3;
+// Differences smaller than this are float noise, not stock (the smallest amount is 0.001).
+const DUST = 1e-9;
 
 export const AMOUNT_MESSAGE = "Enter an amount greater than zero";
 export const DECIMALS_MESSAGE = `Use at most ${MAX_DECIMALS} decimal places`;
@@ -87,13 +89,17 @@ export function planMovement({ action, amount, note }, material) {
         return { ok: false, error: NOTE_MESSAGE };
     }
     const inStock = material && typeof material.quantity === "number" ? material.quantity : 0;
-    if (action === "used" && value > inStock) {
+    // The page shows the stock to three decimals. An amount that equals what is shown IS all the
+    // stock, even when the stored number carries float noise (0.1 + 0.2 = 0.30000000000000004).
+    const takesAll = action === "used" && Math.abs(inStock - value) < DUST;
+    if (action === "used" && value > inStock && !takesAll) {
         return {
             ok: false,
             error: `Only ${formatQuantity(inStock)} ${material.units} in stock. You cannot use ${formatQuantity(value)}.`,
         };
     }
-    const movement = { type: action, delta: action === "used" ? -value : value };
+    const delta = action === "received" ? value : -(takesAll ? inStock : value);
+    const movement = { type: action, delta };
     if (cleanNote) {
         movement.note = cleanNote;
     }

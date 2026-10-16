@@ -21,9 +21,9 @@ Every site has people in it, each with one role:
 
 | Role | Can do |
 |---|---|
-| **Owner** (whoever created the site) | Everything: add, edit and delete materials, delete the site, invite people, change roles, remove people |
-| **Storekeeper** (foreman) | Add, edit and delete materials |
-| **Viewer** (engineer, QS, architect) | Read the stock. No buttons to change anything |
+| **Owner** (whoever created the site) | Everything: record stock, add, edit and delete materials, delete the site, invite people, change roles, remove people |
+| **Storekeeper** (foreman) | Record stock (Received, Used), add, edit and delete materials |
+| **Viewer** (engineer, QS, architect) | Read the stock, every material's history and the site's activity. No buttons to change anything |
 
 The page only shows what your role may do, and the database refuses the rest even if someone bypasses the page (`database.rules.json`).
 
@@ -35,11 +35,13 @@ The dashboard is meant to be used without reading instructions. A site and three
 
 1. Open the dashboard page and sign in (or create an account). **Add Site** is at the top of the left sidebar.
 2. Type the site name and location, pick the type of building from the list, and click **Add Site**. The new site opens by itself, and the dashboard opens the same site next time you come back.
-3. Click **Add Material**. Type the name (names you used before are suggested, and "cement" is saved as "Cement" if that already exists), the quantity, and pick the unit from the list. The date is today unless you change it.
-4. Click **Add** to save and close, or **Add & another** to save and keep the form open for the next item. The unit and date stay filled in, so a delivery of 15 items is 15 times name, quantity, **Add & another**.
-5. To change a material, click the pen and paper icon on its row.
-6. To delete a material, click the bin icon on its row. It goes at once and a **Deleted. Undo** message stays for 8 seconds. Click **Undo** to put it back.
-7. To delete a whole site, click the bin icon next to its name and type the site name to confirm. The site and all its materials are removed together.
+3. Click **Add Material**. Type the name (names you used before are suggested, and "cement" is saved as "Cement" if that already exists), the quantity you have on site now, and pick the unit from the list. The low-stock level is optional.
+4. Click **Add** to save and close, or **Add & another** to save and keep the form open for the next item. The unit stays filled in, so a delivery of 15 items is 15 times name, quantity, **Add & another**.
+5. **Record stock with Received and Used.** On a material's row press **Received** when a delivery arrives, or **Used** when it goes into the work. Type the amount, add a note if you like (a delivery note number, "slab pour level 2"), and confirm. That is 3 taps. You cannot use more than is in stock: the page says how much there is. Nobody types a quantity: the stock is always the sum of what was received and used.
+6. **History.** Press **History** on a material to see every change with who made it, when, how much, the note and the stock after it. The site's recent activity ("brian used 20 bags of Cement, 2h ago") is under the table. Everyone in the site can read both.
+7. To change a material's name, unit or low-stock level, click the pen and paper icon on its row. The stock is not in that form on purpose.
+8. To delete a material, click the bin icon on its row. It goes at once and a **Deleted. Undo** message stays for 8 seconds. Click **Undo** to put it back with the same stock. The deletion and the restore both show in the history.
+9. To delete a whole site, click the bin icon next to its name and type the site name to confirm. The site, its materials and their history are removed together.
 
 Messages (saved, deleted, errors) appear at the bottom of the screen and go away by themselves. Empty pages say what to do next.
 
@@ -63,9 +65,11 @@ How it is laid out:
 * `src/data.js` and `src/auth.js` are the only files that talk to Firebase (both use the one app made in `src/firebase-app.js`, configured in `src/firebase-config.js`).
 * `src/roles.js` holds who may do what on the page, and the invite email keys. `src/auth-errors.js` turns Firebase Auth errors into plain sentences.
 * `login.html` and `login.js` are the sign-in, sign-up and reset page. `dashboard.js` sends anyone who is not signed in there.
-* `database.rules.json` is the real access control. `tests/rules/` checks it on the emulator: who can read and write what, validation, invites, creating and deleting a site, and the migration.
+* `database.rules.json` is the real access control. `tests/rules/` checks it on the emulator: who can read and write what, validation, invites, creating and deleting a site, stock movements (the quantity cannot move without a matching movement, nobody edits history), the migration and the backfill.
 * `scripts/` holds the one-time migration of the old data (`docs/PHASE2-DEPLOY.md` has the steps, including the ones only the project owner can do).
 * `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
+* `src/movements.js` holds everything about stock movements with no DOM and no Firebase: checking an amount, the multi-path writes the data layer sends, the running balance and the wording of the history and the activity feed.
+* `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
 * `src/toast.js` shows the toast messages that replaced `alert()`.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
 
@@ -76,7 +80,8 @@ What is stored (everything is under a site, so one person's sites are never down
 /members/<siteId>/<uid>            "owner" | "storekeeper" | "viewer"
 /userSites/<uid>/<siteId>          the same role, so a user can list their own sites
 /memberInfo/<siteId>/<uid>         { email }, to show who is who
-/materials/<siteId>/<materialId>   { name, quantity, units, lastUpdated }
+/materials/<siteId>/<materialId>   { name, units, quantity, minLevel?, updatedAt, lastMovementId }
+/movements/<siteId>/<movementId>   { materialId, materialName, units, delta, type, byUid, byEmail, at, note? }
 /userInvites/<emailKey>/<siteId>   { role, siteName, invitedBy }, read by the invited person
 /siteInvites/<siteId>/<emailKey>   role, read by the owner
 ```
