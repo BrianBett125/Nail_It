@@ -16,6 +16,8 @@ import {
     sortOverview,
     overviewTotals,
     lowCount,
+    ageLabel,
+    isStale,
     SORTS,
     DEFAULT_SORT,
 } from "../../src/insights.js";
@@ -50,6 +52,15 @@ test("odd records do not throw", () => {
     assert.equal(stockState({}), "ok");
     assert.equal(stockState({ minLevel: 5 }), "out", "a missing quantity is zero");
     assert.equal(isLow({ minLevel: 5, quantity: "3" }), true, "a text quantity counts as zero, not as 3");
+});
+
+test("one of a unit reads singular: '1 piece left', not '1 pieces left'", () => {
+    assert.equal(lowDetail(M("Rebar", 1, { minLevel: 5, units: "pieces" })), "1 piece left, level 5");
+    assert.equal(lowDetail(M("Glue", 1, { minLevel: 5, units: "litres" })), "1 litre left, level 5");
+    assert.equal(lowDetail(M("Nails", 1, { minLevel: 5, units: "kg" })), "1 kg left, level 5");
+    assert.equal(lowDetail(M("Nails", 1, { minLevel: 5, units: "kgs" })), "1 kgs left, level 5", "an old free-text unit is left alone");
+    assert.equal(lowDetail(M("Sand", 1.5, { minLevel: 5, units: "tonnes" })), "1.5 tonnes left, level 5");
+    assert.equal(lowDetail(M("Sand", 0, { minLevel: 5, units: "tonnes" })), "0 tonnes left, level 5");
 });
 
 test("the badge is a word and the detail says how much is left", () => {
@@ -225,4 +236,36 @@ test("overviewTotals: how many sites and how much is low across all of them", ()
     assert.deepEqual(overviewTotals(rows), { sites: 2, low: 1, text: "2 sites, 1 low on stock" });
     assert.equal(overviewTotals([rows[1]]).text, "1 site, nothing low on stock");
     assert.equal(overviewTotals([]).text, "0 sites, nothing low on stock");
+});
+
+// ---- honest ages ----------------------------------------------------------------------
+
+test("ageLabel keeps the short words for a week, then says weeks, months and years", () => {
+    const now = 1_800_000_000_000;
+    const DAY = 86_400_000;
+    const ago = (ms) => ageLabel(now - ms, now);
+    assert.equal(ago(5 * 60_000), "5 min ago");
+    assert.equal(ago(3 * DAY), "3 days ago");
+    assert.equal(ago(6 * DAY + 3_600_000), "6 days ago");
+    assert.equal(ago(7 * DAY), "1 week ago", "singular");
+    assert.equal(ago(21 * DAY), "3 weeks ago");
+    assert.equal(ago(59 * DAY), "8 weeks ago");
+    assert.equal(ago(90 * DAY), "3 months ago");
+    assert.equal(ago(364 * DAY), "12 months ago");
+    assert.equal(ago(365 * DAY), "1 year ago");
+    assert.equal(ago(800 * DAY), "2 years ago");
+    assert.equal(ageLabel(undefined, now), "just now");
+});
+
+test("isStale is more than a month, and false for nothing", () => {
+    const now = 1_800_000_000_000;
+    assert.equal(isStale(now - 31 * 86_400_000, now), true);
+    assert.equal(isStale(now - 29 * 86_400_000, now), false);
+    assert.equal(isStale(null, now), false);
+    assert.equal(isStale(undefined, now), false);
+});
+
+test("summaryText says how stale a site is, not a bare date", () => {
+    const now = 1_800_000_000_000;
+    assert.equal(summaryText({ total: 1, low: 0, lastActivity: now - 800 * 86_400_000 }, now).activity, "Last activity 2 years ago");
 });

@@ -1429,7 +1429,7 @@ td .btn-delete:hover { background: var(--out); border-color: var(--out); color: 
     .main-content > .verify-banner { order: -1; }
     .main-content > .content-header { order: 0; }
     .main-content > #materialsStatus { order: 1; }
-    .main-content > .activity-panel { order: 2; margin: 0 0 12px; }
+    .main-content > .activity-panel { order: 5; margin: 12px 0; }
     .main-content > #materialsTable { order: 3; }
 
     .activity-list { max-height: 11rem; overflow-y: auto; }

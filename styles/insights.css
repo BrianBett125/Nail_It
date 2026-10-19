@@ -441,14 +441,8 @@
     .control-chips { flex: none; }
     .filter-chip { padding: 0 14px; }
     .control-sort { flex: 1 1 0; min-width: 0; margin-left: 0; }
-    .control-sort label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-    }
-    .control-sort::before { content: "\21C5" / ""; flex: none; font-size: 20px; }
+    /* The word "Sort" stays visible on a phone: an arrow alone does not say what the menu does. */
+    .control-sort label { flex: none; font-size: 15px; font-weight: bold; }
     .control-sort select { flex: 1; width: 100%; min-width: 0; padding: 0 6px; font-size: 15px; text-overflow: ellipsis; }
 
     /* Cards: the tint and the accent go on the card, the cells stay clear. */
@@ -489,4 +483,55 @@
     #materialsTable tr { transition: background-color 0.5s; }
     #materialsTable tr.row-flash { background: var(--flash); }
     #materialsTable tr.row-flash td { animation: none; }
+}
+
+
+/* ---- review fixes: what the blind critic of the Phase 4 screens asked for ---- */
+
+/* An empty result looks like a state, not a blank: a dashed card with a way out. */
+.status-card {
+    margin: 12px 0 8px;
+    padding: 18px 16px;
+    border: 2px dashed var(--line, #c9d1d8);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-size: 16px;
+    text-align: center;
+}
+
+.clear-view {
+    display: block;
+    min-height: 44px;
+    margin: 0 auto 16px;
+    padding: 0 20px;
+    border: 2px solid var(--ink, #1b2733);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.clear-view[hidden] { display: none; }
+
+@media (max-width: 700px) {
+    /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
+    .attention-list {
+        flex-wrap: wrap;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .attention-list li { flex: 1 1 100%; }
+    .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 700px) {
+    /* Members and Add Material share one row instead of Add Material standing alone on its own. */
+    .content-header { gap: 8px; }
+    .content-header h1 { flex: 1 1 auto; }
+    #membersButton, #addMaterialButton { flex: 1 1 calc(50% - 4px); }
 }

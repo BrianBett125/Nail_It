@@ -265,6 +265,10 @@ function renderStatus() {
         materialsStatus.textContent = "";
     }
     materialsStatus.hidden = materialsStatus.textContent === "";
+    // An empty result is a dead end unless there is a way out: one button, back to everything.
+    const emptyResult = Boolean(currentSiteId) && materialsLoaded && rows > 0 && visibleCount === 0 && insightsUI.isNarrowed();
+    materialsStatus.classList.toggle('status-card', emptyResult);
+    document.getElementById('clearView').hidden = !emptyResult;
     materialsTable.hidden = !currentSiteId || !materialsLoaded || rows === 0 || visibleCount === 0;
     materialsTable.classList.toggle('readonly', !canWrite);
 }
@@ -454,6 +458,7 @@ siteDeleteForm.addEventListener('submit', (event) => {
     confirmSiteDelete();
 });
 
+document.getElementById('clearView').addEventListener('click', () => insightsUI.clearView());
 membersButton.addEventListener('click', openMembers);
 membersClose.addEventListener('click', closeMembers);
 

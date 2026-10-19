@@ -8,7 +8,7 @@
 // Site and material names are other people's text: textContent only, never innerHTML.
 import * as data from "./src/data.js";
 import * as auth from "./src/auth.js";
-import { overviewRow, sortOverview, overviewTotals, summaryText } from "./src/insights.js";
+import { isStale, overviewRow, sortOverview, overviewTotals, summaryText } from "./src/insights.js";
 import { roleLabel } from "./src/roles.js";
 import { showToast } from "./src/toast.js";
 
@@ -154,9 +154,10 @@ function queueRender() {
 
 const settled = (watch) => watch.materialsState !== "loading" && watch.movementsState !== "loading";
 
-function setStatus(text) {
+function setStatus(text, { action = false } = {}) {
     statusEl.textContent = text;
     statusEl.hidden = text === "";
+    document.getElementById("overviewAddSite").hidden = !action;
 }
 
 function render() {
@@ -170,7 +171,7 @@ function render() {
         return clearList();
     }
     if (ids.length === 0) {
-        setStatus("No sites yet. Add your first site on the dashboard, and it shows up here.");
+        setStatus("No sites yet. Add your first site on the dashboard, and it shows up here.", { action: true });
         return clearList();
     }
     // Every site is drawn together once all have answered, so the order never jumps while the
@@ -263,11 +264,16 @@ function buildCard(row) {
         const fill = el("span", "overview-bar-fill");
         fill.style.setProperty("--share", `${Math.round((row.low / row.total) * 100)}%`);
         bar.append(fill);
-        card.append(bar);
+        card.append(bar, el("p", "overview-bar-caption", `${row.low} of ${row.total} ${row.total === 1 ? "material" : "materials"} low`));
     }
 
     const meta = el("p", "overview-meta");
-    meta.append(el("span", "overview-total", words.total), el("span", "overview-activity", words.activity));
+    const activity = el("span", `overview-activity${isStale(row.lastActivity) ? " is-stale" : ""}`, words.activity);
+    meta.append(el("span", "overview-total", words.total), activity);
+    if (isStale(row.lastActivity)) {
+        // In words, not only in tone: "all stocked" on a site nobody has touched in months can mislead.
+        meta.append(el("span", "overview-stale-tag", "No recent updates"));
+    }
     card.append(meta);
 
     if (row.lowItems.length > 0 && !row.failed) {

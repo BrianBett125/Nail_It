@@ -276,3 +276,41 @@ body.overview-page {
     .overview-name { font-size: 20px; }
     .overview-open { min-height: 44px; }
 }
+
+
+/* ---- review fixes ---- */
+.overview-bar-caption {
+    margin: 4px 0 0;
+    color: var(--muted, #52606d);
+    font-size: 14px;
+}
+
+/* A site that has not moved in a month reads as stale, in words and in tone. */
+.overview-activity.is-stale { font-style: italic; color: #8a4b00; }
+
+.overview-add {
+    display: block;
+    text-align: center;
+    width: fit-content;
+    min-height: 44px;
+    margin: 0 auto 24px;
+    padding: 12px 20px;
+    box-sizing: border-box;
+    border: 2px solid var(--ink, #1b2733);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.overview-add[hidden] { display: none; }
+
+.overview-stale-tag {
+    padding: 2px 8px;
+    border: 1px solid #8a4b00;
+    border-radius: 10px;
+    color: #8a4b00;
+    font-size: 13px;
+    font-weight: bold;
+}

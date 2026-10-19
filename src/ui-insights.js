@@ -12,14 +12,15 @@ import {
     visibleMaterials,
     summarizeSite,
     summaryText,
+    ageLabel,
     overviewRow,
     SORTS,
     DEFAULT_SORT,
 } from "./insights.js";
-import { timeAgo } from "./movements.js";
 
 const CLOCK_MS = 60_000;      // "1h ago" is re-worded once a minute
 const MAX_PILLS = 6;          // more than this and the strip says "+N more" and opens the Low filter
+const MAX_PILLS_PHONE = 3;    // on a phone the strip wraps instead of scrolling sideways, so it stays short
 const FLASH_MS = 2200;        // how long a row stays highlighted after its pill was tapped
 
 const $ = (id) => document.getElementById(id);
@@ -83,7 +84,7 @@ export function createInsightsUI({ onViewChange }) {
         lowTile.setAttribute("aria-pressed", String(filter === "low"));
         lowTile.title = calm ? "" : filter === "low" ? "Show all materials" : "Show only the low materials";
 
-        set(activityTile, ".stat-num", summary.lastActivity ? timeAgo(summary.lastActivity) : "-");
+        set(activityTile, ".stat-num", summary.lastActivity ? ageLabel(summary.lastActivity) : "-");
         set(activityTile, ".stat-label", summary.lastActivity ? "last activity" : "No activity yet");
         set(activityTile, ".summary-activity", words.activity);
     }
@@ -92,9 +93,11 @@ export function createInsightsUI({ onViewChange }) {
 
     function renderAttention() {
         const row = overviewRow({ siteId, site: null, materials: materials || {}, lastMovementAt });
-        attention.hidden = row.low === 0;
+        const limit = window.matchMedia && window.matchMedia("(max-width: 700px)").matches ? MAX_PILLS_PHONE : MAX_PILLS;
+        // With the Low filter on, the list below already is the low list: do not show it twice.
+        attention.hidden = row.low === 0 || filter === "low";
         attentionList.replaceChildren();
-        for (const item of row.lowItems.slice(0, MAX_PILLS)) {
+        for (const item of row.lowItems.slice(0, limit)) {
             const pill = document.createElement("button");
             pill.type = "button";
             pill.className = `attention-pill${item.label === "Out" ? " is-out" : ""}`;
@@ -115,11 +118,11 @@ export function createInsightsUI({ onViewChange }) {
             entry.appendChild(pill);
             attentionList.appendChild(entry);
         }
-        if (row.low > MAX_PILLS) {
+        if (row.low > limit) {
             const more = document.createElement("button");
             more.type = "button";
             more.className = "attention-pill attention-more";
-            more.textContent = `+${row.low - MAX_PILLS} more`;
+            more.textContent = `+${row.low - limit} more`;
             more.addEventListener("click", () => setFilter("low", { scroll: true }));
             const entry = document.createElement("li");
             entry.appendChild(more);
@@ -174,6 +177,7 @@ export function createInsightsUI({ onViewChange }) {
         filter = next;
         syncControls();
         renderSummary();
+        renderAttention();
         onViewChange();
         if (scroll) {
             const table = $("materialsTable");
@@ -244,6 +248,16 @@ export function createInsightsUI({ onViewChange }) {
             }
         },
         view,
+        // A search or a filter is narrowing the list.
+        isNarrowed: () => query.trim() !== "" || filter !== "all",
+        // Back to everything: the way out of an empty result.
+        clearView() {
+            query = "";
+            filter = "all";
+            syncControls();
+            renderSummary();
+            onViewChange();
+        },
         // Why the table is empty when the site has materials but the view shows none. "" when it is not.
         emptyMessage() {
             const typed = query.trim();

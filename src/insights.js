@@ -35,13 +35,18 @@ export function lowLabel(material) {
     return state === "out" ? "Out" : state === "low" ? "Low" : "";
 }
 
+// The dropdown units are plural; one of them is singular ("1 piece left", not "1 pieces left").
+const SINGULAR = { tonnes: "tonne", bags: "bag", pieces: "piece", metres: "metre", litres: "litre", bundles: "bundle", sheets: "sheet" };
+export const unitFor = (units, quantity) => (quantity === 1 && SINGULAR[units]) || units;
+
 // "3 bags left, level 10": what a person wants to read next to the badge.
 export function lowDetail(material) {
     if (!isLow(material)) {
         return "";
     }
-    const units = material.units ? ` ${material.units}` : "";
-    return `${formatQuantity(stockOf(material))}${units} left, level ${formatQuantity(material.minLevel)}`;
+    const quantity = stockOf(material);
+    const units = material.units ? ` ${unitFor(material.units, quantity)}` : "";
+    return `${formatQuantity(quantity)}${units} left, level ${formatQuantity(material.minLevel)}`;
 }
 
 // Entries are [materialId, material] pairs, in the order the database gave them.
@@ -101,12 +106,36 @@ export function summarizeSite({ materials = {}, lastMovementAt = 0 } = {}) {
     };
 }
 
+const DAY = 86_400_000;
+
+// "5 min ago", "2h ago", "3 days ago", then "3 weeks ago", "5 months ago", "2 years ago": a stale site reads
+// as stale, not as a bare date next to "2h ago". `now` is a parameter for tests.
+export function ageLabel(at, now = Date.now()) {
+    const age = now - at;
+    if (!Number.isFinite(age) || age < 7 * DAY) {
+        return timeAgo(at, now);
+    }
+    const days = Math.floor(age / DAY);
+    if (days < 60) {
+        const weeks = Math.floor(days / 7);
+        return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
+    }
+    if (days < 365) {
+        return `${Math.floor(days / 30)} months ago`;
+    }
+    const years = Math.floor(days / 365);
+    return years === 1 ? "1 year ago" : `${years} years ago`;
+}
+
+// More than a month without a sign of life.
+export const isStale = (at, now = Date.now()) => Number.isFinite(at) && now - at > 30 * DAY;
+
 // The three phrases of the site summary header, the same wording on the dashboard and the overview.
 export function summaryText(summary, now = Date.now()) {
     return {
         total: summary.total === 0 ? "No materials yet" : `${summary.total} ${summary.total === 1 ? "material" : "materials"}`,
         low: summary.low === 0 ? "Nothing low on stock" : `${summary.low} low on stock`,
-        activity: summary.lastActivity ? `Last activity ${timeAgo(summary.lastActivity, now)}` : "No activity yet",
+        activity: summary.lastActivity ? `Last activity ${ageLabel(summary.lastActivity, now)}` : "No activity yet",
     };
 }
 
