@@ -22,6 +22,8 @@ import {
 import { lastUpdatedLabel } from "./src/movements.js";
 import { showToast } from "./src/toast.js";
 import { createMovementsUI } from "./src/ui-movements.js";
+import { createInsightsUI } from "./src/ui-insights.js";
+import { visibleMaterials, stockState, lowLabel, lowDetail } from "./src/insights.js";
 
 // DOM Elements
 const addSiteBtn = document.getElementById('addSiteButton');
@@ -96,10 +98,26 @@ let leaveTimer = null;
 const unconfirmedSites = new Set();  // sites we just added or joined whose first snapshot has not arrived
 const savingMaterials = new Set();   // ids with an edit sent but not yet acknowledged
 
+// Search, filter chips, sort, the summary tiles and the Needs attention strip live in
+// src/ui-insights.js. This file draws the rows from whatever view it says is chosen.
+const insightsUI = createInsightsUI({ onViewChange: () => renderRows() });
+let visibleCount = 0;                // rows the current search, filter and sort leave
+
 // Received / Used, history and the activity feed live in src/ui-movements.js. They ask for the
 // current site, materials and role at the moment of each action, never a copy.
 const movementsUI = createMovementsUI({
-    data,
+    // The activity feed already listens to the site's movements. The summary borrows its newest
+    // line ("last activity") instead of opening a second listener on the same data.
+    data: {
+        ...data,
+        subscribeMovements: (siteId, options, onData, onError) => data.subscribeMovements(siteId, options, (movements) => {
+            if (!options || !options.materialId) {
+                const newest = movements[movements.length - 1];
+                insightsUI.setLastMovement(siteId, newest ? newest.at : 0);
+            }
+            onData(movements);
+        }, onError),
+    },
     getContext: () => ({ siteId: currentSiteId, materials: currentMaterials, role: currentRole(), user: currentUser }),
     showToast,
     reportError,
@@ -241,11 +259,13 @@ function renderStatus() {
         materialsStatus.textContent = canWrite
             ? "No materials yet. Add your first material."
             : "No materials recorded in this site yet.";
+    } else if (visibleCount === 0) {
+        materialsStatus.textContent = insightsUI.emptyMessage(); // the search or filter leaves nothing: say why
     } else {
         materialsStatus.textContent = "";
     }
     materialsStatus.hidden = materialsStatus.textContent === "";
-    materialsTable.hidden = !currentSiteId || !materialsLoaded || rows === 0;
+    materialsTable.hidden = !currentSiteId || !materialsLoaded || rows === 0 || visibleCount === 0;
     materialsTable.classList.toggle('readonly', !canWrite);
 }
 
@@ -574,8 +594,13 @@ function renderSites(sites) {
     }
     if (!restoredLastSite) {
         restoredLastSite = true;
+        // dashboard.html?site=<id> (the link on the overview) beats the remembered site; an id this
+        // account cannot see is ignored.
+        const requested = new URLSearchParams(location.search).get('site');
         const last = storageGet(LAST_SITE_KEY);
-        if (!currentSiteId && last && sites[last]) {
+        if (!currentSiteId && requested && sites[requested]) {
+            selectSite(requested);
+        } else if (!currentSiteId && last && sites[last]) {
             selectSite(last);
         }
     }
@@ -595,6 +620,8 @@ function clearSelection() {
     currentMaterials = {};
     materialsLoaded = false;
     materialsError = null;
+    visibleCount = 0;
+    insightsUI.setSite(null);
     tableBody.replaceChildren();
     closeMaterialModals();
     closeMembers();
@@ -619,6 +646,7 @@ function selectSite(siteId) {
     if (unsubscribeMaterials) {
         unsubscribeMaterials();
     }
+    const previousSiteId = currentSiteId;
     if (siteId !== currentSiteId) {
         closeMaterialModals();
         closeMembers();
@@ -633,6 +661,10 @@ function selectSite(siteId) {
     currentMaterials = {};
     materialsLoaded = false;
     materialsError = null;
+    visibleCount = 0;
+    if (siteId !== previousSiteId) {
+        insightsUI.setSite(siteId); // search, filter and sort belong to one site
+    }
     applyRole();
     renderStatus();
     unsubscribeMaterials = data.subscribeMaterials(siteId, (materials) => {
@@ -652,11 +684,8 @@ function renderMaterials(materials) {
     currentMaterials = materials;
     materialsLoaded = true;
     materialsError = null;
-    const editable = canWriteMaterials(currentRole());
-    tableBody.replaceChildren();
-    for (const [materialId, material] of Object.entries(materials)) {
-        addMaterialRow(materialId, material, editable);
-    }
+    insightsUI.update(materials);
+    drawRows();
     if (editingMaterialId && !materials[editingMaterialId]) {
         closeMaterialModals();
     }
@@ -665,6 +694,29 @@ function renderMaterials(materials) {
     }
     movementsUI.refresh(); // an open Received / Used or history sheet follows the new stock
     renderStatus();
+}
+
+// Only the search, filter or sort changed: the rows are redrawn, nothing else is touched.
+function renderRows() {
+    if (!materialsLoaded) {
+        return;
+    }
+    drawRows();
+    renderStatus();
+}
+
+// The rows the chosen view shows, in its order. A row's buttons act on its own material id, so a
+// sorted or filtered table still records stock against the right material.
+function drawRows() {
+    const editable = canWriteMaterials(currentRole());
+    const shown = visibleMaterials(currentMaterials, insightsUI.view());
+    visibleCount = shown.length;
+    // The Status column header only shows while a row in view has something to say in it.
+    materialsTable.classList.toggle('has-low', shown.some(([, material]) => stockState(material) !== 'ok'));
+    tableBody.replaceChildren();
+    for (const [materialId, material] of shown) {
+        addMaterialRow(materialId, material, editable);
+    }
 }
 
 // Function to add a material row to the table. Received and Used are for owners and storekeepers,
@@ -682,6 +734,23 @@ function addMaterialRow(materialId, materialData, editable) {
     const lastUpdatedCell = document.createElement("td");
     lastUpdatedCell.textContent = lastUpdatedLabel(materialData);
     lastUpdatedCell.className = "cell-updated";
+
+    // Low stock: a tinted row, and a word (never colour alone) with how much is left.
+    const statusCell = document.createElement("td");
+    statusCell.className = "cell-status";
+    const state = stockState(materialData);
+    if (state !== "ok") {
+        newRow.classList.add("is-low", state === "out" ? "is-out" : "is-below");
+        const detail = lowDetail(materialData);
+        const badge = document.createElement("span");
+        badge.className = `badge-low${state === "out" ? " badge-out" : ""}`;
+        badge.textContent = lowLabel(materialData);
+        badge.title = detail;
+        const text = document.createElement("span");
+        text.className = "low-detail";
+        text.textContent = detail;
+        statusCell.append(badge, text);
+    }
 
     const stockCell = document.createElement("td");
     stockCell.className = "cell-stock";
@@ -702,7 +771,7 @@ function addMaterialRow(materialId, materialData, editable) {
         manageCell.append(editButton, deleteButton);
     }
 
-    newRow.append(nameCell, quantityCell, unitsCell, lastUpdatedCell, stockCell, manageCell);
+    newRow.append(nameCell, quantityCell, unitsCell, lastUpdatedCell, stockCell, manageCell, statusCell);
     tableBody.appendChild(newRow);
 }
 

@@ -337,7 +337,11 @@ describe("variant A: a 375px phone", () => {
         const visibleItems = () => page.locator("#activityList .activity-item:visible").count();
         assert.equal(await visibleItems(), 1, "only the latest line");
         const materialsTop = await page.locator("#materialTableBody tr").first().evaluate((el) => el.getBoundingClientRect().top);
-        assert.ok(materialsTop < 600, `the first material starts at ${materialsTop}px, on the first screen`);
+        // Phase 4 puts the site summary, the Needs attention strip and the search controls (#insights)
+        // above the list on purpose: they answer "are we running out of anything?". The feed teaser
+        // itself must still not push the materials further than it did before them.
+        const insightsHeight = await page.locator("#insights").evaluate((el) => el.getBoundingClientRect().height);
+        assert.ok(materialsTop - insightsHeight < 600, `the first material starts at ${materialsTop}px, ${insightsHeight}px of which is the Phase 4 summary and controls`);
         assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "false");
         await page.click("#activityToggle");
         assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "true");
