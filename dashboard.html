@@ -6,6 +6,7 @@
     <title>Nail It Dashboard</title>
     <!-- Link to CSS stylesheet -->
     <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="stylesheet" href="styles/insights.css">
     <!-- FontAwesome icons for various icons used in the page -->
     <script src="https://kit.fontawesome.com/739d7a3cd3.js" crossorigin="anonymous"></script>
     <!-- Favicons for different devices -->
@@ -24,16 +25,13 @@
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="dashboard.html">Dashboard</a>
+                <a href="overview.html">Overview</a>
                 <a href="about-us.html">About Us</a>
             </div>
             <!-- Who is signed in -->
             <div class="user-area">
                 <span id="userEmail"></span>
                 <button type="button" id="signOutButton">Sign out</button>
-            </div>
-            <!-- Search bar -->
-            <div class="search-container">
-                <input type="text" placeholder="Search...">
             </div>
         </div>
     </header>
@@ -66,7 +64,52 @@
                 <button id="membersButton" hidden>Members</button>
                 <button id="addMaterialButton">Add Material</button>
             </div>
+
+            <!-- "Are we running out of anything?" answered at a glance. Filled by src/ui-insights.js, which
+                 shows it once the site's materials have arrived. The big figures are decoration for the
+                 eye; the .summary-* spans hold the same facts as plain sentences for everything else. -->
+            <div id="insights" class="insights" hidden>
+                <section id="siteSummary" class="site-summary" aria-label="Site summary">
+                    <div class="stat stat-total">
+                        <span class="stat-num" aria-hidden="true"></span>
+                        <span class="stat-label" aria-hidden="true"></span>
+                        <span class="summary-total sr-only"></span>
+                    </div>
+                    <button type="button" id="summaryLowTile" class="stat stat-low" aria-pressed="false">
+                        <span class="stat-num" aria-hidden="true"></span>
+                        <span class="stat-label" aria-hidden="true"></span>
+                        <span class="summary-low sr-only"></span>
+                    </button>
+                    <div class="stat stat-activity">
+                        <span class="stat-num" aria-hidden="true"></span>
+                        <span class="stat-label" aria-hidden="true"></span>
+                        <span class="summary-activity sr-only"></span>
+                    </div>
+                </section>
+
+                <section id="needsAttention" class="needs-attention" aria-labelledby="needsAttentionTitle" hidden>
+                    <h2 id="needsAttentionTitle">Needs attention</h2>
+                    <ul id="attentionList" class="attention-list"></ul>
+                </section>
+
+                <div id="materialControls" class="material-controls" role="search" aria-label="Find materials">
+                    <div class="control-search">
+                        <label for="materialSearch" class="sr-only">Search materials by name</label>
+                        <input type="search" id="materialSearch" placeholder="Search materials" autocomplete="off" enterkeyhint="search">
+                    </div>
+                    <div class="control-chips" role="group" aria-label="Show">
+                        <button type="button" id="filterAll" class="filter-chip" aria-pressed="true">All</button>
+                        <button type="button" id="filterLow" class="filter-chip" aria-pressed="false">Low stock (0)</button>
+                    </div>
+                    <div class="control-sort">
+                        <label for="materialSort">Sort</label>
+                        <select id="materialSort"></select>
+                    </div>
+                </div>
+            </div>
+
             <p id="materialsStatus" class="status status-main" role="status">Loading...</p>
+            <button type="button" id="clearView" class="clear-view" hidden>Clear search and filter</button>
             <table id="materialsTable" hidden>
                 <thead>
                     <tr>
@@ -76,6 +119,7 @@
                         <th>Last Updated</th>
                         <th>Stock</th>
                         <th>Edit</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="materialTableBody"></tbody>

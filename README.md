@@ -39,9 +39,12 @@ The dashboard is meant to be used without reading instructions. A site and three
 4. Click **Add** to save and close, or **Add & another** to save and keep the form open for the next item. The unit stays filled in, so a delivery of 15 items is 15 times name, quantity, **Add & another**.
 5. **Record stock with Received and Used.** On a material's row press **Received** when a delivery arrives, or **Used** when it goes into the work. Type the amount, add a note if you like (a delivery note number, "slab pour level 2"), and confirm. That is 3 taps. You cannot use more than is in stock: the page says how much there is. Nobody types a quantity: the stock is always the sum of what was received and used.
 6. **History.** Press **History** on a material to see every change with who made it, when, how much, the note and the stock after it. The site's recent activity ("brian used 20 bags of Cement, 2h ago") is under the table. Everyone in the site can read both.
-7. To change a material's name, unit or low-stock level, click the pen and paper icon on its row. The stock is not in that form on purpose.
-8. To delete a material, click the bin icon on its row. It goes at once and a **Deleted. Undo** message stays for 8 seconds. Click **Undo** to put it back with the same stock. The deletion and the restore both show in the history.
-9. To delete a whole site, click the bin icon next to its name and type the site name to confirm. The site, its materials and their history are removed together.
+7. **Spot what is running out.** Give a material a **low-stock level** (when you add it, or in its edit form). When the stock is at or below the level the row says **Low**, or **Out** at zero, with how much is left ("5 bags left, level 10"). At the top of the site, three tiles say how many materials there are, how many are low and when the site last moved; a **Needs attention** strip names the low ones, and tapping one jumps to its row. Nothing is flagged for a material with no level: the level is how you tell the app to watch it.
+8. **Find things.** Type in the search box to filter the site's materials by name, tap **Low stock** to see only what is low, and sort by name, stock (lowest first) or last updated. Search, filter and sort start over when you open another site. If a search finds nothing, **Clear search and filter** brings everything back.
+9. **Owner overview.** The **Overview** link in the header lists every site you belong to, the ones with the most low stock first: how many materials, how many low, which ones, and when it last moved (a site nobody has touched for a month says so). Tap **Open dashboard** to go to that site.
+10. To change a material's name, unit or low-stock level, click the pen and paper icon on its row. The stock is not in that form on purpose.
+11. To delete a material, click the bin icon on its row. It goes at once and a **Deleted. Undo** message stays for 8 seconds. Click **Undo** to put it back with the same stock. The deletion and the restore both show in the history.
+12. To delete a whole site, click the bin icon next to its name and type the site name to confirm. The site, its materials and their history are removed together.
 
 Messages (saved, deleted, errors) appear at the bottom of the screen and go away by themselves. Empty pages say what to do next.
 
@@ -69,6 +72,7 @@ How it is laid out:
 * `scripts/` holds the one-time migration of the old data (`docs/PHASE2-DEPLOY.md` has the steps, including the ones only the project owner can do).
 * `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
 * `src/movements.js` holds everything about stock movements with no DOM and no Firebase: checking an amount, the multi-path writes the data layer sends, the running balance and the wording of the history and the activity feed.
+* `src/insights.js` holds what counts as low stock, how a list is searched, filtered and sorted, and how a site and the overview are summarised, with no DOM and no Firebase. `src/ui-insights.js` is the dashboard's summary tiles, attention strip and controls; `overview.html` and `overview.js` are the owner overview. None of it adds data: it all reads what Phase 3 already stores.
 * `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
 * `src/toast.js` shows the toast messages that replaced `alert()`.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.

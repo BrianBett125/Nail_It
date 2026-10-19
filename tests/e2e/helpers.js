@@ -121,6 +121,21 @@ export async function openDashboard(browser, baseUrl, seed = SEED, options = {})
     return opened;
 }
 
+// Opens overview.html (the owner overview of every site) signed in, or signed out with seed.user null.
+export async function openOverview(browser, baseUrl, seed = SEED, options = {}) {
+    const opened = await newPage(browser, seed, options);
+    const { page } = opened;
+    await page.goto(`${baseUrl}/overview.html`);
+    if ("user" in seed && seed.user === null) {
+        await page.waitForURL(/login\.html/);
+        return opened;
+    }
+    await page.waitForFunction(() =>
+        window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
+    await page.waitForTimeout(20);
+    return opened;
+}
+
 // Opens login.html, signed out unless seed.user says otherwise.
 export async function openLogin(browser, baseUrl, seed = { user: null }, options = {}) {
     const opened = await newPage(browser, seed, options);

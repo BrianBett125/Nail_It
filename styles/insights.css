@@ -1,0 +1,537 @@
+/* ==== Phase 4: "are we running out of anything?" ========================================
+   Variant "At a glance": three stat tiles with a loud low-stock tile, a Needs attention strip of
+   tappable pills, one control row (search, chips, sort), and tinted low rows with a word badge.
+   Loaded after dashboard.css, which defines --ink, --muted, --line and --focus. Colours are picked
+   for glare: white on deep red, dark text on pale tints, and every colour also has a word. */
+:root {
+    --low: #a8201a;
+    --low-deep: #5c0f0b;
+    --low-soft: #fdecea;
+    --low-text: #6e130f;
+    --calm: #14693a;
+    --calm-soft: #e4f3ea;
+    --calm-text: #0b4a28;
+    --flash: #ffe08a;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.insights {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* ---- the three tiles ---- */
+.site-summary {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 12px;
+}
+
+.stat {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    min-height: 104px;
+    margin: 0;
+    padding: 12px 16px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+}
+
+.stat-num {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.stat-label {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.stat-activity .stat-num {
+    font-size: 28px;
+}
+
+/* The low tile is the one that shouts. */
+.stat-low {
+    cursor: pointer;
+}
+
+.stat-low .stat-num {
+    font-size: 60px;
+    line-height: 1;
+}
+
+.stat-low .stat-label {
+    font-size: 18px;
+}
+
+.stat-low.is-alert {
+    border-color: var(--low);
+    background: var(--low);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(168, 32, 26, 0.35);
+}
+
+.stat-low.is-alert .stat-label {
+    color: #fff;
+}
+
+.stat-low.is-alert:hover {
+    background: #8c1914;
+}
+
+.stat-low.is-alert[aria-pressed="true"] {
+    outline: 4px solid var(--ink);
+    outline-offset: 2px;
+}
+
+.stat-low.is-calm {
+    border-color: var(--calm);
+    background: var(--calm-soft);
+    color: var(--calm-text);
+}
+
+.stat-low.is-calm .stat-label {
+    color: var(--calm-text);
+}
+
+.stat-low:disabled {
+    cursor: default;
+}
+
+.stat-low:focus-visible {
+    outline: 4px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* ---- Needs attention ---- */
+.needs-attention {
+    padding: 10px 14px 12px;
+    border-left: 6px solid var(--low);
+    border-radius: 6px 12px 12px 6px;
+    background: var(--low-soft);
+}
+
+.needs-attention h2 {
+    margin: 0 0 8px;
+    color: var(--low-text);
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.attention-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.attention-pill {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 1px;
+    min-width: 150px;
+    min-height: 52px;
+    margin: 0;
+    padding: 6px 12px;
+    border: 2px solid var(--low);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.attention-pill:hover {
+    background: #fff6f5;
+}
+
+.attention-pill:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.pill-name {
+    overflow: hidden;
+    font-size: 17px;
+    font-weight: bold;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pill-state {
+    padding: 1px 9px;
+    border-radius: 10px;
+    background: var(--low);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.attention-pill.is-out .pill-state {
+    background: var(--low-deep);
+}
+
+.pill-detail {
+    grid-column: 1 / -1;
+    color: var(--low-text);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.attention-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    border-style: dashed;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* ---- search, chips, sort in one row ---- */
+.material-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+}
+
+.control-search {
+    flex: 1 1 240px;
+    max-width: 420px;
+}
+
+.control-search input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 48px;
+    margin: 0;
+    padding: 0 14px;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+}
+
+.control-search input:focus-visible,
+.control-sort select:focus-visible,
+.filter-chip:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.control-chips {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-chip {
+    box-sizing: border-box;
+    min-width: 56px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 16px;
+    border: 2px solid var(--ink);
+    border-radius: 22px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#filterLow {
+    border-color: var(--low);
+    color: var(--low);
+}
+
+.filter-chip[aria-pressed="true"] {
+    background: var(--ink);
+    color: #fff;
+}
+
+#filterLow[aria-pressed="true"] {
+    border-color: var(--low);
+    background: var(--low);
+    color: #fff;
+}
+
+.control-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.control-sort select {
+    box-sizing: border-box;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 10px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+}
+
+/* ---- low rows ---- */
+#materialsTable tr.is-low td {
+    background: var(--low-soft);
+}
+
+#materialsTable tr.is-low td:first-child {
+    box-shadow: inset 8px 0 0 var(--low);
+    font-weight: bold;
+}
+
+#materialsTable tr.is-out td:first-child {
+    box-shadow: inset 8px 0 0 var(--low-deep);
+}
+
+#materialsTable tr.is-low td:nth-child(2) {
+    color: var(--low);
+    font-weight: bold;
+}
+
+.cell-status {
+    white-space: nowrap;
+}
+
+/* The Status column exists only while a row in view is low: then every row keeps an (empty) cell so
+   the lines run to the edge. With nothing low it is gone, header and cells. */
+#materialsTable:not(.has-low) td.cell-status,
+#materialsTable:not(.has-low) th:last-child {
+    display: none;
+}
+
+.badge-low {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 12px;
+    background: var(--low);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.badge-out {
+    background: var(--low-deep);
+}
+
+.low-detail {
+    margin-left: 8px;
+    color: var(--low-text);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* A pill was tapped: this row is the one to look at. */
+#materialsTable tr.row-flash {
+    outline: 3px solid var(--focus);
+    outline-offset: -3px;
+}
+
+#materialsTable tr.row-flash td {
+    animation: row-flash 2.2s ease-out;
+}
+
+#materialsTable tr:focus {
+    outline: 3px solid var(--focus);
+    outline-offset: -3px;
+}
+
+@keyframes row-flash {
+    0%, 45% { background-color: var(--flash); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #materialsTable tr.row-flash td { animation: none; }
+}
+
+/* Seven columns on a wide screen: a little less air in each, so the table never outgrows the page. */
+@media (min-width: 701px) {
+    #materialsTable th,
+    #materialsTable td {
+        padding: 12px 9px;
+    }
+
+    #materialsTable th:first-child,
+    #materialsTable td:first-child {
+        padding-left: 14px;
+    }
+}
+
+/* ---- phones ---- */
+@media (max-width: 700px) {
+    .insights { gap: 10px; margin-bottom: 12px; }
+
+    .site-summary {
+        grid-template-columns: 1fr 1.35fr 1fr;
+        gap: 8px;
+    }
+
+    .stat {
+        min-height: 88px;
+        padding: 8px 10px;
+        border-radius: 12px;
+    }
+
+    .stat-num { font-size: 34px; }
+    .stat-low .stat-num { font-size: 46px; }
+    .stat-activity .stat-num { font-size: 21px; }
+    .stat-label { font-size: 13px; }
+    .stat-low .stat-label { font-size: 14px; }
+
+    /* One line of pills that scrolls sideways inside the strip: the page itself never does. */
+    .needs-attention { padding: 8px 10px 10px; }
+    .needs-attention h2 { margin-bottom: 6px; font-size: 13px; }
+
+    .attention-list {
+        flex-wrap: nowrap;
+        margin: 0 -10px;
+        padding: 0 10px 2px;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .attention-list li { flex: none; scroll-snap-align: start; }
+
+    /* Row one: search. Row two: the two chips and the sort menu, each at least 44px tall. */
+    .control-search { flex: 1 1 100%; max-width: none; }
+    .control-chips { flex: none; }
+    .filter-chip { padding: 0 14px; }
+    .control-sort { flex: 1 1 0; min-width: 0; margin-left: 0; }
+    /* The word "Sort" stays visible on a phone: an arrow alone does not say what the menu does. */
+    .control-sort label { flex: none; font-size: 15px; font-weight: bold; }
+    .control-sort select { flex: 1; width: 100%; min-width: 0; padding: 0 6px; font-size: 15px; text-overflow: ellipsis; }
+
+    /* Cards: the tint and the accent go on the card, the cells stay clear. */
+    #materialsTable tr.is-low {
+        border-left: 8px solid var(--low);
+        background: var(--low-soft);
+    }
+
+    #materialsTable tr.is-out { border-left-color: var(--low-deep); }
+
+    #materialsTable tr.is-low td,
+    #materialsTable tr.is-low td:first-child {
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #materialsTable tr.is-low td:nth-child(2) { color: var(--low); }
+
+    /* The status cell is the last in the DOM but sits right under the name and the stock figure. */
+    #materialsTable td:nth-child(-n+3) { grid-row: 1; }
+    #materialsTable td:nth-child(4) { grid-row: 3; }
+    #materialsTable .cell-stock { grid-row: 4; }
+    #materialsTable .cell-manage { grid-row: 5; }
+    #materialsTable .cell-status {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        margin: 6px 0 0;
+        white-space: normal;
+    }
+
+    #materialsTable .cell-status:empty { display: none; }
+    .low-detail { margin-left: 0; font-size: 15px; }
+
+    #materialsTable tr { transition: background-color 0.5s; }
+    #materialsTable tr.row-flash { background: var(--flash); }
+    #materialsTable tr.row-flash td { animation: none; }
+}
+
+
+/* ---- review fixes: what the blind critic of the Phase 4 screens asked for ---- */
+
+/* An empty result looks like a state, not a blank: a dashed card with a way out. */
+.status-card {
+    margin: 12px 0 8px;
+    padding: 18px 16px;
+    border: 2px dashed var(--line, #c9d1d8);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-size: 16px;
+    text-align: center;
+}
+
+.clear-view {
+    display: block;
+    min-height: 44px;
+    margin: 0 auto 16px;
+    padding: 0 20px;
+    border: 2px solid var(--ink, #1b2733);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.clear-view[hidden] { display: none; }
+
+@media (max-width: 700px) {
+    /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
+    .attention-list {
+        flex-wrap: wrap;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .attention-list li { flex: 1 1 100%; }
+    .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 700px) {
+    /* Members and Add Material share one row instead of Add Material standing alone on its own. */
+    .content-header { gap: 8px; }
+    .content-header h1 { flex: 1 1 auto; }
+    #membersButton, #addMaterialButton { flex: 1 1 calc(50% - 4px); }
+}

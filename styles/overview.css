@@ -1,0 +1,316 @@
+/* The owner overview: a grid of site cards, trouble first. The header and the buttons come from
+   dashboard.css, the tokens (--low, --calm, ...) from insights.css. Healthy sites are quiet
+   grey-green, troubled ones are warm, and every colour is backed by a number or a word. */
+body.overview-page {
+    height: auto;
+    min-height: 100vh;
+    background: #ecf0f1;
+    color: var(--ink);
+}
+
+.overview {
+    box-sizing: border-box;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 76px 24px 40px; /* the header is fixed on wide screens */
+}
+
+.overview-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 18px;
+}
+
+.overview-head h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.overview-totals {
+    margin: 0;
+    padding: 8px 16px;
+    border: 2px solid var(--calm);
+    border-radius: 22px;
+    background: var(--calm-soft);
+    color: var(--calm-text);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.overview-totals.has-low {
+    border-color: var(--low);
+    background: var(--low);
+    color: #fff;
+}
+
+.overview-status {
+    margin: 24px 0;
+    padding: 28px 20px;
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    background: #f7f9fa;
+    color: var(--muted);
+    font-size: 18px;
+    text-align: center;
+}
+
+.overview-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ---- one site ---- */
+.overview-site {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 16px 18px;
+    border: 2px solid #c5d6ca;
+    border-left-width: 8px;
+    border-left-color: #6f9a80;
+    border-radius: 14px;
+    background: #eef3ef;
+}
+
+.overview-site.is-trouble {
+    border-color: #e6b8a6;
+    border-left-color: var(--low);
+    background: #fff3ec;
+    box-shadow: 0 3px 12px rgba(168, 32, 26, 0.16);
+}
+
+.overview-site.is-empty,
+.overview-site.is-error {
+    border-color: var(--line);
+    border-left-color: #8a96a3;
+    background: #f4f6f8;
+}
+
+.overview-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.overview-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+}
+
+.overview-name {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.overview-location {
+    color: var(--muted);
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+.overview-role {
+    margin-top: 4px;
+    padding: 1px 10px;
+    border-radius: 10px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.overview-figure {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.overview-bignum {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.overview-bigword {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.is-trouble .overview-bignum,
+.is-trouble .overview-bigword {
+    color: var(--low);
+}
+
+.is-calm .overview-bignum,
+.is-calm .overview-bigword {
+    color: var(--calm);
+}
+
+.overview-bar {
+    height: 10px;
+    border-radius: 5px;
+    background: #cfdcd3;
+    overflow: hidden;
+}
+
+.is-trouble .overview-bar {
+    background: #ecd3c8;
+}
+
+.overview-bar-fill {
+    display: block;
+    width: var(--share, 0%);
+    height: 100%;
+    border-radius: 5px;
+    background: var(--low);
+}
+
+.overview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 12px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.overview-lowitems {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.overview-lowitems li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 16px;
+}
+
+.overview-item-name {
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.overview-lowitems .low-detail {
+    margin-left: 0;
+    font-size: 14px;
+}
+
+.overview-more {
+    margin: 0;
+    color: var(--low-text);
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.overview-open {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    margin-top: auto;
+    padding: 0 16px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.is-trouble .overview-open {
+    background: var(--ink);
+    color: #fff;
+}
+
+.overview-open:hover {
+    background: var(--ink);
+    color: #fff;
+}
+
+.overview-open:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+    .overview {
+        padding: 14px 12px 28px; /* the header is not fixed on phones */
+    }
+
+    .overview-head h1 { font-size: 24px; }
+    .overview-list { grid-template-columns: 1fr; gap: 12px; }
+    .overview-site { gap: 8px; padding: 12px 14px; }
+    /* Number and word side by side: a card is a few lines shorter, which counts with 20 sites. */
+    .overview-figure { flex-direction: row; align-items: baseline; gap: 6px; }
+    .overview-bignum { font-size: 40px; }
+    .overview-name { font-size: 20px; }
+    .overview-open { min-height: 44px; }
+}
+
+
+/* ---- review fixes ---- */
+.overview-bar-caption {
+    margin: 4px 0 0;
+    color: var(--muted, #52606d);
+    font-size: 14px;
+}
+
+/* A site that has not moved in a month reads as stale, in words and in tone. */
+.overview-activity.is-stale { font-style: italic; color: #8a4b00; }
+
+.overview-add {
+    display: block;
+    text-align: center;
+    width: fit-content;
+    min-height: 44px;
+    margin: 0 auto 24px;
+    padding: 12px 20px;
+    box-sizing: border-box;
+    border: 2px solid var(--ink, #1b2733);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink, #1b2733);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.overview-add[hidden] { display: none; }
+
+.overview-stale-tag {
+    padding: 2px 8px;
+    border: 1px solid #8a4b00;
+    border-radius: 10px;
+    color: #8a4b00;
+    font-size: 13px;
+    font-weight: bold;
+}
