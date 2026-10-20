@@ -8,6 +8,7 @@
 //   updateFormContainer   row .btn-edit                #uMaterialName      #updateCancelButton
 //   siteDeleteContainer   a site's .delete-site-btn    #siteDeleteInput    #siteDeleteCancel
 //   membersContainer      #membersButton               #membersClose       #membersClose
+//   reportsContainer      #reportsButton               #exportStock        #reportsClose
 //   movementContainer     row .btn-use                 #movementAmount     #movementCancel
 //   historyContainer      row .btn-history             #historyClose       #historyClose
 import { describe, it, before, after } from "node:test";
@@ -59,6 +60,7 @@ const DIALOGS = [
     { id: "materialFormContainer", focus: "#materialsName", close: "#materialCancelButton", open: (page) => page.click("#addMaterialButton") },
     { id: "updateFormContainer", focus: "#uMaterialName", close: "#updateCancelButton", open: (page) => row(page, "Cement").locator(".btn-edit").click(), opener: (page) => row(page, "Cement").locator(".btn-edit") },
     { id: "siteDeleteContainer", focus: "#siteDeleteInput", close: "#siteDeleteCancel", open: openSiteDelete, opener: (page) => page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn"), phoneFoldsOpener: true },
+    { id: "reportsContainer", focus: "#exportStock", close: "#reportsClose", open: (page) => page.click("#reportsButton"), opener: (page) => page.locator("#reportsButton") },
     { id: "membersContainer", focus: "#membersClose", close: "#membersClose", open: (page) => page.click("#membersButton") },
     { id: "movementContainer", focus: "#movementAmount", close: "#movementCancel", open: (page) => row(page, "Cement").locator(".btn-use").click(), opener: (page) => row(page, "Cement").locator(".btn-use") },
     { id: "historyContainer", focus: "#historyClose", close: "#historyClose", open: (page) => row(page, "Cement").locator(".btn-history").click(), opener: (page) => row(page, "Cement").locator(".btn-history") },

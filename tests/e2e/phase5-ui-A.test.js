@@ -204,13 +204,14 @@ describe("dialog fields", () => {
         const { context, page } = await phoneOnSite(seed);
         await page.click("#membersButton");
         await page.locator("#memberList li").nth(10).waitFor();
+        await page.waitForTimeout(400); // the sheet slides up first
         const facts = await page.evaluate(() => {
             const close = document.getElementById("membersClose").getBoundingClientRect();
             const body = document.querySelector("#membersContainer .sheet-body");
             return { closeBottom: close.bottom, vh: innerHeight, scrolls: body.scrollHeight > body.clientHeight };
         });
         assert.equal(facts.scrolls, true, "the body scrolls");
-        assert.ok(facts.closeBottom <= facts.vh, "Close is on the screen without scrolling ");
+        assert.ok(facts.closeBottom <= facts.vh, "Close is on the screen without scrolling");
         await context.close();
     });
 });

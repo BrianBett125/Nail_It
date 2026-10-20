@@ -339,6 +339,12 @@ export function restoreMaterial(siteId, materialId, material, user) {
     }));
 }
 
+// Every movement of the site inside [from, to], oldest first, as a report reads them.
+export async function fetchMovementsBetween(siteId, from, to) {
+    const all = Object.entries(db.movements[siteId] || {}).map(([id, movement]) => ({ id, ...structuredClone(movement) }));
+    return sortMovements(all.filter((movement) => movement.at >= from && movement.at <= to));
+}
+
 export function subscribeMovements(siteId, { materialId = null, limit = 100 } = {}, onData, onError) {
     return subscribe({ kind: "movements", siteId, materialId, limit, onData, onError });
 }

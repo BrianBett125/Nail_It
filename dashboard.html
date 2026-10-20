@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="styles/insights.css">
     <link rel="stylesheet" href="styles/dialogs.css">
+    <link rel="stylesheet" href="styles/reports.css">
+    <link rel="stylesheet" href="styles/print.css" media="print">
     <!-- Favicons for different devices -->
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -72,9 +74,15 @@
                 <button type="button" id="resendVerification">Send again</button>
                 <button type="button" id="checkVerified">I have verified</button>
             </div>
+            <!-- Only on paper: which site, when printed, and what the table is narrowed to (styles/print.css) -->
+            <div id="printHeader" class="print-header">
+                <h2 id="printSite"></h2>
+                <p id="printNote"></p>
+            </div>
             <div class="content-header">
                 <h1>Materials</h1>
                 <span id="roleBadge" class="role-badge" hidden></span>
+                <button id="reportsButton" hidden>Reports</button>
                 <button id="membersButton" hidden>Members</button>
                 <button id="addMaterialButton">Add Material</button>
             </div>
@@ -236,6 +244,47 @@
                 <button type="button" id="siteDeleteCancel" class="sheet-secondary">Cancel</button>
             </div>
         </form>
+    </dialog>
+
+    <!-- Reports: CSV downloads of the stock and of the movements in a date range, a message to share, and print.
+         Driven by src/ui-reports.js; what goes into the files is decided in src/reports.js. -->
+    <dialog id="reportsContainer" class="sheet-dialog sheet-dialog-wide" aria-labelledby="reportsTitle">
+        <div class="sheet sheet-form reports-dialog">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="reportsTitle">Reports</h2>
+                <p id="reportsSite" class="hint"></p>
+
+                <h3>Stock now</h3>
+                <button type="button" id="exportStock" class="sheet-secondary">Download stock (CSV)</button>
+
+                <h3>Movements</h3>
+                <div class="report-presets" role="group" aria-label="Quick ranges" id="reportPresets"></div>
+                <div class="report-range">
+                    <div>
+                        <label for="reportFrom" class="sheet-label">From</label>
+                        <input type="date" id="reportFrom" class="field">
+                    </div>
+                    <div>
+                        <label for="reportTo" class="sheet-label">To</label>
+                        <input type="date" id="reportTo" class="field">
+                    </div>
+                </div>
+                <p id="reportError" class="sheet-error" role="alert" hidden></p>
+                <button type="button" id="exportMovements" class="sheet-secondary">Download movements (CSV)</button>
+                <p class="hint">Both days are included. Times are in this device's time zone. Opens in Excel as it is.</p>
+
+                <h3>Send or print</h3>
+                <div class="report-send">
+                    <button type="button" id="reportShare" class="sheet-secondary">Share summary</button>
+                    <button type="button" id="reportPrint" class="sheet-secondary">Print or PDF</button>
+                </div>
+                <p id="reportStatus" class="hint" role="status"></p>
+            </div>
+            <div class="sheet-actions">
+                <button type="button" id="reportsClose" class="sheet-primary">Close</button>
+            </div>
+        </div>
     </dialog>
 
     <!-- Members: who is in the site, their roles. The owner can also invite, change roles and remove. -->

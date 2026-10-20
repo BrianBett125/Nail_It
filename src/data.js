@@ -24,6 +24,8 @@ import {
     query,
     orderByChild,
     equalTo,
+    startAt,
+    endAt,
     limitToLast,
     increment,
     serverTimestamp,
@@ -37,6 +39,7 @@ import {
     buildRestoreMaterialUpdates,
     buildEditMaterialUpdates,
     sortMovements,
+    movementsFromObject,
 } from "./movements.js";
 import { emailFromKey } from "./roles.js";
 
@@ -197,6 +200,16 @@ export function subscribeMovements(siteId, { materialId = null, limit = 100 } = 
         });
         onData(sortMovements(list));
     }, onError);
+}
+
+// Every movement of a site between two times (milliseconds, both included), oldest first: what a
+// report is made from. One read, not a listener; with no signal it gives up after timeoutMs.
+export async function fetchMovementsBetween(siteId, from, to, { timeoutMs = 20000 } = {}) {
+    const snapshot = await withTimeout(
+        get(query(ref(db, `movements/${siteId}`), orderByChild("at"), startAt(from), endAt(to))),
+        timeoutMs,
+    );
+    return movementsFromObject(snapshot.val());
 }
 
 export const OFFLINE_MESSAGE = "Could not reach the database. Check your connection and try again.";
