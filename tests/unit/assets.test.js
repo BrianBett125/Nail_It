@@ -17,7 +17,7 @@ const SOURCES = [...PAGES, ...STYLES];
 const BUDGET = {
     "sparks-1600.webp": 200,
     "sparks-800.webp": 80,
-    "hammer-900.webp": 150,
+    "hammer-600.webp": 50,
     "architecture-1600.webp": 150,
     "architecture-800.webp": 70,
     "database.webp": 40,

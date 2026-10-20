@@ -19,8 +19,8 @@ from PIL import Image
 # (source file, output file, max width, budget in KB)
 TARGETS = [
     ("sparks.jpg", "sparks-1600.webp", 1600, 200),        # home page hero
-    ("sparks.jpg", "sparks-800.webp", 800, 80),           # the same on phones
-    ("hammer.jpg", "hammer-900.webp", 900, 150),          # sign-in card background
+    ("sparks.jpg", "sparks-800.webp", 800, 80),           # the same on phones, and behind the sign-in card
+    ("hammer.jpg", "hammer-600.webp", 600, 50),           # sign-in card background (the card is 400px wide)
     ("architechture.jpg", "architecture-1600.webp", 1600, 150),  # about page background
     ("architechture.jpg", "architecture-800.webp", 800, 70),
     ("database.jpg", "database.webp", 640, 40),           # home page feature pictures
