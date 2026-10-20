@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
     <link rel="stylesheet" href="styles/index.css">
-    <script src="https://kit.fontawesome.com/739d7a3cd3.js" crossorigin="anonymous"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
@@ -14,7 +13,7 @@
 <body>
     <header>
         <div class="nav-bar">
-            <div class="logo">Nail <i class="fa-solid fa-exclamation"></i> It</div>
+            <div class="logo">Nail <span aria-hidden="true">!</span> It</div>
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="dashboard.html">Dashboard</a>
@@ -23,6 +22,7 @@
         </div>
     </header>
 
+    <main>
     <section id="intro" class="intro-section">
         <div class="cover-image"></div>
         <div class="intro-content">
@@ -35,21 +35,21 @@
     <section id="features" class="feature-section">
         <h2>Features</h2>
         <div class="feature">
-            <img src="assets/database.jpg" alt="Feature 1">
+            <img src="assets/database.webp" alt="Feature 1" width="640" height="427" loading="lazy">
             <div class="feature-info">
                 <h3>Real-time Data</h3>
                 <p>Stay updated with real-time data synchronization for all your construction sites.</p>
             </div>
         </div>
         <div class="feature">
-            <img src="assets/Stock.jpg" alt="Feature 2">
+            <img src="assets/stock.webp" alt="Feature 2" width="640" height="427" loading="lazy">
             <div class="feature-info">
                 <h3>Inventory Management</h3>
                 <p>Easily manage and track your materials inventory across multiple locations.</p>
             </div>
         </div>
         <div class="feature">
-            <img src="assets/storage.jpg" alt="Feature 3">
+            <img src="assets/storage.webp" alt="Feature 3" width="640" height="427" loading="lazy">
             <div class="feature-info">
                 <h3>Cloud Storage</h3>
                 <p>Your sites and materials are stored in the cloud with Firebase. Sign in with your own account, and each site's owner decides who can view or edit it.</p>
@@ -67,6 +67,7 @@
         </div>
         <a href="https://github.com/BrianBett125/Nail_It" class="btn">GitHub Repository</a>
     </section>
+    </main>
 
     <footer>
         <p>&copy; 2024 Nail It Dashboard. All rights reserved.</p>

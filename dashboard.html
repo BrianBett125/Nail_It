@@ -7,8 +7,6 @@
     <!-- Link to CSS stylesheet -->
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="styles/insights.css">
-    <!-- FontAwesome icons for various icons used in the page -->
-    <script src="https://kit.fontawesome.com/739d7a3cd3.js" crossorigin="anonymous"></script>
     <!-- Favicons for different devices -->
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -20,7 +18,7 @@
     <!-- Header section with navigation bar -->
     <header>
         <div class="nav-bar">
-            <div class="logo">Nail <i class="fa-solid fa-exclamation"></i> It</div>
+            <div class="logo">Nail <span aria-hidden="true">!</span> It</div>
             <!-- Navigation links -->
             <div class="nav-links">
                 <a href="index.html">Home</a>
@@ -39,7 +37,7 @@
     <!-- Main dashboard layout -->
     <div class="dashboard">
         <!-- Sidebar with list of sites -->
-        <div class="sidebar">
+        <nav class="sidebar" aria-label="Sites">
             <h2>Sites Dashboard</h2>
             <button id="addSiteButton">Add Site</button>
             <!-- Invitations waiting for this account's verified email -->
@@ -49,9 +47,9 @@
             </section>
             <p id="sitesStatus" class="status" role="status">Loading sites...</p>
             <ul id="siteList"></ul>
-        </div>
+        </nav>
         <!-- Main content section -->
-        <div class="main-content">
+        <main class="main-content">
             <!-- Shown until the account's email is verified: an unverified email cannot accept invitations -->
             <div id="verifyBanner" class="verify-banner" role="status" hidden>
                 <span>Verify your email to accept invitations. We sent a link to <strong id="verifyEmail"></strong>.</span>
@@ -135,7 +133,7 @@
                 <p id="activityEmpty" class="activity-empty" hidden>No activity yet. Stock that is received or used shows up here.</p>
                 <ul id="activityList" class="activity-list"></ul>
             </section>
-        </div>
+        </main>
     </div>
 
     <!-- Modal forms for adding and updating sites and materials -->

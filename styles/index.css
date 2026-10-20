@@ -57,7 +57,7 @@ header {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: url('../assets/sparks.jpg') no-repeat center center/cover;
+    background: url('../assets/sparks-1600.webp') no-repeat center center/cover;
     color: #ffedd5;
     text-align: center;
     padding: 20px;
@@ -75,7 +75,7 @@ header {
 
 .btn {
     padding: 10px 20px;
-    background-color: #f97316;
+    background-color: #c2410c;
     color: #fff;
     text-decoration: none;
     border-radius: 5px;
@@ -136,7 +136,7 @@ header {
 }
 
 .social-links a {
-    color: #3498db;
+    color: #1b6ca8;
     text-decoration: none;
     margin: 0 10px;
 }
@@ -156,4 +156,8 @@ footer {
     .feature img {
         margin: 0 0 20px 0;
     }
+}
+
+@media (max-width: 768px) {
+    .intro-section { background-image: url('../assets/sparks-800.webp'); }
 }

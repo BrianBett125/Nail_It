@@ -208,11 +208,10 @@ describe("dashboard core behavior (Phase 0)", () => {
     it("B4: clicking the trash icon itself (not just the button edge) deletes the right site", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await siteLink(page, "Cape Town").waitFor();
-        // The Font Awesome kit is stubbed out here, so the <i> has no size and cannot be
-        // clicked with the mouse. A DOM click on it has the same event.target a real tap has.
+        // A click on the icon itself (an inline SVG) has the same event.target a real tap on it has.
         await page.locator("#siteList li", { hasText: "Cape Town" })
-            .locator(".delete-site-btn i")
-            .evaluate((icon) => icon.click());
+            .locator(".delete-site-btn svg")
+            .evaluate((icon) => icon.dispatchEvent(new MouseEvent("click", { bubbles: true })));
         await page.fill("#siteDeleteInput", "Cape Town");
         await page.click("#siteDeleteConfirm");
         await page.waitForFunction(() => window.__nailit.writes.length > 0);

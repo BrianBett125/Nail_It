@@ -20,6 +20,7 @@ import {
     validateInvite,
 } from "./src/roles.js";
 import { lastUpdatedLabel } from "./src/movements.js";
+import { icon } from "./src/icons.js";
 import { showToast } from "./src/toast.js";
 import { createMovementsUI } from "./src/ui-movements.js";
 import { createInsightsUI } from "./src/ui-insights.js";
@@ -561,9 +562,7 @@ function buildSiteItem(siteId, site) {
         deleteButton.className = 'delete-site-btn';
         deleteButton.dataset.siteId = siteId;
         deleteButton.setAttribute('aria-label', `Delete site ${siteLabel(site)}`);
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-trash-alt';
-        deleteButton.appendChild(icon);
+        deleteButton.appendChild(icon('trash'));
         deleteButton.addEventListener('click', (event) => {
             event.stopPropagation(); // Prevent triggering the site link click event
             showDeleteSiteConfirmation(siteId);
@@ -764,8 +763,8 @@ function addMaterialRow(materialId, materialData, editable) {
     const manageCell = document.createElement("td");
     manageCell.className = "cell-manage";
     if (editable) {
-        const editButton = makeManageButton("btn-edit", "fa-regular fa-pen-to-square", "Edit", "Edit material");
-        const deleteButton = makeManageButton("btn-delete", "fas fa-trash-alt", "Delete", "Delete material");
+        const editButton = makeManageButton("btn-edit", "pen", "Edit", "Edit material");
+        const deleteButton = makeManageButton("btn-delete", "trash", "Delete", "Delete material");
         editButton.addEventListener("click", () => {
             showUpdateForm(materialId, materialData);
         });
@@ -780,16 +779,13 @@ function addMaterialRow(materialId, materialData, editable) {
     tableBody.appendChild(newRow);
 }
 
-// A text label next to the icon, so the button reads even where the icon font does not load.
-function makeManageButton(className, iconClass, text, label) {
+// A text label next to the icon: the button reads without the picture, and the picture is decoration.
+function makeManageButton(className, iconName, text, label) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
     button.setAttribute("aria-label", label);
-    const icon = document.createElement("i");
-    icon.className = iconClass;
-    icon.setAttribute("aria-hidden", "true");
-    button.append(icon, ` ${text}`);
+    button.append(icon(iconName), ` ${text}`);
     return button;
 }
 

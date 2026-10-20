@@ -19,7 +19,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: 'Poppins', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
     position: fixed;
     top: 0;
     width: 100%;
@@ -109,7 +109,7 @@ header {
 /* CSS for the selected site */
 .sidebar ul li.selected a {
     background-color: #d3a269;
-    color: #2c3e50;
+    color: #1b1b1b;
     font-weight: bold;
     border-left: 5px solid #b38150;
 }
@@ -125,7 +125,7 @@ header {
     border: none;
     border-radius: 5px;
     background-color: #d3a269;
-    color: white;
+    color: #1b1b1b;
     cursor: pointer;
     transition: background-color 0.3s;
     margin-top: 10px;
@@ -192,7 +192,7 @@ td button:hover {
     border: none;
     border-radius: 5px;
     background-color: #d3a269;
-    color: white;
+    color: #1b1b1b;
     cursor: pointer;
     transition: background-color 0.3s;
 }
@@ -299,7 +299,7 @@ td button:hover {
     padding: 10px;
     border: none;
     border-radius: 5px;
-    background-color: #3498db;
+    background-color: #1b6ca8;
     color: white;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -308,14 +308,14 @@ td button:hover {
 .site-form button[type="button"],
 .update-form button[type="button"],
 .material-form button[type="button"] {
-    background-color: #e74c3c;
+    background-color: #c0392b;
     margin-left: 10px;
 }
 
 .site-form button[type="submit"],
 .update-form button[type="submit"],
 .material-form button[type="submit"] {
-    background-color: #3498db;
+    background-color: #1b6ca8;
     color: white;
 }
 
@@ -337,7 +337,7 @@ td button:hover {
     padding: 10px;
     border: none;
     border-radius: 5px;
-    background-color: #3498db;
+    background-color: #1b6ca8;
     color: white;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -406,7 +406,7 @@ td button:hover {
 }
 
 #siteDeleteCancel {
-    background-color: #3498db;
+    background-color: #1b6ca8;
 }
 
 #siteDeleteConfirm {
@@ -515,7 +515,7 @@ td button:hover {
     border: none;
     border-radius: 3px;
     background: #d3a269;
-    color: #fff;
+    color: #1b1b1b;
     cursor: pointer;
 }
 
@@ -580,7 +580,7 @@ td button:hover {
     padding: 2px 8px;
     border-radius: 10px;
     background: #d3a269;
-    color: #2c3e50;
+    color: #1b1b1b;
     font-size: 12px;
 }
 
@@ -672,7 +672,7 @@ table.readonly td.cell-manage {
     padding: 8px 12px;
     border: none;
     border-radius: 5px;
-    background: #3498db;
+    background: #1b6ca8;
     color: #fff;
     cursor: pointer;
 }
@@ -1490,4 +1490,12 @@ td .btn-delete:hover {
 
     .activity-panel:not(.activity-open) .activity-item:nth-child(n + 2) { display: none; }
     .activity-panel.activity-open .activity-list { max-height: 16rem; overflow-y: auto; }
+}
+
+/* ---- inline SVG icons (src/icons.js) ---- */
+.icon {
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.2em;
+    flex: none;
 }
