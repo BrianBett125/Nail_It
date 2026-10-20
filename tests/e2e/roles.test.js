@@ -228,7 +228,7 @@ describe("an edit never lands in the wrong site", () => {
         await waitForRows(page, ["Cement", "Sand"]);
         await editBtn(page, "Cement").click();
         await domSelectSite(page, "Cape Town");
-        await page.waitForFunction(() => document.getElementById("updateFormContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("updateFormContainer").open);
         await page.evaluate(() => document.getElementById("updateForm").requestSubmit());
         await page.waitForTimeout(50);
         assert.deepEqual(await wrote(page), []);
@@ -393,7 +393,7 @@ describe("members dialog: owner", () => {
         await open(page);
         assert.equal((await page.evaluate(() => window.__nailit.activeListeners())).filter((l) => l.kind === "members").length, 1);
         await page.click("#membersClose");
-        assert.equal(await page.locator("#membersContainer").evaluate((el) => el.style.display), "none");
+        assert.equal(await page.locator("#membersContainer").evaluate((el) => el.open), false);
         assert.equal((await page.evaluate(() => window.__nailit.activeListeners())).filter((l) => l.kind === "members").length, 0);
         await context.close();
     });
@@ -402,7 +402,7 @@ describe("members dialog: owner", () => {
         const { context, page } = await openDashboard(browser, baseUrl, seed());
         await open(page);
         await page.evaluate(() => document.querySelector("#siteList li:nth-child(2) a").click());
-        await page.waitForFunction(() => document.getElementById("membersContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("membersContainer").open);
         await context.close();
     });
 });
@@ -450,7 +450,7 @@ describe("members dialog: storekeeper and viewer", () => {
         // The site drops out of the list, the selection and the dialog go with it.
         await page.waitForFunction(() => document.querySelectorAll("#siteList li").length === 1);
         assert.equal(await page.locator("#siteList a.active").count(), 0);
-        assert.equal(await page.locator("#membersContainer").evaluate((el) => el.style.display), "none");
+        assert.equal(await page.locator("#membersContainer").evaluate((el) => el.open), false);
         await context.close();
     });
 

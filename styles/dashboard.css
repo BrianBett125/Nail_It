@@ -201,164 +201,7 @@ td button:hover {
     background-color: #b38150;
 }
 
-/* Modal styling */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgb(0,0,0);
-    background-color: rgba(0,0,0,0.4);
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-}
-
-.modal-content button {
-    margin: 5px;
-}
-
-/* Form Styling */
-.site-form-container {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-}
-
-.del-site-form-container,
-.update-form-container,
-.material-form-container {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    text-align: center;
-    
-}
-
-.delete-form,
-.update-form,
-.material-form,
-.site-form{
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    position: absolute;
-    top: 25%;
-    left: 45%;    
-}
-
-.site-form h2,
-.update-form h2,
-.material-form h2{
-    margin-bottom: 20px;
-}
-
-.del-site-form-container  h3{
-    margin-bottom: 10px;  
-}
-
-.site-form label,
-.update-form label,
-.material-form label {
-    display: block;
-    margin-bottom: 5px;
-}
-
-.site-form input,
-.update-form input,
-.material-form input{
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 15px;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-}
-
-.site-form button,
-.update-form button,
-.material-form button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #1b6ca8;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.site-form button[type="button"],
-.update-form button[type="button"],
-.material-form button[type="button"] {
-    background-color: #c0392b;
-    margin-left: 10px;
-}
-
-.site-form button[type="submit"],
-.update-form button[type="submit"],
-.material-form button[type="submit"] {
-    background-color: #1b6ca8;
-    color: white;
-}
-
-/* Button hover styling */
-.site-form button[type="submit"]:hover,
-.update-form button[type="submit"]:hover,
-.material-form button[type="submit"]:hover {
-    background-color: #2980b9;
-}
-
-.site-form button[type="button"]:hover,
-.update-form button[type="button"]:hover,
-.material-form button[type="button"]:hover {
-    background-color: #c0392b;
-}
-
-/* Delete button styling */
-#delCancelButton, #del-yes-btn {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #1b6ca8;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-#del-yes-btn {
-    background-color: #c0392b;
-}
-
 /* Phase 1: dropdowns, status lines, toasts */
-.site-form select,
-.update-form select,
-.material-form select {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 15px;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-    background: white;
-    box-sizing: content-box; /* same width as the text inputs, which are content-box */
-}
-
 .sidebar #addSiteButton {
     margin: 5px 5px 10px;
 }
@@ -373,50 +216,6 @@ td button:hover {
     color: #555;
     font-size: 16px;
     margin: 20px 0;
-}
-
-.material-form #material-another-btn {
-    margin-left: 10px;
-    background-color: #27ae60;
-}
-
-.material-form #material-another-btn:hover {
-    background-color: #1e8449;
-}
-
-.delete-form p {
-    margin-bottom: 10px;
-}
-
-.delete-form input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 15px;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-}
-
-#siteDeleteCancel,
-#siteDeleteConfirm {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    cursor: pointer;
-}
-
-#siteDeleteCancel {
-    background-color: #1b6ca8;
-}
-
-#siteDeleteConfirm {
-    background-color: #c0392b;
-    margin-left: 10px;
-}
-
-#siteDeleteConfirm:disabled {
-    background-color: #999;
-    cursor: not-allowed;
 }
 
 .toasts {
@@ -590,116 +389,6 @@ table.readonly td.cell-manage {
     display: none;
 }
 
-.members-container {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    overflow-y: auto;
-    z-index: 10;
-}
-
-.members-dialog {
-    box-sizing: border-box;
-    width: 480px;
-    max-width: calc(100% - 32px);
-    margin: 8vh auto;
-    padding: 20px;
-    border-radius: 5px;
-    background: #fff;
-}
-
-.members-dialog h2 {
-    margin-bottom: 12px;
-}
-
-.members-dialog h3 {
-    margin: 18px 0 6px;
-}
-
-.member-list {
-    list-style: none;
-}
-
-.member-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.member-list .member-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-all;
-}
-
-.member-list .member-role {
-    color: #555;
-}
-
-.member-list select {
-    padding: 6px;
-}
-
-.members-dialog .hint,
-.hint {
-    color: #666;
-    font-size: 13px;
-}
-
-.invite-form label {
-    display: block;
-    margin: 8px 0 4px;
-}
-
-.invite-form input,
-.invite-form select {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-}
-
-.members-dialog button,
-.member-list button {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 5px;
-    background: #1b6ca8;
-    color: #fff;
-    cursor: pointer;
-}
-
-.invite-form button {
-    margin-top: 12px;
-}
-
-.member-list .remove-member,
-.member-list .revoke-invite,
-#leaveSiteButton {
-    background: #c0392b;
-}
-
-.members-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.members-dialog button:disabled,
-.member-list button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
 /* ==== Phase 3: Received / Used, history, activity ======================================
    Variant "Sheet": modal dialogs that are a bottom sheet on phones and a centred card on
    larger screens. Colours are picked for glare: dark text on white, white on deep green/red,
@@ -721,10 +410,6 @@ table.readonly td.cell-manage {
 td button:focus-visible {
     outline: 3px solid var(--focus);
     outline-offset: 2px;
-}
-
-body.sheet-open {
-    overflow: hidden;
 }
 
 /* Table cells that hold buttons */
@@ -803,43 +488,12 @@ td .btn-delete:hover {
     color: #fff;
 }
 
-/* ---- the sheets ---- */
-.sheet-backdrop {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 30;
-    align-items: flex-end;
-    justify-content: center;
-    background: rgba(12, 20, 28, 0.62);
-}
-
-.sheet {
-    --accent: var(--ink);
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 480px;
-    max-height: 100%;
-    overflow-y: auto;
-    padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-    border-top: 6px solid var(--accent);
-    border-radius: 18px 18px 0 0;
-    background: #fff;
-    color: var(--ink);
-    text-align: left;
-    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.4);
-    animation: sheet-up 0.16s ease-out;
-}
-
 .sheet-received { --accent: var(--in); }
 .sheet-used { --accent: var(--out); }
 
 @keyframes sheet-up {
-    from { transform: translateY(24px); opacity: 0.4; }
-    to { transform: none; opacity: 1; }
+    from { transform: translateY(24px); }
+    to { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1231,62 +885,69 @@ td .btn-delete:hover {
     white-space: nowrap;
 }
 
-/* ---- larger screens: a centred card instead of a bottom sheet ---- */
-@media (min-width: 601px) {
-    .sheet-backdrop {
-        align-items: center;
-    }
+/* ==== Phase 5: the phone shell ===========================================================
+   Variant "Drawer". At 768px and below the page is: the top bar (logo, the other page, Sign out),
+   then ONE row, the site bar (the site picker with the open site's name, the role, Add Site), then the
+   materials. The picker opens the sites nav as a drawer that slides down from under the bar, with the
+   page dimmed behind it. On a desktop none of the bar shows and the nav is the sidebar, as before.
+   src/ui-drawer.js opens and closes it. */
 
-    .sheet {
-        padding: 22px 26px 26px;
-        border-top-width: 8px;
-        border-radius: 14px;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
-    }
+/* Desktop: the site bar has no box of its own, and its phone-only parts are not there. */
+.site-bar { display: contents; }
+.site-picker,
+.bar-role,
+.site-scrim,
+.drawer-close,
+.drawer-account,
+.add-plus { display: none; }
 
-    .sheet-grip {
-        display: none;
-    }
+/* A page does not scroll behind a dialog or the open drawer. */
+body:has(dialog[open]),
+body:has(.site-bar.is-open) { overflow: hidden; }
 
-    .sheet-history {
-        height: auto;
-        max-height: 86%;
-        min-height: 360px;
-        max-width: 560px;
-    }
+@keyframes drawer-down {
+    from { transform: translateY(-12px); opacity: 0; }
+    to { transform: none; opacity: 1; }
 }
 
-/* With the sidebar beside the content (wider than a phone) the dimmed area covers the content
-   only, so another site can still be picked while a sheet is open. That closes the sheet. */
-@media (min-width: 701px) {
-    .sheet-backdrop {
-        left: 220px;
-        width: calc(100% - 220px);
-    }
-}
-
-/* ---- phones ----
-   Not the full mobile rewrite (that is a later phase): just enough that the materials list is
-   usable at 375px. The sidebar stacks above the content and each material becomes a card. */
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     body { height: auto; }
 
+    /* ---- the top bar ---- */
     header {
         position: static;
         box-sizing: border-box; /* width 100% plus padding made the whole page wider than the phone */
-        padding: 8px 12px;
+        padding: 6px 12px;
     }
 
     .nav-bar {
-        flex-wrap: wrap;
-        gap: 6px 10px;
+        gap: 8px;
         width: 100%;
     }
 
-    .nav-links { margin-left: 0; }
-    .nav-links a { margin: 0 12px 0 0; }
-    .user-area { margin-left: auto; }
-    .user-area #userEmail { max-width: 45vw; }
+    .logo { font-size: 22px; }
+    .nav-links { margin-left: auto; }
+
+    .nav-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin: 0;
+        padding: 0 12px;
+    }
+
+    /* Home and About Us are on the public pages; the page you are on is not a link you need. */
+    .nav-links .nav-extra,
+    .nav-links [aria-current="page"] { display: none; }
+
+    .user-area { margin-left: 0; }
+    .user-area #userEmail { display: none; }
+
+    .user-area button {
+        min-height: 44px;
+        padding: 0 14px;
+        font-size: 15px;
+    }
 
     .dashboard {
         display: block;
@@ -1294,24 +955,240 @@ td .btn-delete:hover {
         height: auto;
     }
 
-    .sidebar {
-        position: static;
+    /* ---- the site bar: one row, stuck under the top bar while the page scrolls ---- */
+    .site-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 64px;
+        padding: 8px 68px 8px 12px; /* the right padding is Add Site's place, reserved so nothing jumps when it arrives */
+        border-bottom: 3px solid #d3a269;
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+
+    .site-picker {
+        position: relative;
+        z-index: 1;
+        box-sizing: border-box;
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+        min-height: 48px;
+        margin: 0;
+        padding: 4px 12px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.22);
+        color: #fff;
+        font: inherit;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .site-picker:focus-visible,
+    .drawer-close:focus-visible,
+    .site-bar > #addSiteButton:focus-visible {
+        outline: 3px solid #ffd27d;
+        outline-offset: 2px;
+    }
+
+    .picker-text { display: block; min-width: 0; }
+
+    .picker-name {
+        display: -webkit-box;
+        overflow: hidden;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .picker-chevron {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        transition: transform 0.15s;
+    }
+
+    .site-bar.is-open .picker-chevron { transform: rotate(180deg); }
+
+    .bar-role {
+        position: relative;
+        z-index: 1;
+        display: inline-block;
+        flex: none;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: #d3a269;
+        color: #1b1b1b;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    /* Add Site is one element that lives in the sidebar on a desktop and in this bar on a phone. */
+    .site-bar > #addSiteButton {
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        z-index: 1;
+        width: 48px;
+        height: 48px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 12px;
+        background: #d3a269;
+        color: #1b1b1b;
+        font-size: 30px;
+        font-weight: bold;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .site-bar .add-plus { display: inline; }
+
+    .site-bar .add-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    /* ---- the drawer ---- */
+    .site-bar .sidebar {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        bottom: auto;
+        left: 0;
+        z-index: 2;
+        box-sizing: border-box;
+        display: none;
+        visibility: hidden; /* closed: its links are neither visible nor reachable */
+        flex-direction: column;
         width: auto;
         max-width: none;
         height: auto;
-        overflow: visible;
+        max-height: 70dvh;
+        padding: 10px 12px 16px;
+        overflow-y: auto;
+        border-radius: 0 0 18px 18px;
+        background: #2c3e50;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .site-bar.is-open .sidebar {
+        visibility: visible;
+        display: flex;
+        animation: drawer-down 0.16s ease-out;
+    }
+
+    .site-bar.is-open .site-scrim {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        z-index: 0;
+        display: block;
+        height: 100dvh;
+        background: rgba(12, 20, 28, 0.62);
+    }
+
+    .drawer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .sidebar h2 { margin: 0; font-size: 18px; }
+
+    .sidebar .drawer-close {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin: 0;
+        padding: 0 16px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 10px;
+        background: transparent;
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
     }
 
     .sidebar ul {
-        display: flex;
         flex: none;
-        gap: 8px;
-        overflow-x: auto;
-        padding-bottom: 4px;
+        overflow: visible;
     }
 
-    .sidebar ul li { margin-bottom: 0; flex: none; }
-    .sidebar ul li a { min-height: 24px; align-items: center; }
+    .sidebar ul li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .sidebar ul li a {
+        flex: 1;
+        min-width: 0;
+        min-height: 48px;
+        align-items: center;
+        padding: 6px 12px;
+        font-size: 17px;
+        overflow-wrap: anywhere;
+    }
+
+    .sidebar ul li a.active { box-shadow: inset 5px 0 0 #d3a269; }
+    .sidebar .role-tag { flex: none; margin: 0; }
+
+    .sidebar .delete-site-btn {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        min-height: 48px;
+        margin: 0;
+        padding: 0;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        background: transparent;
+        color: #ecf0f1;
+    }
+
+    .sidebar .delete-site-btn:hover { background: #922b21; }
+    .sidebar .status { margin: 8px 4px; font-size: 16px; }
+    .invites-panel li { gap: 8px; }
+
+    .invites-panel button {
+        min-height: 44px;
+        margin: 0 8px 0 0;
+        padding: 0 18px;
+        font-size: 16px;
+    }
+
+    .drawer-account {
+        display: block;
+        margin: 8px 4px 0;
+        color: #c9d3dd;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
 
     .main-content {
         height: auto;
@@ -1320,6 +1197,34 @@ td .btn-delete:hover {
         overflow: visible;
     }
 
+    /* The site bar already says which site and which role: the heading stays for screen readers, and the
+       page starts with the buttons and the figures instead. */
+    .content-header h1,
+    #roleBadge {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .content-header { margin-bottom: 12px; }
+}
+
+/* The activity feed waits for the materials: it would otherwise be on screen while they load and get
+   pushed down when they arrive. */
+.main-content:not(.is-ready) .activity-panel { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .site-bar.is-open .sidebar { animation: none; }
+}
+
+/* ---- phones ----
+   The shell (top bar, site bar, drawer) is above. At 700px and below each material also becomes a
+   card, with big Receive / Use / History buttons. */
+@media (max-width: 768px) {
     .content-header { flex-wrap: wrap; }
     #addMaterialButton, #membersButton { min-height: 44px; }
 
@@ -1423,7 +1328,7 @@ td .btn-delete:hover {
 td .btn-delete { color: var(--ink); }
 td .btn-delete:hover { background: var(--out); border-color: var(--out); color: #fff; }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     /* What happened lately comes before the long list of materials, not after it. */
     .main-content { display: flex; flex-direction: column; }
     .main-content > .verify-banner { order: -1; }
@@ -1469,7 +1374,7 @@ td .btn-delete:hover {
     text-decoration: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     /* One line of activity until opened: the materials stay the first thing on the screen. */
     .activity-toggle {
         display: inline-block;

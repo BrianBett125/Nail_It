@@ -1,0 +1,231 @@
+/* ==== Phase 5: native dialogs ===========================================================
+   Every form and sheet on the dashboard is a <dialog> opened with showModal(): a bottom sheet on a phone,
+   a centred card on a larger screen. One language for all seven: a grip, a scrolling body, and the
+   buttons pinned under it so a thumb always reaches them, with one big primary action on top.
+   Loaded after dashboard.css and insights.css, which define the tokens (--ink, --line, --focus, ...)
+   and the Phase 3 pieces (amount field, chips, history rows) that live inside the sheets. */
+
+/* ---- the dialog element: transparent, the .sheet inside is what you see ---- */
+.sheet-dialog {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    max-height: var(--vh, 100dvh);
+    margin: auto 0 0;       /* the bottom of the screen */
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    overflow: visible;
+    bottom: var(--kb, 0px); /* lifted above an on-screen keyboard (src/dialog.js) */
+}
+
+.sheet-dialog::backdrop {
+    background: rgba(12, 20, 28, 0.62);
+}
+
+.sheet {
+    --accent: var(--ink);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: calc(var(--vh, 100dvh) - 16px); /* a strip of dim stays above the sheet to tap */
+    margin: 0 auto;
+    padding: 8px 0 0;
+    overflow: hidden;
+    border-top: 6px solid var(--accent);
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+    color: var(--ink);
+    text-align: left;
+    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.4);
+    animation: sheet-up 0.16s ease-out;
+}
+
+.sheet-form,
+.members-dialog { --accent: #1b6ca8; }
+.sheet-danger { --accent: var(--out); }
+
+.sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 16px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* The buttons stay put while the body scrolls. One primary action, full width; the rest under it. */
+.sheet-actions {
+    display: grid;
+    flex: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: #fff;
+}
+
+.sheet-actions .sheet-primary,
+.sheet-actions .sheet-secondary:nth-child(2):last-child {
+    grid-column: 1 / -1;
+}
+
+.sheet-actions .sheet-secondary {
+    margin: 0;
+}
+
+.sheet-form h2,
+.members-dialog h2 {
+    margin: 4px 0 16px;
+}
+
+.sheet-primary:disabled {
+    background: #5d6b79;
+    cursor: not-allowed;
+}
+
+.sheet-leave {
+    border-color: var(--out);
+    color: var(--out);
+}
+
+/* ---- fields ---- */
+.field {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    margin: 0 0 14px;
+    padding: 0 12px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px; /* 16px or more: iOS Safari zooms the page in on smaller text */
+}
+
+.field:focus-visible,
+.sheet select:focus-visible,
+.member-list select:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.sheet-form .hint {
+    margin: -4px 0 4px;
+}
+
+.hint {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+/* ---- members ---- */
+.members-dialog h3 {
+    margin: 20px 0 6px;
+    font-size: 17px;
+}
+
+.member-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.member-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.member-list .member-name {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.member-list .member-role {
+    color: var(--muted);
+}
+
+.member-list select {
+    box-sizing: border-box;
+    flex: 1 1 140px;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+}
+
+.member-list button {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--out);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--out);
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.member-list button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.member-list li.hint {
+    display: block;
+    border-bottom: 0;
+}
+
+.invite-form .sheet-secondary {
+    margin-top: 4px;
+}
+
+/* ---- history: its own header stays, the timeline scrolls ---- */
+.sheet-dialog .sheet-history {
+    height: calc(var(--vh, 100dvh) * 0.92);
+    max-height: none;
+    padding: 8px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ---- phones: the sheet fills the width ---- */
+@media (max-width: 600px) {
+    .sheet-dialog { overscroll-behavior: contain; }
+}
+
+/* ---- larger screens: a centred card ---- */
+@media (min-width: 601px) {
+    .sheet-dialog {
+        max-width: 480px;
+        margin: auto;
+    }
+
+    .sheet-dialog-wide { max-width: 560px; }
+
+    .sheet {
+        max-height: calc(var(--vh, 100dvh) - 48px);
+        border-top-width: 8px;
+        border-radius: 14px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    .sheet-grip { display: none; }
+    .sheet-body { padding: 6px 26px 10px; }
+    .sheet-actions { padding: 12px 26px 22px; }
+
+    .sheet-dialog .sheet-history {
+        height: min(640px, calc(var(--vh, 100dvh) - 48px));
+        padding: 22px 26px 26px;
+    }
+}

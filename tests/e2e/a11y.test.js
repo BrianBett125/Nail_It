@@ -179,6 +179,8 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
             await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-edit").click();
             await assertClean(page, `edit dialog on a ${name}`);
             await page.click("#updateCancelButton");
+            const picker = page.locator("#sitePickerButton");
+            if (await picker.isVisible()) await picker.click();
             await page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn").click();
             await assertClean(page, `delete site dialog on a ${name}`);
             await context.close();

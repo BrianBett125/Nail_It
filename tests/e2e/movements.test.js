@@ -160,7 +160,7 @@ describe("recording stock: Received and Used", () => {
         assert.match(await error.textContent(), /Only 5 bags in stock/);
         assert.equal(await error.getAttribute("role"), "alert");
         assert.equal((await wrote(page)).length, 0);
-        assert.notEqual(await page.evaluate(() => getComputedStyle(document.querySelector("#movementContainer")).display), "none", "dialog stays open");
+        assert.equal(await page.evaluate(() => document.querySelector("#movementContainer").open), true, "dialog stays open");
         assert.equal(await page.inputValue("#movementAmount"), "6", "what was typed is kept");
 
         await page.fill("#movementAmount", "5");
@@ -264,7 +264,8 @@ describe("recording stock: Received and Used", () => {
         await closed(page, "#movementContainer");
 
         await openRecord(page, "Sand", "received");
-        await selectSite(page, "Cape Town");
+        // a modal sheet makes the sidebar inert, so a person cannot click it; code (another tab, a link) still can
+        await page.locator("#siteList a", { hasText: "Cape Town" }).evaluate((a) => a.click());
         await closed(page, "#movementContainer");
         assert.equal((await wrote(page)).length, 0);
         await context.close();

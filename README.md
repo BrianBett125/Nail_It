@@ -79,6 +79,7 @@ How it is laid out:
 * `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
 * `src/toast.js` shows the toast messages that replaced `alert()`. `src/icons.js` draws the few icons as inline SVG (there is no icon font).
 * `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site and Google's Firebase CDN. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
+* `src/dialog.js` opens every form and sheet as a native `<dialog>` (focus trap, Escape, a sheet that rides above the phone keyboard). `src/ui-drawer.js` turns the sidebar into a site picker drawer at 768px and below; `styles/dialogs.css` styles the dialogs as bottom sheets on a phone and cards on a desktop. On a phone the trash can for a site is inside the drawer.
 * `tests/e2e/a11y.test.js` runs axe-core on every page and dialog, on a phone and on a desktop (zero serious or critical violations; `AXE_ALL=1` also fails on moderate ones). `tests/e2e/phone.test.js` and `tests/e2e/dialogs.test.js` hold the 375px and native `<dialog>` contract.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
 

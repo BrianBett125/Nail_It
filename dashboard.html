@@ -7,6 +7,7 @@
     <!-- Link to CSS stylesheet -->
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="styles/insights.css">
+    <link rel="stylesheet" href="styles/dialogs.css">
     <!-- Favicons for different devices -->
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -19,12 +20,12 @@
     <header>
         <div class="nav-bar">
             <div class="logo">Nail <span aria-hidden="true">!</span> It</div>
-            <!-- Navigation links -->
+            <!-- Navigation links. On a phone only the other page is shown: Home and About Us are on the public pages. -->
             <div class="nav-links">
-                <a href="index.html">Home</a>
-                <a href="dashboard.html">Dashboard</a>
+                <a href="index.html" class="nav-extra">Home</a>
+                <a href="dashboard.html" aria-current="page">Dashboard</a>
                 <a href="overview.html">Overview</a>
-                <a href="about-us.html">About Us</a>
+                <a href="about-us.html" class="nav-extra">About Us</a>
             </div>
             <!-- Who is signed in -->
             <div class="user-area">
@@ -36,18 +37,33 @@
 
     <!-- Main dashboard layout -->
     <div class="dashboard">
-        <!-- Sidebar with list of sites -->
-        <nav class="sidebar" aria-label="Sites">
-            <h2>Sites Dashboard</h2>
-            <button id="addSiteButton">Add Site</button>
-            <!-- Invitations waiting for this account's verified email -->
-            <section id="invitesPanel" class="invites-panel" aria-label="Invitations" hidden>
-                <h3>Invitations</h3>
-                <ul id="inviteList"></ul>
-            </section>
-            <p id="sitesStatus" class="status" role="status">Loading sites...</p>
-            <ul id="siteList"></ul>
-        </nav>
+        <!-- The site bar. On a phone it is one row under the top bar: the site picker, the role, Add Site.
+             The picker opens the sites nav below as a drawer (src/ui-drawer.js). On a desktop the row is
+             not there and the nav is the sidebar. -->
+        <div class="site-bar" id="siteBar" role="region" aria-label="Site">
+            <button type="button" id="sitePickerButton" class="site-picker" aria-expanded="false" aria-controls="siteDrawer">
+                <span class="picker-text"><span class="sr-only">Site: </span><span id="sitePickerName" class="picker-name">Loading sites...</span></span>
+                <svg class="picker-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <span id="siteBarRole" class="bar-role" hidden></span>
+            <div id="siteScrim" class="site-scrim" aria-hidden="true"></div>
+            <!-- Sidebar with list of sites -->
+            <nav class="sidebar" id="siteDrawer" aria-label="Sites">
+                <div class="drawer-head" id="drawerHead">
+                    <h2>Sites Dashboard</h2>
+                    <button type="button" id="siteDrawerClose" class="drawer-close">Close</button>
+                </div>
+                <button type="button" id="addSiteButton"><span class="add-plus" aria-hidden="true">+</span><span class="add-text">Add Site</span></button>
+                <!-- Invitations waiting for this account's verified email -->
+                <section id="invitesPanel" class="invites-panel" aria-label="Invitations" hidden>
+                    <h3>Invitations</h3>
+                    <ul id="inviteList"></ul>
+                </section>
+                <p id="sitesStatus" class="status" role="status">Loading sites...</p>
+                <ul id="siteList"></ul>
+                <p id="drawerAccount" class="drawer-account"></p>
+            </nav>
+        </div>
         <!-- Main content section -->
         <main class="main-content">
             <!-- Shown until the account's email is verified: an unverified email cannot accept invitations -->
@@ -136,129 +152,158 @@
         </main>
     </div>
 
-    <!-- Modal forms for adding and updating sites and materials -->
+    <!-- Every dialog is a native <dialog> opened with showModal() (src/dialog.js): the browser gives the
+         focus trap, Escape, the inert page behind it and the modal semantics. On a phone each is a bottom
+         sheet with its buttons pinned under a scrolling body; on a larger screen a centred card. -->
+
     <!-- Add Site Form. createdAt is stamped by the app; the building type options are filled by dashboard.js from src/logic.js -->
-    <div id="siteFormContainer" class="site-form-container">
-        <form id="siteForm" class="site-form">
-            <h2>Add New Site</h2>
-            <label for="siteName">Name:</label>
-            <input type="text" id="siteName" name="siteName" autocomplete="off" required>
-            <label for="siteLocation">Location:</label>
-            <input type="text" id="siteLocation" name="siteLocation" autocomplete="off" required>
-            <label for="buildingType">Type of Building:</label>
-            <select id="buildingType" name="buildingType" required></select>
-            <button type="button" id="cancelButton">Cancel</button>
-            <button type="submit" id="add-site-btn">Add Site</button>
+    <dialog id="siteFormContainer" class="sheet-dialog" aria-labelledby="siteFormTitle">
+        <form id="siteForm" class="sheet sheet-form">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="siteFormTitle">Add New Site</h2>
+                <label for="siteName" class="sheet-label">Name</label>
+                <input type="text" id="siteName" name="siteName" class="field" autocomplete="off" required>
+                <label for="siteLocation" class="sheet-label">Location</label>
+                <input type="text" id="siteLocation" name="siteLocation" class="field" autocomplete="off" required>
+                <label for="buildingType" class="sheet-label">Type of building</label>
+                <select id="buildingType" name="buildingType" class="field" required></select>
+            </div>
+            <div class="sheet-actions">
+                <button type="submit" id="add-site-btn" class="sheet-primary">Add Site</button>
+                <button type="button" id="cancelButton" class="sheet-secondary">Cancel</button>
+            </div>
         </form>
-    </div>
+    </dialog>
 
     <!-- UPDATE FORM -->
-    <div id="updateFormContainer" class="update-form-container">
-        <form id="updateForm" class="update-form">
-            <h2>Edit</h2>
-            <label for="uMaterialName">Material Name:</label>
-            <input type="text" id="uMaterialName" name="materialName" list="materialNames" autocomplete="off" required>
-            <label for="uUnits">Units:</label>
-            <select id="uUnits" name="units" required></select>
-            <label for="uMinLevel">Low-stock level (optional):</label>
-            <input type="number" id="uMinLevel" name="minLevel" min="0" step="any" inputmode="decimal">
-            <p class="hint">Stock is changed with Received and Used, not here.</p>
-            <button type="button" id="updateCancelButton">Cancel</button>
-            <button type="submit" id="update-material-btn">Update</button>
+    <dialog id="updateFormContainer" class="sheet-dialog" aria-labelledby="updateFormTitle">
+        <form id="updateForm" class="sheet sheet-form">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="updateFormTitle">Edit material</h2>
+                <label for="uMaterialName" class="sheet-label">Material name</label>
+                <input type="text" id="uMaterialName" name="materialName" class="field" list="materialNames" autocomplete="off" required>
+                <label for="uUnits" class="sheet-label">Units</label>
+                <select id="uUnits" name="units" class="field" required></select>
+                <label for="uMinLevel" class="sheet-label">Low-stock level (optional)</label>
+                <input type="number" id="uMinLevel" name="minLevel" class="field" min="0" step="any" inputmode="decimal">
+                <p class="hint">Stock is changed with Received and Used, not here.</p>
+            </div>
+            <div class="sheet-actions">
+                <button type="submit" id="update-material-btn" class="sheet-primary">Update</button>
+                <button type="button" id="updateCancelButton" class="sheet-secondary">Cancel</button>
+            </div>
         </form>
-    </div>
+    </dialog>
 
     <!-- NEW MATERIAL FORM. Add closes the form; Add & another keeps it open for the next item. -->
-    <div id="materialFormContainer" class="material-form-container">
-        <form id="materialForm" class="material-form">
-            <h2>New Material</h2>
-            <label for="materialsName">Material Name:</label>
-            <input type="text" id="materialsName" name="materialName" list="materialNames" autocomplete="off" required>
-            <label for="mQuantity">Quantity in stock now:</label>
-            <input type="number" id="mQuantity" name="quantity" min="0" step="any" inputmode="decimal" required>
-            <label for="mUnits">Units:</label>
-            <select id="mUnits" name="units" required></select>
-            <label for="mMinLevel">Low-stock level (optional):</label>
-            <input type="number" id="mMinLevel" name="minLevel" min="0" step="any" inputmode="decimal">
-            <button type="button" id="materialCancelButton">Cancel</button>
-            <button type="submit" id="material-btn">Add</button>
-            <button type="submit" id="material-another-btn">Add &amp; another</button>
+    <dialog id="materialFormContainer" class="sheet-dialog" aria-labelledby="materialFormTitle">
+        <form id="materialForm" class="sheet sheet-form">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="materialFormTitle">New Material</h2>
+                <label for="materialsName" class="sheet-label">Material name</label>
+                <input type="text" id="materialsName" name="materialName" class="field" list="materialNames" autocomplete="off" required>
+                <label for="mQuantity" class="sheet-label">Quantity in stock now</label>
+                <input type="number" id="mQuantity" name="quantity" class="field" min="0" step="any" inputmode="decimal" required>
+                <label for="mUnits" class="sheet-label">Units</label>
+                <select id="mUnits" name="units" class="field" required></select>
+                <label for="mMinLevel" class="sheet-label">Low-stock level (optional)</label>
+                <input type="number" id="mMinLevel" name="minLevel" class="field" min="0" step="any" inputmode="decimal">
+            </div>
+            <div class="sheet-actions">
+                <button type="submit" id="material-btn" class="sheet-primary">Add</button>
+                <button type="button" id="materialCancelButton" class="sheet-secondary">Cancel</button>
+                <button type="submit" id="material-another-btn" class="sheet-secondary">Add &amp; another</button>
+            </div>
         </form>
-        <datalist id="materialNames"></datalist>
-    </div>
+    </dialog>
+    <datalist id="materialNames"></datalist>
 
     <!-- Delete site confirmation: the site name must be typed. Deleting a material has no
          dialog, it shows a "Deleted. Undo" toast instead. -->
-    <div id="siteDeleteContainer" class="del-site-form-container">
-        <form id="siteDeleteForm" class="delete-form">
-            <h3>Delete this site and all its materials?</h3>
-            <p>Type <strong id="siteDeletePhrase"></strong> to confirm.</p>
-            <input type="text" id="siteDeleteInput" autocomplete="off" aria-label="Type the site name to confirm">
-            <button type="button" id="siteDeleteCancel">Cancel</button>
-            <button type="submit" id="siteDeleteConfirm" disabled>Delete site</button>
+    <dialog id="siteDeleteContainer" class="sheet-dialog" aria-labelledby="siteDeleteTitle">
+        <form id="siteDeleteForm" class="sheet sheet-form sheet-danger">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="siteDeleteTitle">Delete this site and all its materials?</h2>
+                <label for="siteDeleteInput" class="sheet-label">Type <strong id="siteDeletePhrase"></strong> to confirm.</label>
+                <input type="text" id="siteDeleteInput" class="field" autocomplete="off">
+            </div>
+            <div class="sheet-actions">
+                <button type="submit" id="siteDeleteConfirm" class="sheet-primary" disabled>Delete site</button>
+                <button type="button" id="siteDeleteCancel" class="sheet-secondary">Cancel</button>
+            </div>
         </form>
-    </div>
+    </dialog>
 
     <!-- Members: who is in the site, their roles. The owner can also invite, change roles and remove. -->
-    <div id="membersContainer" class="members-container">
-        <div class="members-dialog" role="dialog" aria-modal="true" aria-labelledby="membersTitle">
-            <h2 id="membersTitle">Members</h2>
-            <ul id="memberList" class="member-list"></ul>
-            <div id="inviteSection" hidden>
-                <h3>Invite someone</h3>
-                <p class="hint">They join by signing up or signing in with this email and verifying it. No email is sent from here, so tell them.</p>
-                <form id="inviteForm" class="invite-form">
-                    <label for="inviteEmail">Email</label>
-                    <input type="email" id="inviteEmail" autocomplete="off" required>
-                    <label for="inviteRole">Role</label>
-                    <select id="inviteRole"></select>
-                    <button type="submit" id="inviteSubmit">Send invite</button>
-                </form>
-                <h3>Pending invitations</h3>
-                <ul id="pendingInviteList" class="member-list"></ul>
+    <dialog id="membersContainer" class="sheet-dialog sheet-dialog-wide" aria-labelledby="membersTitle">
+        <div class="sheet members-dialog">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-body">
+                <h2 id="membersTitle">Members</h2>
+                <ul id="memberList" class="member-list"></ul>
+                <div id="inviteSection" hidden>
+                    <h3>Invite someone</h3>
+                    <p class="hint">They join by signing up or signing in with this email and verifying it. No email is sent from here, so tell them.</p>
+                    <form id="inviteForm" class="invite-form">
+                        <label for="inviteEmail" class="sheet-label">Email</label>
+                        <input type="email" id="inviteEmail" class="field" autocomplete="off" required>
+                        <label for="inviteRole" class="sheet-label">Role</label>
+                        <select id="inviteRole" class="field"></select>
+                        <button type="submit" id="inviteSubmit" class="sheet-secondary">Send invite</button>
+                    </form>
+                    <h3>Pending invitations</h3>
+                    <ul id="pendingInviteList" class="member-list"></ul>
+                </div>
             </div>
-            <div class="members-actions">
-                <button type="button" id="leaveSiteButton" hidden>Leave site</button>
-                <button type="button" id="membersClose">Close</button>
+            <div class="sheet-actions">
+                <button type="button" id="membersClose" class="sheet-primary">Close</button>
+                <button type="button" id="leaveSiteButton" class="sheet-secondary sheet-leave" hidden>Leave site</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
     <!-- Received / Used. A bottom sheet on phones, a centred card on larger screens.
          Filled and driven by src/ui-movements.js. -->
-    <div id="movementContainer" class="sheet-backdrop">
-        <form id="movementForm" class="sheet sheet-record" role="dialog" aria-modal="true" aria-labelledby="movementTitle" novalidate>
+    <dialog id="movementContainer" class="sheet-dialog" aria-labelledby="movementTitle">
+        <form id="movementForm" class="sheet sheet-record" novalidate>
             <div class="sheet-grip" aria-hidden="true"></div>
-            <h2 id="movementTitle"></h2>
-            <p id="movementStock" class="sheet-stock" aria-live="polite"></p>
+            <div class="sheet-body">
+                <h2 id="movementTitle"></h2>
+                <p id="movementStock" class="sheet-stock" aria-live="polite"></p>
 
-            <label for="movementAmount" class="sheet-label">Amount</label>
-            <div class="amount-row">
-                <input type="text" id="movementAmount" name="amount" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0">
-                <span id="movementUnits" class="amount-units"></span>
+                <label for="movementAmount" class="sheet-label">Amount</label>
+                <div class="amount-row">
+                    <input type="text" id="movementAmount" name="amount" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0">
+                    <span id="movementUnits" class="amount-units"></span>
+                </div>
+                <div class="chips" role="group" aria-label="Quick amounts, each adds to the amount">
+                    <button type="button" class="chip" data-add="1">+1</button>
+                    <button type="button" class="chip" data-add="5">+5</button>
+                    <button type="button" class="chip" data-add="10">+10</button>
+                    <button type="button" class="chip" data-add="20">+20</button>
+                    <button type="button" class="chip chip-all" id="movementAll" hidden></button>
+                </div>
+                <p id="movementAfter" class="sheet-after"></p>
+
+                <p id="movementError" class="sheet-error" role="alert" hidden></p>
+
+                <label for="movementNote" class="sheet-label sheet-label-note">Note (optional)</label>
+                <input type="text" id="movementNote" name="note" class="note-input" maxlength="200" autocomplete="off" placeholder="Delivery note, who it was for...">
             </div>
-            <div class="chips" role="group" aria-label="Quick amounts, each adds to the amount">
-                <button type="button" class="chip" data-add="1">+1</button>
-                <button type="button" class="chip" data-add="5">+5</button>
-                <button type="button" class="chip" data-add="10">+10</button>
-                <button type="button" class="chip" data-add="20">+20</button>
-                <button type="button" class="chip chip-all" id="movementAll" hidden></button>
+            <div class="sheet-actions">
+                <button type="submit" id="movementSubmit" class="sheet-primary">Record</button>
+                <button type="button" id="movementCancel" class="sheet-secondary">Cancel</button>
             </div>
-            <p id="movementAfter" class="sheet-after"></p>
-
-            <p id="movementError" class="sheet-error" role="alert" hidden></p>
-
-            <label for="movementNote" class="sheet-label sheet-label-note">Note (optional)</label>
-            <input type="text" id="movementNote" name="note" class="note-input" maxlength="200" autocomplete="off" placeholder="Delivery note, who it was for...">
-
-            <button type="submit" id="movementSubmit" class="sheet-primary">Record</button>
-            <button type="button" id="movementCancel" class="sheet-secondary">Cancel</button>
         </form>
-    </div>
+    </dialog>
 
     <!-- History of one material: a timeline, oldest first, ending at today's stock. -->
-    <div id="historyContainer" class="sheet-backdrop">
-        <section class="sheet sheet-history" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <dialog id="historyContainer" class="sheet-dialog sheet-dialog-wide" aria-labelledby="historyTitle">
+        <section class="sheet sheet-history">
             <div class="sheet-grip" aria-hidden="true"></div>
             <div class="history-head">
                 <div class="history-heading">
@@ -274,7 +319,7 @@
                 <ol id="historyList" class="history-list"></ol>
             </div>
         </section>
-    </div>
+    </dialog>
 
     <script src="dashboard.js" type="module"></script>
 </body>

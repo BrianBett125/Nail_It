@@ -18,14 +18,12 @@ import {
     TYPE_LABELS,
 } from "./movements.js";
 import { canWriteMaterials } from "./roles.js";
+import { openDialog, closeDialog, closeOnBackdrop } from "./dialog.js";
 
 const FEED_LIMIT = 30;
 const CLOCK_MS = 60_000;          // "2h ago" is re-worded once a minute
-const KEYBOARD_GAP = 120;         // a viewport this much shorter than the window means a keyboard is up
 const ACTION_VERB = { received: "Receive", used: "Use" };
 const SIGN = { positive: "+", negative: "−" }; // a real minus sign, easier to see than a hyphen
-
-const FOCUSABLE = "button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex='-1'])";
 
 const $ = (id) => document.getElementById(id);
 
@@ -107,96 +105,31 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
 
     // ---- shared dialog behaviour ------------------------------------------------------------
 
-    function showBox(box) {
-        box.style.display = "flex";
-        document.body.classList.add("sheet-open");
-        fitToViewport();
-    }
-
-    function hideBox(box) {
-        box.style.display = "none";
-        box.style.height = "";
-        box.style.top = "";
-        if (recordBox.style.display !== "flex" && historyBox.style.display !== "flex") {
-            document.body.classList.remove("sheet-open");
+    // Both sheets are native <dialog>s (src/dialog.js): the browser traps Tab, closes on Escape and
+    // keeps the page behind inert. What is left here is state and focus. Whatever closes a sheet
+    // (Escape, a button, a tap on the dimmed area, a site change) ends in its "close" event, and the
+    // event is ignored if the sheet has been opened again since.
+    closeOnBackdrop(recordBox);
+    closeOnBackdrop(historyBox);
+    recordBox.addEventListener("close", () => {
+        if (!recordBox.open) {
+            endRecord();
         }
-    }
-
-    // On a phone the keyboard covers the bottom of the screen, and a sheet anchored to the bottom
-    // would sit behind it. The visual viewport is what is really visible, so the backdrop follows it.
-    function fitToViewport() {
-        const viewport = window.visualViewport;
-        for (const box of [recordBox, historyBox]) {
-            if (box.style.display !== "flex") {
-                continue;
-            }
-            const keyboard = viewport && window.innerHeight - viewport.height > KEYBOARD_GAP;
-            box.style.height = keyboard ? `${viewport.height}px` : "";
-            box.style.top = keyboard ? `${viewport.offsetTop}px` : "";
+    });
+    historyBox.addEventListener("close", () => {
+        if (!historyBox.open) {
+            endHistory();
         }
-    }
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", fitToViewport);
-        window.visualViewport.addEventListener("scroll", fitToViewport);
-    }
+    });
 
     // After a sheet closes, focus goes back to the button that opened it. The table is rebuilt on
     // every update, so the old button may be gone: look the same button up again by row and class.
-    function restoreFocus(opener) {
-        if (!opener) {
-            return;
-        }
+    function findOpener(opener) {
         const row = document.querySelector(`#materialTableBody tr[data-material-id="${CSS.escape(opener.materialId)}"]`);
-        const target = (row && row.querySelector(`.${opener.className}`))
+        return (row && row.querySelector(`.${opener.className}`))
             || (row && row.querySelector("button"))
             || document.getElementById("addMaterialButton");
-        if (target && target.offsetParent !== null) {
-            target.focus({ preventScroll: true });
-        }
     }
-
-    // Tab stays inside the open sheet.
-    function trapTab(event, box) {
-        if (event.key !== "Tab") {
-            return;
-        }
-        const items = [...box.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
-        if (items.length === 0) {
-            return;
-        }
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (event.shiftKey && (document.activeElement === first || !box.contains(document.activeElement))) {
-            event.preventDefault();
-            last.focus();
-        } else if (!event.shiftKey && (document.activeElement === last || !box.contains(document.activeElement))) {
-            event.preventDefault();
-            first.focus();
-        }
-    }
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            if (record) {
-                closeRecord();
-            } else if (history) {
-                closeHistory();
-            }
-        }
-    });
-    recordBox.addEventListener("keydown", (event) => trapTab(event, recordBox));
-    historyBox.addEventListener("keydown", (event) => trapTab(event, historyBox));
-    // A tap on the dimmed area outside the sheet closes it.
-    recordBox.addEventListener("click", (event) => {
-        if (event.target === recordBox) {
-            closeRecord();
-        }
-    });
-    historyBox.addEventListener("click", (event) => {
-        if (event.target === historyBox) {
-            closeHistory();
-        }
-    });
 
     // ---- Received / Used --------------------------------------------------------------------
 
@@ -213,8 +146,8 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         noteInput.value = "";
         hideError();
         renderRecord(material);
-        showBox(recordBox);
-        amountInput.focus();
+        const { opener } = record;
+        openDialog(recordBox, { focus: amountInput, opener: () => findOpener(opener) });
     }
 
     // Everything on the sheet that depends on the material or on what is typed: the live stock,
@@ -265,16 +198,14 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         errorEl.hidden = true;
     }
 
+    // focus: false when the thing the sheet was about is gone, so there is nothing to give focus back to.
     function closeRecord({ focus = true } = {}) {
-        if (!record) {
-            return;
-        }
-        const { opener } = record;
+        closeDialog(recordBox, { restore: focus });
+        endRecord();
+    }
+
+    function endRecord() {
         record = null;
-        hideBox(recordBox);
-        if (focus) {
-            restoreFocus(opener);
-        }
     }
 
     function refreshRecordFromContext() {
@@ -377,8 +308,8 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         historyTitle.textContent = `${history.name} history`;
         historyList.replaceChildren();
         renderHistory(true);
-        showBox(historyBox);
-        historyClose.focus();
+        const { opener } = history;
+        openDialog(historyBox, { focus: historyClose, opener: () => findOpener(opener) });
         history.stop = data.subscribeMovements(siteId, { materialId }, (movements) => {
             if (history && history.token === token) { // ignore a late callback from a sheet we closed
                 history.movements = movements;
@@ -401,16 +332,13 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
     }
 
     function closeHistory({ focus = true } = {}) {
-        if (!history) {
-            return;
-        }
-        const { opener } = history;
+        closeDialog(historyBox, { restore: focus });
+        endHistory();
+    }
+
+    function endHistory() {
         stopHistory();
         history = null;
-        hideBox(historyBox);
-        if (focus) {
-            restoreFocus(opener);
-        }
     }
 
     // Oldest first, so the list reads as a story and its last line is today's stock.

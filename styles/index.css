@@ -161,3 +161,23 @@ footer {
 @media (max-width: 768px) {
     .intro-section { background-image: url('../assets/sparks-800.webp'); }
 }
+
+/* Phase 5: a phone-sized top bar with links big enough to hit (44px) that never pushes the page sideways. */
+@media (max-width: 768px) {
+    header {
+        box-sizing: border-box;
+        padding: 6px 12px;
+    }
+
+    .nav-bar { width: 100%; gap: 6px; }
+    .logo { font-size: 20px; }
+
+    .nav-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin: 0;
+        padding: 0 8px;
+        font-size: 15px;
+    }
+}

@@ -93,7 +93,7 @@ export function createInsightsUI({ onViewChange }) {
 
     function renderAttention() {
         const row = overviewRow({ siteId, site: null, materials: materials || {}, lastMovementAt });
-        const limit = window.matchMedia && window.matchMedia("(max-width: 700px)").matches ? MAX_PILLS_PHONE : MAX_PILLS;
+        const limit = window.matchMedia && window.matchMedia("(max-width: 768px)").matches ? MAX_PILLS_PHONE : MAX_PILLS;
         // With the Low filter on, the list below already is the low list: do not show it twice.
         attention.hidden = row.low === 0 || filter === "low";
         attentionList.replaceChildren();

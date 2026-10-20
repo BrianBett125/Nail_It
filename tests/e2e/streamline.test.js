@@ -315,7 +315,7 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await fillMaterial(page, { name: "Gravel", quantity: "3", units: "tonnes" });
         await page.click("#material-btn");
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
-        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.style.display), "none");
+        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.open), false);
         await context.close();
     });
 
@@ -328,7 +328,7 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await page.click("#material-another-btn");
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
 
-        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.style.display), "block");
+        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.open), true);
         assert.equal(await page.inputValue("#materialsName"), "");
         assert.equal(await page.inputValue("#mQuantity"), "");
         assert.equal(await page.inputValue("#mUnits"), "tonnes");
@@ -377,7 +377,7 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await fillMaterial(page, { name: "Gravel", quantity: "3", units: "tonnes" });
         await page.press("#mQuantity", "Enter");
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
-        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.style.display), "none");
+        assert.equal(await page.locator("#materialFormContainer").evaluate((el) => el.open), false);
         assert.equal((await wrote(page)).length, 1);
         await context.close();
     });
@@ -425,7 +425,7 @@ describe("delete: Undo toast for materials, typed name for sites", () => {
         await page.fill("#siteDeleteInput", "Mombasa");
         await page.press("#siteDeleteInput", "Enter");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
-        await page.waitForFunction(() => document.querySelector("#siteDeleteContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("siteDeleteContainer").open);
         await toastLocator(page, 'Site "Mombasa" and its materials deleted').waitFor();
         assert.deepEqual(Object.keys((await dbState(page)).sites), ["sB"]);
         await context.close();
