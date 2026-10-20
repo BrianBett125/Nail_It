@@ -60,6 +60,9 @@ npm run test:e2e         # drives the pages in Chrome against an in-memory fake 
 npm test                 # unit and e2e
 npm run test:all         # unit, rules and e2e
 git config core.hooksPath .githooks   # run the unit tests before every commit
+node scripts/serve.mjs --fake         # open every page at http://127.0.0.1:5173 with fake data and a fake sign-in, no account needed
+node scripts/lighthouse.mjs           # Lighthouse mobile on every page: performance and accessibility must be 90 or more
+python3 scripts/optimize-images.py ORIGINALS assets   # rebuild the WebP pictures within their size budgets
 ```
 
 How it is laid out:
@@ -74,7 +77,9 @@ How it is laid out:
 * `src/movements.js` holds everything about stock movements with no DOM and no Firebase: checking an amount, the multi-path writes the data layer sends, the running balance and the wording of the history and the activity feed.
 * `src/insights.js` holds what counts as low stock, how a list is searched, filtered and sorted, and how a site and the overview are summarised, with no DOM and no Firebase. `src/ui-insights.js` is the dashboard's summary tiles, attention strip and controls; `overview.html` and `overview.js` are the owner overview. None of it adds data: it all reads what Phase 3 already stores.
 * `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
-* `src/toast.js` shows the toast messages that replaced `alert()`.
+* `src/toast.js` shows the toast messages that replaced `alert()`. `src/icons.js` draws the few icons as inline SVG (there is no icon font).
+* `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site and Google's Firebase CDN. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
+* `tests/e2e/a11y.test.js` runs axe-core on every page and dialog, on a phone and on a desktop (zero serious or critical violations; `AXE_ALL=1` also fails on moderate ones). `tests/e2e/phone.test.js` and `tests/e2e/dialogs.test.js` hold the 375px and native `<dialog>` contract.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
 
 What is stored (everything is under a site, so one person's sites are never downloaded with another's):
