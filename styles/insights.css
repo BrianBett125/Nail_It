@@ -388,7 +388,7 @@
 }
 
 /* Seven columns on a wide screen: a little less air in each, so the table never outgrows the page. */
-@media (min-width: 701px) {
+@media (min-width: 769px) {
     #materialsTable th,
     #materialsTable td {
         padding: 12px 9px;
@@ -401,7 +401,7 @@
 }
 
 /* ---- phones ---- */
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     .insights { gap: 10px; margin-bottom: 12px; }
 
     .site-summary {
@@ -516,7 +516,7 @@
 
 .clear-view[hidden] { display: none; }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
     .attention-list {
         flex-wrap: wrap;
@@ -529,9 +529,18 @@
     .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     /* Members and Add Material share one row instead of Add Material standing alone on its own. */
     .content-header { gap: 8px; }
     .content-header h1 { flex: 1 1 auto; }
     #membersButton, #addMaterialButton { flex: 1 1 calc(50% - 4px); }
+}
+
+/* Phase 5: on a phone the list is what people came for, so the figures above it are a little tighter. */
+@media (max-width: 768px) {
+    .stat { min-height: 78px; }
+    .attention-pill { min-height: 46px; padding: 4px 12px; }
+    .needs-attention { padding: 6px 10px 8px; }
+    .attention-list { gap: 6px; }
+    .insights { gap: 8px; margin-bottom: 8px; }
 }

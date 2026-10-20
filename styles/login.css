@@ -6,9 +6,9 @@
 
 body {
     margin: 0;  
-    font-family: 'Poppins', sans-serif;
-    background: url('../assets/sparks.jpg');
-    backdrop-filter: brightness(0.3);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    /* A dark layer over the picture, not backdrop-filter: the filter repaints the whole screen and is slow on a phone. */
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/sparks-1600.webp');
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -24,7 +24,7 @@ body {
     width: 400px;
     max-width: 100%;
     min-height: 500px;
-    background: url('../assets/hammer.jpg');
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../assets/hammer-600.webp');
     color: antiquewhite;
     background-size: cover;
     background-position: center;
@@ -38,7 +38,6 @@ form {
     padding: 40px;
     width: 100%;
     min-height: 500px;
-    backdrop-filter: brightness(0.6);
     flex-direction: column;
     display: flex;
     gap: 5px;
@@ -73,7 +72,7 @@ input {
 }
 
 button {
-    background: #3498db;
+    background: #1b6ca8;
     color: white;
     border: none;
     height: 40px;
@@ -138,4 +137,16 @@ button.link {
     letter-spacing: 0;
     text-decoration: underline;
     color: antiquewhite;
+}
+
+@media (max-width: 768px) {
+    body { background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/sparks-800.webp'); }
+}
+
+/* Phase 5: every control is at least 44px to hit, and the card never outgrows a 320px screen. */
+@media (max-width: 768px) {
+    form { padding: 28px 20px; }
+    input { height: 48px; font-size: 16px; }
+    button { min-height: 48px; }
+    button.link { min-height: 44px; padding: 10px 14px; }
 }

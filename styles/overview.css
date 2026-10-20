@@ -262,10 +262,14 @@ body.overview-page {
     outline-offset: 2px;
 }
 
-@media (max-width: 700px) {
+/* The top bar is not fixed at 768px and below (dashboard.css), so the page does not need room for it. */
+@media (max-width: 768px) {
     .overview {
-        padding: 14px 12px 28px; /* the header is not fixed on phones */
+        padding: 14px 12px 28px;
     }
+}
+
+@media (max-width: 700px) {
 
     .overview-head h1 { font-size: 24px; }
     .overview-list { grid-template-columns: 1fr; gap: 12px; }

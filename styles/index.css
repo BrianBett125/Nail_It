@@ -57,7 +57,7 @@ header {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: url('../assets/sparks.jpg') no-repeat center center/cover;
+    background: url('../assets/sparks-1600.webp') no-repeat center center/cover;
     color: #ffedd5;
     text-align: center;
     padding: 20px;
@@ -75,7 +75,7 @@ header {
 
 .btn {
     padding: 10px 20px;
-    background-color: #f97316;
+    background-color: #c2410c;
     color: #fff;
     text-decoration: none;
     border-radius: 5px;
@@ -136,7 +136,7 @@ header {
 }
 
 .social-links a {
-    color: #3498db;
+    color: #1b6ca8;
     text-decoration: none;
     margin: 0 10px;
 }
@@ -155,5 +155,29 @@ footer {
 
     .feature img {
         margin: 0 0 20px 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .intro-section { background-image: url('../assets/sparks-800.webp'); }
+}
+
+/* Phase 5: a phone-sized top bar with links big enough to hit (44px) that never pushes the page sideways. */
+@media (max-width: 768px) {
+    header {
+        box-sizing: border-box;
+        padding: 6px 12px;
+    }
+
+    .nav-bar { width: 100%; gap: 6px; }
+    .logo { font-size: 20px; }
+
+    .nav-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin: 0;
+        padding: 0 8px;
+        font-size: 15px;
     }
 }

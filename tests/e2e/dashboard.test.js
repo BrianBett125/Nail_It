@@ -67,7 +67,7 @@ describe("dashboard core behavior (Phase 0)", () => {
         await editButton(page, "Cement").click();
         await page.fill("#uMinLevel", "8");
         await page.click("#update-material-btn");
-        await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("updateFormContainer").open);
 
         const writes = await wrote(page);
         assert.equal(writes.length, 1, `expected one write, got ${JSON.stringify(writes)}`);
@@ -208,11 +208,10 @@ describe("dashboard core behavior (Phase 0)", () => {
     it("B4: clicking the trash icon itself (not just the button edge) deletes the right site", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await siteLink(page, "Cape Town").waitFor();
-        // The Font Awesome kit is stubbed out here, so the <i> has no size and cannot be
-        // clicked with the mouse. A DOM click on it has the same event.target a real tap has.
+        // A click on the icon itself (an inline SVG) has the same event.target a real tap on it has.
         await page.locator("#siteList li", { hasText: "Cape Town" })
-            .locator(".delete-site-btn i")
-            .evaluate((icon) => icon.click());
+            .locator(".delete-site-btn svg")
+            .evaluate((icon) => icon.dispatchEvent(new MouseEvent("click", { bubbles: true })));
         await page.fill("#siteDeleteInput", "Cape Town");
         await page.click("#siteDeleteConfirm");
         await page.waitForFunction(() => window.__nailit.writes.length > 0);
@@ -241,7 +240,7 @@ describe("dashboard core behavior (Phase 0)", () => {
 
         assert.deepEqual(state.toasts, ["Select a site first"]);
         assert.deepEqual(state.dialogs, []);
-        assert.notEqual(await page.evaluate(() => document.getElementById("materialFormContainer").style.display), "block");
+        assert.equal(await page.evaluate(() => document.getElementById("materialFormContainer").open), false);
         assert.deepEqual(await wrote(page), []);
         await context.close();
     });
@@ -380,7 +379,7 @@ describe("hardening: gaps found by the cold critic", () => {
         await page.waitForTimeout(50);
 
         assert.deepEqual(await wrote(page), []);
-        assert.equal(await page.locator("#siteDeleteContainer").evaluate((el) => el.style.display), "none");
+        assert.equal(await page.locator("#siteDeleteContainer").evaluate((el) => el.open), false);
         await context.close();
     });
 
@@ -405,7 +404,7 @@ describe("hardening: gaps found by the cold critic", () => {
         await page.evaluate(() => window.__nailit.externalRemoveMaterial("sA", "m1"));
         await waitForRows(page, ["Sand"]);
 
-        await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("updateFormContainer").open);
         await page.evaluate(() => document.getElementById("updateForm").requestSubmit());
         await page.waitForTimeout(50);
         assert.deepEqual(await wrote(page), [], "update() on a missing path would create an orphan node");
@@ -416,7 +415,7 @@ describe("hardening: gaps found by the cold critic", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await openSiteDelete(page, "Cape Town");
         await page.evaluate(() => window.__nailit.externalRemoveSite("sB"));
-        await page.waitForFunction(() => document.querySelector("#siteDeleteContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("siteDeleteContainer").open);
         assert.deepEqual(await wrote(page), []);
         await context.close();
     });
@@ -463,7 +462,7 @@ describe("hardening round 2: slow or missing signal", () => {
 
         await page.evaluate(() => window.__nailit.releaseAcks());
         await page.waitForTimeout(100);
-        assert.equal(await page.evaluate(() => document.querySelector("#updateFormContainer").style.display), "block");
+        assert.equal(await page.evaluate(() => document.querySelector("#updateFormContainer").open), true);
 
         await page.fill("#uMinLevel", "12");
         await page.click("#update-material-btn");
@@ -573,7 +572,7 @@ describe("hardening round 2: slow or missing signal", () => {
         await editButton(page, "Cement").click();
         await page.click("#update-material-btn");
         await page.evaluate(() => window.__nailit.releaseAcks());
-        await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("updateFormContainer").open);
 
         await page.evaluate(() => { window.__nailit.holdAcks = false; });
         await editButton(page, "Cement").click();
@@ -652,7 +651,7 @@ describe("eval: README walkthrough end to end", () => {
         await editButton(page, "Cement").click();
         await page.fill("#uMinLevel", "15");
         await page.click("#update-material-btn");
-        await page.waitForFunction(() => document.querySelector("#updateFormContainer").style.display === "none");
+        await page.waitForFunction(() => !document.getElementById("updateFormContainer").open);
         assert.equal(await page.locator("#materialTableBody td:nth-child(2)").textContent(), "20", "an edit does not change the stock");
 
         await deleteMaterialButton(page, "Cement").click();

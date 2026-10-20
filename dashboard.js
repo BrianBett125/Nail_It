@@ -20,9 +20,12 @@ import {
     validateInvite,
 } from "./src/roles.js";
 import { lastUpdatedLabel } from "./src/movements.js";
+import { icon } from "./src/icons.js";
 import { showToast } from "./src/toast.js";
 import { createMovementsUI } from "./src/ui-movements.js";
 import { createInsightsUI } from "./src/ui-insights.js";
+import { createDrawer } from "./src/ui-drawer.js";
+import { openDialog, closeDialog, closeOnBackdrop } from "./src/dialog.js";
 import { visibleMaterials, stockState, lowLabel, lowDetail } from "./src/insights.js";
 
 // DOM Elements
@@ -71,6 +74,9 @@ const inviteSubmit = document.getElementById('inviteSubmit');
 const pendingInviteList = document.getElementById('pendingInviteList');
 const leaveSiteButton = document.getElementById('leaveSiteButton');
 const membersClose = document.getElementById('membersClose');
+const mainContent = document.querySelector('.main-content');
+const drawerAccount = document.getElementById('drawerAccount');
+const siteNameInput = document.getElementById('siteName');
 
 // State. The ids live here and are read at submit time, never captured in a handler
 // that gets added more than once.
@@ -85,6 +91,7 @@ let editingLegacyUnit = null;        // the unit a legacy material had, if it is
 let deletingSiteId = null;
 let deletingSite = false;            // the cascade delete is in flight
 let sitesById = {};                  // latest sites snapshot, each with the user's role
+const pendingSiteLabels = new Map(); // name of a site just added, until its first snapshot arrives
 let currentMaterials = {};           // latest materials snapshot of the selected site
 let sitesLoaded = false;
 let materialsLoaded = false;
@@ -97,6 +104,9 @@ let leaveArmed = false;              // the first tap on "Leave site" arms it, t
 let leaveTimer = null;
 const unconfirmedSites = new Set();  // sites we just added or joined whose first snapshot has not arrived
 const savingMaterials = new Set();   // ids with an edit sent but not yet acknowledged
+
+// The site picker and the drawer it opens on a phone live in src/ui-drawer.js.
+const drawer = createDrawer();
 
 // Search, filter chips, sort, the summary tiles and the Needs attention strip live in
 // src/ui-insights.js. This file draws the rows from whatever view it says is chosen.
@@ -282,12 +292,33 @@ function applyRole() {
     membersButton.hidden = !currentSiteId;
     roleBadge.hidden = !currentSiteId;
     roleBadge.textContent = currentSiteId ? `Your role: ${roleLabel(role)}` : '';
+    updateSiteBar();
+}
+
+// The picker on a phone: the open site's name and the person's role in it.
+function updateSiteBar() {
+    const site = sitesById[currentSiteId];
+    const label = site ? siteLabel(site) : pendingSiteLabels.get(currentSiteId) || UNNAMED_SITE;
+    drawer.setSite(currentSiteId ? label : null, currentSiteId ? roleLabel(currentRole()) : '');
+}
+
+// A material row's button, found again by id and class: the table is redrawn on every update, so the
+// button that opened a dialog may be a new element by the time the dialog closes.
+function rowButton(materialId, className) {
+    const row = tableBody.querySelector(`tr[data-material-id="${CSS.escape(materialId)}"]`);
+    return (row && (row.querySelector(`.${className}`) || row.querySelector('button'))) || null;
+}
+
+// The first of these that is still on the page and can take focus.
+function usable(...candidates) {
+    return candidates.find((el) => el && el.isConnected && (!el.checkVisibility || el.checkVisibility())) || null;
 }
 
 // ---- Session ------------------------------------------------------------------------
 
 function renderUser() {
     userEmailEl.textContent = currentUser ? currentUser.email : '';
+    drawerAccount.textContent = currentUser ? `Signed in as ${currentUser.email}` : '';
     const unverified = Boolean(currentUser) && !currentUser.emailVerified;
     verifyBanner.hidden = !unverified;
     verifyEmailEl.textContent = unverified ? currentUser.email : '';
@@ -406,13 +437,11 @@ function acceptInvite(siteId, invite) {
 // ---- Event listeners ----------------------------------------------------------------
 
 addSiteBtn.addEventListener('click', () => {
-    addSiteContainer.style.display = 'block';
-    document.getElementById('siteName').focus();
+    drawer.close();
+    openDialog(addSiteContainer, { focus: siteNameInput, opener: addSiteBtn });
 });
 
-siteCancelBtn.addEventListener('click', () => {
-    addSiteContainer.style.display = 'none';
-});
+siteCancelBtn.addEventListener('click', () => closeDialog(addSiteContainer));
 
 siteForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -427,9 +456,7 @@ addMaterialButton.addEventListener('click', () => {
     openMaterialForm();
 });
 
-materialCancelButton.addEventListener('click', () => {
-    materialContainer.style.display = 'none';
-});
+materialCancelButton.addEventListener('click', () => closeDialog(materialContainer));
 
 materialForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -437,19 +464,26 @@ materialForm.addEventListener('submit', (event) => {
     addNewMaterial(another);
 });
 
-updateCancelButton.addEventListener('click', () => {
-    editingMaterialId = null;
-    editingSiteId = null;
-    updateContainer.style.display = 'none';
-    refreshModalButtons();
+updateCancelButton.addEventListener('click', () => closeDialog(updateContainer));
+// Escape, Cancel, a save and a site change all end here: the edit no longer names a material.
+updateContainer.addEventListener('close', () => {
+    if (!updateContainer.open) {
+        endEdit();
+    }
 });
 
 updateForm.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (!updateContainer.open) return;
     updateMaterial();
 });
 
 siteDeleteCancel.addEventListener('click', closeSiteDelete);
+siteDeleteContainer.addEventListener('close', () => {
+    if (!siteDeleteContainer.open) {
+        resetSiteDelete();
+    }
+});
 
 siteDeleteInput.addEventListener('input', refreshSiteDeleteButton);
 
@@ -461,6 +495,11 @@ siteDeleteForm.addEventListener('submit', (event) => {
 document.getElementById('clearView').addEventListener('click', () => insightsUI.clearView());
 membersButton.addEventListener('click', openMembers);
 membersClose.addEventListener('click', closeMembers);
+membersContainer.addEventListener('close', () => {
+    if (!membersContainer.open) {
+        resetMembers();
+    }
+});
 
 inviteForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -471,8 +510,7 @@ leaveSiteButton.addEventListener('click', leaveSite);
 
 function openMaterialForm() {
     refreshNameSuggestions();
-    materialContainer.style.display = 'block';
-    materialNameInput.focus();
+    openDialog(materialContainer, { focus: materialNameInput, opener: addMaterialButton });
 }
 
 // Function to add new site data to Firebase, open it straight away and remember it.
@@ -488,6 +526,7 @@ function addNewSite() {
     }
     const { id, done } = data.addSite(result.value, currentUser);
     unconfirmedSites.add(id);
+    pendingSiteLabels.set(id, result.value.name);
     Promise.resolve(done)
         .then(() => unconfirmedSites.delete(id))
         .catch((error) => {
@@ -498,7 +537,7 @@ function addNewSite() {
             reportError(error);
         });
     siteForm.reset();
-    addSiteContainer.style.display = 'none';
+    closeDialog(addSiteContainer);
     selectSite(id);
     showToast(`Site "${result.value.name}" added`);
 }
@@ -527,7 +566,7 @@ function addNewMaterial(another) {
         materialNameInput.focus();
     } else {
         materialForm.reset();
-        materialContainer.style.display = 'none';
+        closeDialog(materialContainer);
     }
 }
 
@@ -545,6 +584,7 @@ function buildSiteItem(siteId, site) {
     link.addEventListener('click', (event) => {
         event.preventDefault();
         selectSite(siteId);
+        drawer.close({ focus: true }); // on a phone, picking a site folds the drawer away
     });
     item.append(link);
 
@@ -561,12 +601,10 @@ function buildSiteItem(siteId, site) {
         deleteButton.className = 'delete-site-btn';
         deleteButton.dataset.siteId = siteId;
         deleteButton.setAttribute('aria-label', `Delete site ${siteLabel(site)}`);
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-trash-alt';
-        deleteButton.appendChild(icon);
+        deleteButton.appendChild(icon('trash'));
         deleteButton.addEventListener('click', (event) => {
             event.stopPropagation(); // Prevent triggering the site link click event
-            showDeleteSiteConfirmation(siteId);
+            showDeleteSiteConfirmation(siteId, deleteButton);
         });
         item.append(' ', deleteButton);
     }
@@ -582,6 +620,7 @@ function renderSites(sites) {
     siteList.replaceChildren();
     for (const [siteId, site] of Object.entries(sites)) {
         unconfirmedSites.delete(siteId);
+        pendingSiteLabels.delete(siteId);
         siteList.appendChild(buildSiteItem(siteId, site));
     }
     // A site we just added may not be in this snapshot yet. Keep it selected until it is.
@@ -614,6 +653,7 @@ function renderSites(sites) {
     }
     applyRole();
     renderStatus();
+    drawer.sitesReady(); // with no site open on a phone, the list opens by itself
 }
 
 function clearSelection() {
@@ -631,8 +671,12 @@ function clearSelection() {
     closeMaterialModals();
     closeMembers();
     movementsUI.setSite(null);
+    mainContent.classList.remove('is-ready');
     applyRole();
     renderStatus();
+    if (sitesLoaded) {
+        drawer.open(); // the open site is gone: pick another
+    }
 }
 
 // An edit names one material in one site. When the material is gone (deleted by someone
@@ -640,9 +684,14 @@ function clearSelection() {
 // submitting it would write into the wrong place.
 function closeMaterialModals() {
     movementsUI.closeDialogs();
+    closeDialog(updateContainer, { restore: false });
+    endEdit();
+}
+
+// The edit form no longer names a material.
+function endEdit() {
     editingMaterialId = null;
     editingSiteId = null;
-    updateContainer.style.display = 'none';
     refreshModalButtons();
 }
 
@@ -663,6 +712,7 @@ function selectSite(siteId) {
         link.classList.toggle('active', link.dataset.siteId === siteId);
     });
     tableBody.replaceChildren();
+    mainContent.classList.remove('is-ready');
     currentMaterials = {};
     materialsLoaded = false;
     materialsError = null;
@@ -694,11 +744,14 @@ function renderMaterials(materials) {
     if (editingMaterialId && !materials[editingMaterialId]) {
         closeMaterialModals();
     }
-    if (materialContainer.style.display === 'block') {
+    if (materialContainer.open) {
         refreshNameSuggestions();
     }
     movementsUI.refresh(); // an open Received / Used or history sheet follows the new stock
     renderStatus();
+    // The tiles, the table and the activity feed appear together, in one frame: nothing that is on
+    // screen while the site loads sits below them, so nothing is pushed down when they arrive.
+    mainContent.classList.add('is-ready');
 }
 
 // Only the search, filter or sort changed: the rows are redrawn, nothing else is touched.
@@ -764,8 +817,8 @@ function addMaterialRow(materialId, materialData, editable) {
     const manageCell = document.createElement("td");
     manageCell.className = "cell-manage";
     if (editable) {
-        const editButton = makeManageButton("btn-edit", "fa-regular fa-pen-to-square", "Edit", "Edit material");
-        const deleteButton = makeManageButton("btn-delete", "fas fa-trash-alt", "Delete", "Delete material");
+        const editButton = makeManageButton("btn-edit", "pen", "Edit", "Edit material");
+        const deleteButton = makeManageButton("btn-delete", "trash", "Delete", "Delete material");
         editButton.addEventListener("click", () => {
             showUpdateForm(materialId, materialData);
         });
@@ -780,16 +833,13 @@ function addMaterialRow(materialId, materialData, editable) {
     tableBody.appendChild(newRow);
 }
 
-// A text label next to the icon, so the button reads even where the icon font does not load.
-function makeManageButton(className, iconClass, text, label) {
+// A text label next to the icon: the button reads without the picture, and the picture is decoration.
+function makeManageButton(className, iconName, text, label) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
     button.setAttribute("aria-label", label);
-    const icon = document.createElement("i");
-    icon.className = iconClass;
-    icon.setAttribute("aria-hidden", "true");
-    button.append(icon, ` ${text}`);
+    button.append(icon(iconName), ` ${text}`);
     return button;
 }
 
@@ -814,13 +864,16 @@ function setEditUnits(units) {
 function showUpdateForm(materialId, materialData) {
     editingMaterialId = materialId;
     editingSiteId = currentSiteId;
-    updateContainer.style.display = 'block';
     refreshNameSuggestions();
     // ?? "" so a legacy record with a missing field shows an empty input, not the text "undefined".
     document.getElementById('uMaterialName').value = materialData.name ?? "";
     setEditUnits(materialData.units);
     document.getElementById('uMinLevel').value = materialData.minLevel ?? "";
     refreshModalButtons();
+    openDialog(updateContainer, {
+        focus: document.getElementById('uMaterialName'),
+        opener: () => usable(rowButton(materialId, 'btn-edit'), addMaterialButton),
+    });
 }
 
 // The Update button is locked per material while its write is unacknowledged
@@ -858,9 +911,7 @@ function updateMaterial() {
             // The ack can arrive after the user moved on to another material. Only close
             // the modal if it still belongs to the edit that was sent.
             if (editingMaterialId === materialId) {
-                editingMaterialId = null;
-                editingSiteId = null;
-                updateContainer.style.display = 'none';
+                closeDialog(updateContainer);
             }
         })
         .catch(reportError)
@@ -910,7 +961,7 @@ function undoDelete(materialId, material, siteId) {
 // ---- Deleting a site ----------------------------------------------------------------
 
 // The site name must be typed before the delete button works. Only the owner gets here.
-function showDeleteSiteConfirmation(siteId) {
+function showDeleteSiteConfirmation(siteId, button) {
     const site = sitesById[siteId];
     if (!site || !canManageSite(site.role)) {
         return;
@@ -919,8 +970,12 @@ function showDeleteSiteConfirmation(siteId) {
     siteDeletePhraseEl.textContent = deletePhrase(site);
     siteDeleteInput.value = '';
     refreshSiteDeleteButton();
-    siteDeleteContainer.style.display = 'block';
-    siteDeleteInput.focus();
+    drawer.close();
+    openDialog(siteDeleteContainer, {
+        focus: siteDeleteInput,
+        // The trash can sits in the drawer on a phone, which is shut again by then: the picker takes the focus.
+        opener: () => usable(button, document.getElementById('sitePickerButton'), addSiteBtn),
+    });
 }
 
 function refreshSiteDeleteButton() {
@@ -931,9 +986,13 @@ function refreshSiteDeleteButton() {
 }
 
 function closeSiteDelete() {
+    closeDialog(siteDeleteContainer);
+    resetSiteDelete();
+}
+
+function resetSiteDelete() {
     deletingSiteId = null;
     siteDeleteInput.value = '';
-    siteDeleteContainer.style.display = 'none';
     refreshSiteDeleteButton();
 }
 
@@ -980,7 +1039,7 @@ function openMembers() {
     disarmLeave();
     memberList.replaceChildren();
     pendingInviteList.replaceChildren();
-    membersContainer.style.display = 'block';
+    openDialog(membersContainer, { focus: membersClose, opener: membersButton });
     stopMembers = data.subscribeMembers(membersSiteId, { withInvites: manage }, (state) => {
         if (membersSiteId) {
             renderMembers(state);
@@ -996,9 +1055,13 @@ function stopMembersListener() {
 }
 
 function closeMembers() {
+    closeDialog(membersContainer);
+    resetMembers();
+}
+
+function resetMembers() {
     stopMembersListener();
     membersSiteId = null;
-    membersContainer.style.display = 'none';
     disarmLeave();
 }
 

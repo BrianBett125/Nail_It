@@ -168,7 +168,7 @@ describe("variant A: the Received / Used sheet", () => {
     it("Tab stays inside the sheet, and the page behind does not scroll while it is open", async () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
-        assert.equal(await page.evaluate(() => document.body.classList.contains("sheet-open")), true);
+        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), true);
         for (let i = 0; i < 12; i += 1) {
             await page.keyboard.press("Tab");
             assert.equal(await page.evaluate(() => document.querySelector("#movementForm").contains(document.activeElement)), true, `Tab ${i}`);
@@ -178,7 +178,7 @@ describe("variant A: the Received / Used sheet", () => {
             assert.equal(await page.evaluate(() => document.querySelector("#movementForm").contains(document.activeElement)), true, `Shift+Tab ${i}`);
         }
         await page.keyboard.press("Escape");
-        assert.equal(await page.evaluate(() => document.body.classList.contains("sheet-open")), false);
+        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), false);
         await context.close();
     });
 
@@ -186,7 +186,7 @@ describe("variant A: the Received / Used sheet", () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
         await page.click("#movementTitle");
-        assert.notEqual(await page.evaluate(() => getComputedStyle(document.querySelector("#movementContainer")).display), "none");
+        assert.equal(await page.evaluate(() => document.querySelector("#movementContainer").open), true);
         await page.mouse.click(1250, 690); // bottom right corner of the default 1280x720 window: backdrop, not the card
         await closed(page, "#movementContainer");
         assert.equal((await wrote(page)).length, 0);
@@ -196,9 +196,10 @@ describe("variant A: the Received / Used sheet", () => {
     it("a second tap on the table's Use while the sheet is open and a site switch leave nothing open", async () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
-        await selectSite(page, "Cape Town");
+        // a modal sheet makes the sidebar inert, so a person cannot click it; code (another tab, a link) still can
+        await page.locator("#siteList a", { hasText: "Cape Town" }).evaluate((a) => a.click());
         await closed(page, "#movementContainer");
-        assert.equal(await page.evaluate(() => document.body.classList.contains("sheet-open")), false);
+        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), false);
         await context.close();
     });
 });
@@ -210,9 +211,8 @@ describe("variant A: accessibility", () => {
         assert.deepEqual(labels, ["Receive Cement", "Use Cement", "History of Cement", "Edit material", "Delete material"]);
 
         await row(page, "Cement").locator(".btn-use").click();
-        const dialog = page.locator("#movementForm");
-        assert.equal(await dialog.getAttribute("role"), "dialog");
-        assert.equal(await dialog.getAttribute("aria-modal"), "true");
+        const dialog = page.locator("#movementContainer");
+        assert.equal(await dialog.evaluate((el) => el.tagName + el.matches(":modal")), "DIALOGtrue", "a native modal dialog");
         assert.equal(await dialog.getAttribute("aria-labelledby"), "movementTitle");
         assert.equal(await page.locator("label[for='movementAmount']").count(), 1);
         assert.equal(await page.locator("label[for='movementNote']").count(), 1);
@@ -220,8 +220,8 @@ describe("variant A: accessibility", () => {
         await page.click("#movementCancel");
 
         await row(page, "Cement").locator(".btn-history").click();
-        const history = page.locator("#historyContainer [role='dialog']");
-        assert.equal(await history.getAttribute("aria-modal"), "true");
+        const history = page.locator("#historyContainer");
+        assert.equal(await history.evaluate((el) => el.tagName + el.matches(":modal")), "DIALOGtrue", "a native modal dialog");
         assert.equal(await history.getAttribute("aria-labelledby"), "historyTitle");
         assert.equal(await page.evaluate(() => document.activeElement.id), "historyClose", "focus moves into the history sheet");
         await context.close();
@@ -268,7 +268,7 @@ describe("variant A: keeps database text as text", () => {
 
         await row(page, "<img").locator(".btn-use").click();
         assert.equal(await page.textContent("#movementTitle"), `Use ${evil}`);
-        assert.equal(await page.getAttribute("#movementContainer .sheet", "aria-labelledby"), "movementTitle");
+        assert.equal(await page.getAttribute("#movementContainer", "aria-labelledby"), "movementTitle");
         await page.fill("#movementNote", evil);
         await page.fill("#movementAmount", "1");
         await page.click("#movementSubmit");
@@ -298,7 +298,8 @@ describe("variant A: listeners", () => {
         assert.equal(await count(), 1);
         await row(page, "Cement").locator(".btn-history").click();
         assert.equal(await count(), 2);
-        await selectSite(page, "Cape Town");
+        // a modal sheet makes the sidebar inert, so a person cannot click it; code (another tab, a link) still can
+        await page.locator("#siteList a", { hasText: "Cape Town" }).evaluate((a) => a.click());
         await closed(page, "#historyContainer");
         assert.equal(await count(), 1, "the history listener went with the sheet");
         await context.close();
@@ -310,7 +311,7 @@ describe("variant A: listeners", () => {
         await page.locator("#historyList .history-row").first().waitFor();
         await page.evaluate(() => window.__nailit.externalRemoveMaterial("sA", "m1"));
         await page.waitForFunction(() => /deleted/.test(document.querySelector("#historySummary").textContent));
-        assert.notEqual(await page.evaluate(() => getComputedStyle(document.querySelector("#historyContainer")).display), "none");
+        assert.equal(await page.evaluate(() => document.querySelector("#historyContainer").open), true);
         await context.close();
     });
 });
@@ -401,8 +402,9 @@ describe("variant A: a 375px phone", () => {
         await page.waitForTimeout(250);
         const fit = await page.evaluate(() => {
             const sheet = document.querySelector("#movementForm");
+            const body = sheet.querySelector(".sheet-body"); // the buttons stay pinned, the body scrolls
             const rect = sheet.getBoundingClientRect();
-            return { top: rect.top, bottom: rect.bottom, height: innerHeight, scrolls: sheet.scrollHeight > sheet.clientHeight };
+            return { top: rect.top, bottom: rect.bottom, height: innerHeight, scrolls: body.scrollHeight > body.clientHeight };
         });
         assert.ok(fit.top >= 0 && fit.bottom <= fit.height + 1, JSON.stringify(fit));
         assert.equal(fit.scrolls, true, "what does not fit scrolls inside the sheet");
@@ -422,7 +424,7 @@ describe("variant A: a 375px phone", () => {
         await page.locator("#historyList .history-row").nth(13).waitFor();
         await page.waitForTimeout(250);
         const state = await page.evaluate(() => {
-            const sheet = document.querySelector("#historyContainer [role='dialog']").getBoundingClientRect();
+            const sheet = document.querySelector("#historyContainer .sheet").getBoundingClientRect();
             const body = document.querySelector("#historyBody");
             const last = document.querySelector("#historyList .history-row:last-child").getBoundingClientRect();
             const bodyRect = body.getBoundingClientRect();
