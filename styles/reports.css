@@ -1,0 +1,65 @@
+/* Phase 6: the Reports dialog. Uses the sheet pieces from dialogs.css; this file only adds what
+   is new: the quick-range chips, the two date fields side by side, and the Share / Print pair. */
+
+/* The print heading exists only on paper (styles/print.css shows it). */
+.print-header { display: none; }
+
+.reports-dialog h3 {
+    margin: 20px 0 8px;
+    font-size: 17px;
+}
+
+.reports-dialog .sheet-secondary {
+    display: block;
+    width: 100%;
+    margin: 0 0 10px;
+}
+
+.report-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.report-presets button {
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 2px solid var(--ink);
+    border-radius: 22px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.report-presets button[aria-pressed="true"] {
+    background: var(--ink);
+    color: #fff;
+}
+
+.report-range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.report-range > div { min-width: 0; }
+.report-range .field { min-width: 0; max-width: 100%; padding: 0 8px; }
+.report-range .sheet-label { margin-top: 0; }
+
+.report-send {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.report-send .sheet-secondary { margin: 0; }
+
+@media (max-width: 360px) {
+    .report-range,
+    .report-send { grid-template-columns: 1fr; }
+}

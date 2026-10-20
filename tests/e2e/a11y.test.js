@@ -168,6 +168,16 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
             await context.close();
         });
 
+        it("the reports dialog", async () => {
+            const { context, page } = await open();
+            await page.click("#reportsButton");
+            await assertClean(page, `reports dialog on a ${name}`);
+            await page.click("#exportMovements");
+            await page.waitForTimeout(200);
+            await assertClean(page, `reports dialog after an empty or filled export on a ${name}`);
+            await context.close();
+        });
+
         it("the add site, add material, edit and delete site dialogs", async () => {
             const { context, page } = await open();
             await page.click("#addSiteButton");

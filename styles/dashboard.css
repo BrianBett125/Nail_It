@@ -360,6 +360,7 @@ td button:hover {
     font-size: 13px;
 }
 
+#reportsButton,
 #membersButton {
     padding: 10px;
     border: 1px solid #2c3e50;
@@ -369,6 +370,7 @@ td button:hover {
     cursor: pointer;
 }
 
+#reportsButton:hover,
 #membersButton:hover {
     background: #2c3e50;
     color: #fff;
@@ -1226,7 +1228,7 @@ body:has(.site-bar.is-open) { overflow: hidden; }
    card, with big Receive / Use / History buttons. */
 @media (max-width: 768px) {
     .content-header { flex-wrap: wrap; }
-    #addMaterialButton, #membersButton { min-height: 44px; }
+    #addMaterialButton, #reportsButton, #membersButton { min-height: 44px; }
 
     #materialsTable,
     #materialsTable tbody {

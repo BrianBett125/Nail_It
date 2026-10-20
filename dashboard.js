@@ -25,6 +25,7 @@ import { showToast } from "./src/toast.js";
 import { createMovementsUI } from "./src/ui-movements.js";
 import { createInsightsUI } from "./src/ui-insights.js";
 import { createDrawer } from "./src/ui-drawer.js";
+import { createReportsUI } from "./src/ui-reports.js";
 import { openDialog, closeDialog, closeOnBackdrop } from "./src/dialog.js";
 import { visibleMaterials, stockState, lowLabel, lowDetail } from "./src/insights.js";
 
@@ -129,6 +130,14 @@ const movementsUI = createMovementsUI({
         }, onError),
     },
     getContext: () => ({ siteId: currentSiteId, materials: currentMaterials, role: currentRole(), user: currentUser }),
+    showToast,
+    reportError,
+});
+
+// CSV downloads, the shared summary and print live in src/ui-reports.js.
+const reportsUI = createReportsUI({
+    data,
+    getContext: () => ({ siteId: currentSiteId, site: sitesById[currentSiteId], materials: currentMaterials, view: insightsUI.view() }),
     showToast,
     reportError,
 });
@@ -290,6 +299,7 @@ function applyRole() {
     // With no site selected the button stays so that pressing it can say "Select a site first".
     addMaterialButton.hidden = Boolean(currentSiteId) && !canWriteMaterials(role);
     membersButton.hidden = !currentSiteId;
+    reportsUI.setSite(currentSiteId);
     roleBadge.hidden = !currentSiteId;
     roleBadge.textContent = currentSiteId ? `Your role: ${roleLabel(role)}` : '';
     updateSiteBar();

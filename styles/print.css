@@ -1,0 +1,108 @@
+/* Phase 6: the dashboard on paper, and as "Save as PDF" for architects and head office.
+   Loaded with media="print", so it costs nothing on screen. One site, one table, black on white:
+   a heading with the site and the date, the materials with their stock, and nothing you cannot
+   press on paper (buttons, the site list, the activity feed, the dialogs). */
+@page {
+    margin: 14mm;
+}
+
+@media print {
+    html,
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 12pt;
+    }
+
+    header,
+    .site-bar,
+    .sidebar,
+    .content-header,
+    .insights,
+    .verify-banner,
+    .activity-panel,
+    .clear-view,
+    #materialsStatus:not(.status-card),
+    .toast-region,
+    .toasts,
+    dialog,
+    footer {
+        display: none !important;
+    }
+
+    .dashboard,
+    .main-content {
+        display: block !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: none !important;
+        overflow: visible !important;
+    }
+
+    .print-header {
+        display: block;
+        margin: 0 0 10pt;
+        padding-bottom: 6pt;
+        border-bottom: 2pt solid #000;
+    }
+
+    .print-header h2 {
+        margin: 0;
+        font-size: 20pt;
+    }
+
+    .print-header p {
+        margin: 2pt 0 0;
+        font-size: 11pt;
+    }
+
+    #materialsTable {
+        display: table !important;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #materialsTable thead { display: table-header-group !important; }
+    #materialsTable tbody { display: table-row-group !important; }
+    #materialsTable tr { display: table-row !important; break-inside: avoid; }
+
+    #materialsTable th,
+    #materialsTable td {
+        display: table-cell !important;
+        padding: 5pt 6pt;
+        border: 0.75pt solid #000;
+        background: none !important;
+        color: #000 !important;
+        text-align: left;
+    }
+
+    #materialsTable th {
+        font-weight: bold;
+        border-bottom-width: 1.5pt;
+    }
+
+    /* Buttons mean nothing on paper. */
+    #materialsTable th:nth-child(5),
+    #materialsTable th:nth-child(6),
+    #materialsTable td.cell-stock,
+    #materialsTable td.cell-manage {
+        display: none !important;
+    }
+
+    #materialsTable td:nth-child(2) { text-align: right; }
+    #materialsTable td:first-child { border-left: 0.75pt solid #000 !important; }
+
+    /* Low stock is a word with the amount, not a colour. */
+    #materialsTable .badge-low {
+        border: 1pt solid #000;
+        background: none !important;
+        color: #000 !important;
+        font-weight: bold;
+    }
+
+    #materialsTable:not(.has-low) th:last-child,
+    #materialsTable:not(.has-low) td.cell-status {
+        display: none !important;
+    }
+}

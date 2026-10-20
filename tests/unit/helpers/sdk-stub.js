@@ -25,6 +25,14 @@ export function equalTo(value) {
     return { constraint: "equalTo", value };
 }
 
+export function startAt(value) {
+    return { constraint: "startAt", value };
+}
+
+export function endAt(value) {
+    return { constraint: "endAt", value };
+}
+
 export function limitToLast(count) {
     return { constraint: "limitToLast", count };
 }

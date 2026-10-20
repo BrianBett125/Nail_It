@@ -185,4 +185,21 @@ describe("the signed-in pages run under the policy", () => {
         assert.deepEqual(await violations(page), []);
         await context.close();
     });
+    it("the Reports dialog saves files and prints with no policy violation", async () => {
+        const { context, page, seen } = await watched(`${fakeUrl}/dashboard.html?site=sA`);
+        await page.waitForSelector("#materialTableBody tr");
+        await page.evaluate(() => { window.print = () => {}; });
+        await page.click("#reportsButton");
+        const [stock] = await Promise.all([page.waitForEvent("download"), page.click("#exportStock")]);
+        assert.match(stock.suggestedFilename(), /-stock-\d{4}-\d{2}-\d{2}\.csv$/);
+        await page.fill("#reportFrom", "2000-01-01");
+        const [moves] = await Promise.all([page.waitForEvent("download"), page.click("#exportMovements")]);
+        assert.match(moves.suggestedFilename(), /-movements-2000-01-01_to_/);
+        await page.click("#reportShare");
+        await page.click("#reportPrint");
+        await page.waitForTimeout(150);
+        assert.deepEqual(await violations(page), []);
+        assert.deepEqual(seen.consoleErrors, []);
+        await context.close();
+    });
 });

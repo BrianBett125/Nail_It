@@ -530,10 +530,10 @@
 }
 
 @media (max-width: 768px) {
-    /* Members and Add Material share one row instead of Add Material standing alone on its own. */
+    /* Reports, Members and Add Material share one row instead of one standing alone on its own. */
     .content-header { gap: 8px; }
     .content-header h1 { flex: 1 1 auto; }
-    #membersButton, #addMaterialButton { flex: 1 1 calc(50% - 4px); }
+    #reportsButton, #membersButton, #addMaterialButton { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
 }
 
 /* Phase 5: on a phone the list is what people came for, so the figures above it are a little tighter. */
