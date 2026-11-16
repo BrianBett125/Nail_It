@@ -14,6 +14,7 @@
 // a whole and nothing is left half done.
 import {
     getDatabase,
+    forceLongPolling,
     ref,
     onValue,
     push,
@@ -44,6 +45,9 @@ import {
 } from "./movements.js";
 import { emailFromKey } from "./roles.js";
 
+// Some site networks and privacy browsers block WebSockets. Long polling uses HTTPS requests instead,
+// while retaining Realtime Database's persistent, automatically reconnecting client connection.
+forceLongPolling();
 const db = getDatabase(app);
 
 // What a server timestamp and an increment are, for the pure builders in movements.js.
