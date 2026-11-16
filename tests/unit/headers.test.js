@@ -73,10 +73,10 @@ test("the pictures and the manifest are allowed, and nothing else is", () => {
     assert.deepEqual(directive("font-src"), ["'self'"]);
 });
 
-test("pictures are cached for a week, pages are not told to cache, and the worker is never cached", () => {
+test("pictures are cached for a week, the dashboard is not cached, and the worker is never cached", () => {
     assert.equal(headersFor(config, "/assets/sparks-800.webp")["Cache-Control"], "public, max-age=604800");
     assert.equal(headersFor(config, "/favicon/favicon.ico")["Cache-Control"], "public, max-age=604800");
-    assert.equal(headersFor(config, "/dashboard.html")["Cache-Control"], undefined);
+    assert.equal(headersFor(config, "/dashboard.html")["Cache-Control"], "no-store");
     // A cached sw.js is a worker that can never be replaced: the browser keeps checking for a new one only
     // if it is allowed to revalidate it.
     assert.match(headersFor(config, "/sw.js")["Cache-Control"], /no-cache|max-age=0/);
@@ -84,7 +84,7 @@ test("pictures are cached for a week, pages are not told to cache, and the worke
     // fetches them through the HTTP cache. Leave that import cacheable and a changed policy can sit behind
     // a stale copy: the new worker looks identical to the old one and is never installed.
     assert.match(headersFor(config, "/src/sw-cache.js")["Cache-Control"], /no-cache|max-age=0/);
-    assert.equal(headersFor(config, "/dashboard.js")["Cache-Control"], undefined, "only the worker and its import");
+    assert.equal(headersFor(config, "/dashboard.js")["Cache-Control"], undefined, "the dashboard script keeps its normal cache behavior");
 });
 
 test("sourceMatches reads Vercel's path patterns", () => {
