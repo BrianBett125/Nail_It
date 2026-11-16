@@ -27,11 +27,16 @@ test("the policy has no 'unsafe-inline', 'unsafe-eval' or wildcard source", () =
     assert.doesNotMatch(text, /(^|\s)https?:(\s|;|$)/, "a bare scheme allows every host");
 });
 
-test("scripts come from this site, Google's Firebase CDN and the project's RTDB host", () => {
+// Firebase's RTDB long-polling transport loads its responses as <script> tags (JSONP). The SDK first
+// hits the project's canonical host, then is redirected to a dynamic shard server under the same
+// *.firebasedatabase.app domain. script-src must therefore allow the whole *.firebasedatabase.app
+// namespace, not just the one canonical host, or the shard redirects are blocked and the app reads as
+// offline. connect-src already covered them, but a <script> load is governed by script-src.
+test("scripts come from this site, Google's Firebase CDN and the Firebase RTDB namespace", () => {
     assert.deepEqual(directive("script-src"), [
         "'self'",
         "https://www.gstatic.com",
-        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app",
+        "https://*.firebasedatabase.app",
     ]);
     assert.deepEqual(directive("style-src"), ["'self'"]);
     assert.deepEqual(directive("object-src"), ["'none'"]);
@@ -59,11 +64,14 @@ test("the database, sign-in and token hosts the app really talks to are allowed 
     assert.ok(connect.includes("'self'"));
 });
 
-test("the project's own auth domain, and no other, may be framed", () => {
+// The RTDB long-polling transport also frames shard hosts under *.firebasedatabase.app, the same dynamic
+// servers script-src has to allow. Pinning frame-src to the one canonical host is what produced the
+// "frame-src blocked ...s-gke-euw1-..." violation that came with the dead connection.
+test("the project's own auth domain, and the RTDB namespace, may be framed", () => {
     assert.deepEqual(directive("frame-src"), [
         "'self'",
         "https://nail-it-6b883.firebaseapp.com",
-        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app",
+        "https://*.firebasedatabase.app",
     ]);
 });
 

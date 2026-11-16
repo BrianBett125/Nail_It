@@ -13,6 +13,10 @@ export function getDatabase() {
     return { kind: "db" };
 }
 
+// src/data.js calls this at import time to prefer long polling over WebSockets (some site networks and
+// privacy browsers block WebSockets). In the stub it is a no-op: the tests never open a real connection.
+export function forceLongPolling() {}
+
 export function ref(_db, path = "") {
     return { kind: "ref", path };
 }
