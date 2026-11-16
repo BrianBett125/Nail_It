@@ -13,8 +13,11 @@
 //   siteInvites { siteId: [{ key, email, role }] }              pending invites, as the owner sees them
 //   invites     { siteId: { role, siteName, invitedBy } }       invitations waiting for the signed-in user
 //   hiddenSites [siteId]                                        exist, but the user is not in them yet (invited)
+// Preset flags (window.__preset, read before load): holdSnapshots, holdAcks, throwOnWrite, throwOnRemove,
+// failAdds, failDeleteSite, failAccept, offline (the page starts with no signal at all).
 import { buildSiteDeleteUpdates } from "/src/logic.js";
 import { emailFromKey } from "/src/roles.js";
+import { createOutbox } from "/src/outbox.js";
 import {
     buildMovementUpdates,
     buildAddMaterialUpdates,
@@ -52,6 +55,22 @@ const everSubscribed = [];
 const pendingAcks = [];
 const heldSnapshots = [];
 let counter = 0;
+
+// What Firebase's own `.info/connected` reports: true while the database is reachable. A test flips it with
+// window.__nailit.setConnected(false) to put the page in the state it would be in with no signal, and a page
+// can be started in that state with window.__preset = { offline: true } (a reload on a phone with no bars).
+let connected = !(window.__preset && window.__preset.offline);
+const connectionListeners = new Set();
+
+// Writes made with no signal, in the order they were made. They are NOT applied to the fake database: with
+// no connection the server has not seen them, which is the whole point of src/outbox.js.
+const heldWrites = [];
+
+function releaseHeldWrites() {
+    for (const held of heldWrites.splice(0)) {
+        applyStock(held.updates).then(held.resolve, held.reject);
+    }
+}
 
 function nextId() {
     counter += 1;
@@ -189,6 +208,24 @@ window.__nailit = {
     releaseAcks() {
         pendingAcks.splice(0).forEach((resolve) => resolve());
     },
+    // The connection comes and goes, like a phone on a site: false is what the page shows the banner for.
+    // Coming back releases whatever was recorded with no signal, which is when it reaches the database.
+    setConnected(flag) {
+        connected = flag;
+        if (connected) {
+            releaseHeldWrites();
+        }
+        for (const listener of [...connectionListeners]) {
+            listener.onData(connected);
+        }
+    },
+    // The flag itself could not be read: the page has to leave the banner as it found it rather than
+    // claim to know either way.
+    failConnection(message) {
+        for (const listener of [...connectionListeners]) {
+            listener.onError(new Error(message));
+        }
+    },
     // Firebase can deliver a callback that was already in flight when its listener was
     // removed. Replay every unsubscribed listener to prove the page ignores them.
     replayUnsubscribed() {
@@ -209,6 +246,19 @@ export function subscribeSites(uid, onData, onError) {
 
 export function subscribeMaterials(siteId, onData, onError) {
     return subscribe({ kind: "materials", siteId, onData, onError });
+}
+
+// Mirrors the real one: a listener on Firebase's own connection flag, not on any site. The first value
+// arrives asynchronously, like the real thing, so the page cannot depend on it being there immediately.
+export function subscribeConnection(onData, onError) {
+    const listener = { onData, onError };
+    connectionListeners.add(listener);
+    setTimeout(() => {
+        if (connectionListeners.has(listener)) {
+            onData(connected);
+        }
+    }, 0);
+    return () => connectionListeners.delete(listener);
 }
 
 export function addSite(site, user) {
@@ -277,7 +327,7 @@ function applyPaths(tree, updates) {
 }
 
 // Applies the update the way the server would, or refuses the whole thing.
-function writeStock(updates) {
+function applyStock(updates) {
     const tree = { materials: structuredClone(db.materials), movements: structuredClone(db.movements) };
     applyPaths(tree, updates);
     for (const materials of Object.values(tree.materials)) {
@@ -296,6 +346,69 @@ function writeStock(updates) {
     return ack();
 }
 
+// A write is only applied while there is a connection. With none, the server has not seen it, so nothing
+// here moves and the promise stays open until the connection comes back and it lands.
+function writeStock(updates) {
+    if (!connected) {
+        return new Promise((resolve, reject) => {
+            heldWrites.push({ updates, resolve, reject });
+        });
+    }
+    return applyStock(updates);
+}
+
+// ---- The outbox -----------------------------------------------------------------------
+// The real src/data.js wires this same module to the real SDK (src/outbox.js has the why). Here it is
+// wired to this fake, with the browser's own localStorage, so what a person records with no signal
+// survives a reload in a test exactly as it does on a phone. A replayed movement is stamped by the
+// server on arrival, like the real one (database.rules.json accepts no other `at`), so the replay
+// carries the normal server-timestamp marker rather than the reading time.
+function browserStorage() {
+    try {
+        return localStorage;
+    } catch {
+        return null;
+    }
+}
+
+const outbox = createOutbox({
+    storage: browserStorage(),
+    write: (entry) => {
+        if (window.__nailit.throwOnWrite) {
+            throw new Error("boom");
+        }
+        return writeStock(buildMovementUpdates({
+            siteId: entry.siteId,
+            materialId: entry.materialId,
+            movementId: entry.movementId,
+            material: entry.material,
+            movement: entry.movement,
+            user: entry.user,
+            sv,
+        }));
+    },
+    // Already in the fake database? Then it landed during a write whose answer went missing.
+    landed: (entry) => Boolean(db.movements[entry.siteId] && db.movements[entry.siteId][entry.movementId]),
+});
+
+const outboxListeners = new Set();
+
+outbox.subscribe((report) => {
+    for (const listener of [...outboxListeners]) {
+        listener(report);
+    }
+});
+
+export function observeOutbox(onData) {
+    outboxListeners.add(onData);
+    onData(outbox.snapshot());
+    return () => outboxListeners.delete(onData);
+}
+
+export function replayOutbox() {
+    return outbox.replay();
+}
+
 export function addMaterial(siteId, material, user) {
     const id = nextId();
     const done = writeStock(buildAddMaterialUpdates({
@@ -305,14 +418,16 @@ export function addMaterial(siteId, material, user) {
 }
 
 export function recordMovement(siteId, materialId, material, movement, user) {
-    if (window.__nailit.throwOnWrite) {
-        throw new Error("boom");
-    }
-    const id = nextId();
-    const done = writeStock(buildMovementUpdates({
-        siteId, materialId, movementId: id, material, movement, user, sv,
-    }));
-    return { id, done };
+    // On the device before the database is asked, wherever the signal happens to be.
+    return outbox.record({
+        movementId: nextId(),
+        siteId,
+        materialId,
+        material: { name: material.name, units: material.units },
+        movement,
+        user: { uid: user.uid, email: user.email },
+        at: clock(),
+    });
 }
 
 export function updateMaterial(siteId, materialId, fields) {

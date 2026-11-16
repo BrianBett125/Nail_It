@@ -14,7 +14,7 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, SEED,
+    startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, focusOn, SEED,
 } from "./helpers.js";
 
 let server;
@@ -142,9 +142,9 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 await page.keyboard.press("Escape");
                 assert.equal(await isOpen(page, dialog.id), false);
                 if (dialog.opener && !(dialog.phoneFoldsOpener && viewport.width < 600)) {
-                    const returned = await dialog.opener(page).evaluate((el) => el === document.activeElement);
-                    assert.equal(returned, true, "focus did not return to the button that opened the dialog");
+                    assert.equal(await focusOn(page, dialog.opener(page)), true, "focus did not return to the button that opened the dialog");
                 } else {
+                    await page.waitForFunction(() => document.activeElement && document.activeElement.tagName !== "BODY", undefined, { timeout: 5000 });
                     assert.notEqual(await page.evaluate(() => document.activeElement.tagName), "BODY", "focus was dropped on the page");
                 }
                 assert.deepEqual(await wrote(page), [], "closing writes nothing");

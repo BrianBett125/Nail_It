@@ -61,6 +61,35 @@ test("every stylesheet and script a page names exists", () => {
     }
 });
 
+// Phase 7: any of these pages can be the first one opened with no signal, so all of them have to hand the
+// browser the worker. src/sw-register.js does the registering, and it needs the module type like any other.
+test("every page registers the service worker", () => {
+    for (const page of PAGES) {
+        assert.match(markup(page), /<script src="src\/sw-register\.js" type="module"><\/script>/,
+            `${page} does not register the service worker, so it cannot open with no signal`);
+    }
+});
+
+test("every page links the manifest and an apple touch icon, so it can be installed from any of them", () => {
+    for (const page of PAGES) {
+        const html = markup(page);
+        assert.match(html, /<link rel="manifest" href="favicon\/site\.webmanifest">/, page);
+        assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="favicon\/apple-touch-icon\.png">/, page);
+    }
+});
+
+// Phase 7: the dashboard is the page that says the app is working offline. One indicator, announced to a
+// screen reader rather than left for the eye alone, hidden until it is needed, and never printed.
+test("the dashboard has one offline indicator, hidden until it is needed and never printed", () => {
+    const html = markup("dashboard.html");
+    assert.equal((html.match(/id="offlineBanner"/g) || []).length, 1, "exactly one indicator");
+    assert.match(html, /<div id="offlineBanner"[^>]*\brole="status"[^>]*\shidden>/);
+    assert.match(read("styles/print.css"), /\.offline-banner\b/, "a printed stock sheet must not carry it");
+    // The banner is a flex row, so `display: flex` beats the browser's own [hidden] rule and the one thing
+    // keeping it off the screen is this one. Losing the !important shows it to everybody, for good.
+    assert.match(read("styles/dashboard.css"), /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/);
+});
+
 // ---- the inline icons --------------------------------------------------------------------
 
 // A tiny stand-in for the DOM: enough for src/icons.js, which only creates elements and sets attributes.

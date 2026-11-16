@@ -68,6 +68,14 @@
         </div>
         <!-- Main content section -->
         <main class="main-content">
+            <!-- Shown while the app is working from its own copy with no signal, and while anything
+                 recorded earlier is still waiting to be sent (src/outbox.js): the movement is on this
+                 device and will go up when the connection comes back, so this says what is happening
+                 rather than warning about anything. Text and visibility are set by dashboard.js. -->
+            <div id="offlineBanner" class="offline-banner" role="status" hidden>
+                <span class="offline-dot" aria-hidden="true"></span>
+                <span id="offlineMessage">Offline. Changes will sync when the connection comes back.</span>
+            </div>
             <!-- Shown until the account's email is verified: an unverified email cannot accept invitations -->
             <div id="verifyBanner" class="verify-banner" role="status" hidden>
                 <span>Verify your email to accept invitations. We sent a link to <strong id="verifyEmail"></strong>.</span>
@@ -371,5 +379,6 @@
     </dialog>
 
     <script src="dashboard.js" type="module"></script>
+    <script src="src/sw-register.js" type="module"></script>
 </body>
 </html>

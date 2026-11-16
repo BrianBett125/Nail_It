@@ -67,6 +67,19 @@ async function record(page, material, action, amount, note) {
 const closed = (page, selector) =>
     page.waitForFunction((s) => getComputedStyle(document.querySelector(s)).display === "none", selector);
 
+// Closing a native <dialog> fires its `close` event asynchronously, and src/ui-movements.js ends the
+// history subscription there. Escape is closed by the browser, so the listener is dropped a moment
+// after the sheet leaves the screen: wait for the drop rather than reading the count the instant the
+// sheet disappears, which fails under load.
+const movementListenerCount = (page) =>
+    page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length);
+const movementListenersDropTo = (page, wanted) =>
+    page.waitForFunction(
+        (w) => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length === w,
+        wanted,
+        { timeout: 5000 },
+    );
+
 const movementWrites = async (page) =>
     (await wrote(page)).filter((w) => w.op === "multi" && Object.keys(w.paths).some((p) => p.startsWith("movements/")));
 
@@ -393,10 +406,11 @@ describe("material history", () => {
         const { context, page } = await open();
         await button(page, "Cement", ".btn-history").click();
         await page.locator("#historyContainer").waitFor({ state: "visible" });
-        assert.equal(await page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length), 2, "feed + history");
+        assert.equal(await movementListenerCount(page), 2, "feed + history");
         await page.keyboard.press("Escape");
         await closed(page, "#historyContainer");
-        assert.equal(await page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length), 1, "feed only");
+        await movementListenersDropTo(page, 1);
+        assert.equal(await movementListenerCount(page), 1, "feed only: the history subscription is gone");
         await context.close();
     });
 

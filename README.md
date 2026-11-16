@@ -49,6 +49,22 @@ The dashboard is meant to be used without reading instructions. A site and three
 
 Messages (saved, deleted, errors) appear at the bottom of the screen and go away by themselves. Empty pages say what to do next.
 
+## Offline, and installing it on a phone
+
+Sites have bad signal, so the app is built to keep working when the signal goes.
+
+**The app opens with no signal.** The phone keeps the app's own files (pages, styles, scripts, icons), so it starts even with nothing to fetch. It does **not** keep the stock itself: while the dashboard stays open the material list you already loaded is still on screen, but a **reload with no signal** comes up with an empty list until the connection is back. The app says what is happening rather than showing a blank board with no explanation.
+
+**You can still record stock.** While the dashboard is open, press **Received** or **Used** and confirm. The movement is kept on the phone **before** the app asks the database, a banner at the top reads **Offline. Changes will sync when the connection comes back.**, and it sends itself the moment there is a signal. Nothing needs the app to stay open: a movement recorded with no signal, even if the app is closed or the phone dies, goes up on its next start. A movement that finally reaches the database this way is stamped with the time it arrived, not the time it was recorded.
+
+The banner counts what is still waiting: **Offline. 2 changes waiting to send.** Movements are only ever added, never overwritten, so two people recording the same material with no signal both arrive, one after the other, and neither loses the other's work. If one of them already reached the database, the phone recognises that and does not count it a second time.
+
+Two things to expect while offline: a material's **History** and the site's **activity feed** stay empty (they read the newest entries from the server, which the phone does not keep), and a movement you record offline is only on your phone until it sends, so nobody else sees it in the meantime.
+
+**To install it on a phone home screen** (Android Chrome, or Safari on iPhone): open the app, then **Menu**, **Add to Home screen** (Chrome), or **Share**, **Add to Home Screen** (Safari). It then opens full screen with its own icon, and starts with no signal. If a phone ever looks like it is showing an old version, close it and open it again: the app re-checks for a new one on every visit.
+
+`docs/PHASE7-DEPLOY.md` has the two-minute check to do on a real phone, and what the app does and does not keep while offline.
+
 ## Development
 
 The site is static, there is no build step. `package.json` only holds the test tooling.
@@ -80,7 +96,8 @@ How it is laid out:
 * `src/insights.js` holds what counts as low stock, how a list is searched, filtered and sorted, and how a site and the overview are summarised, with no DOM and no Firebase. `src/ui-insights.js` is the dashboard's summary tiles, attention strip and controls; `overview.html` and `overview.js` are the owner overview. None of it adds data: it all reads what Phase 3 already stores.
 * `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
 * `src/toast.js` shows the toast messages that replaced `alert()`. `src/icons.js` draws the few icons as inline SVG (there is no icon font).
-* `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site and Google's Firebase CDN. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
+* `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site and Google's Firebase CDN, and only this site's own script may run as the service worker (`worker-src 'self'`). `sw.js` and `src/sw-cache.js` are served `no-cache` so a new worker is always picked up. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
+* `sw.js` is the service worker that lets the app open with no signal. `src/sw-cache.js` holds the whole policy as a plain module (what is cached, and which of three strategies every request gets) so `node --test` can check it (`tests/unit/sw-cache.test.js`), and `sw.js` is the thin part that carries it out. `src/sw-register.js` registers it from every page. The worker caches only the app's own files and the Firebase SDK from Google's CDN; the database, sign-in and every write are passed straight through. `src/outbox.js` is what keeps a movement recorded with no signal: it writes the movement to the phone before the app asks the database, replays it on the next start, and drops it once the server has it. `dashboard.js` shows the offline banner and the count of waiting changes from `data.subscribeConnection` (Firebase's `.info/connected`) and `data.observeOutbox`. `tests/unit/outbox.test.js` and `tests/e2e/offline.test.js` cover both: the offline E2E is the one file that runs with the worker on and the real files behind it (it shuts the test server down and proves the app still opens and its files still load), and the indicator and the queue are tested on the fake data layer, where the connection flag can be flipped. `docs/PHASE7-DEPLOY.md` has the real-phone check.
 * `src/dialog.js` opens every form and sheet as a native `<dialog>` (focus trap, Escape, a sheet that rides above the phone keyboard). `src/ui-drawer.js` turns the sidebar into a site picker drawer at 768px and below; `styles/dialogs.css` styles the dialogs as bottom sheets on a phone and cards on a desktop. On a phone the trash can for a site is inside the drawer.
 * `tests/e2e/a11y.test.js` runs axe-core on every page and dialog, on a phone and on a desktop (zero serious or critical violations; `AXE_ALL=1` also fails on moderate ones). `tests/e2e/phone.test.js` and `tests/e2e/dialogs.test.js` hold the 375px and native `<dialog>` contract.
 * `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.

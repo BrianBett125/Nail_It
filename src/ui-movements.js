@@ -260,7 +260,14 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             }
         }, 0);
         showToast(summary);
-        Promise.resolve(sent.done).catch(() => {
+        Promise.resolve(sent.done).catch((error) => {
+            // The movement is on this device (src/outbox.js) and goes up by itself, so this is not a
+            // failure to report as one: telling somebody to try again would have them count the same
+            // stock twice. Only a write the queue could not hold is a real "try again".
+            if (error && error.queued) {
+                showToast(`"${summary}" is saved on this device and will be sent when the connection comes back.`, { kind: "error" });
+                return;
+            }
             showToast(`Could not record "${summary}". The stock may have changed, check it and try again.`, { kind: "error" });
         });
     }

@@ -23,6 +23,7 @@ beforeEach(() => {
     sdk.getValues = {};
     sdk.hangGet = false;
     sdk.setError = null;
+    sdk.updateError = null;
 });
 
 test("the app points at the new project's database, and is created once", () => {
@@ -191,6 +192,33 @@ test("subscribeSites hands the error callback to the SDK so permission errors ar
     assert.equal(listener("userSites/u1").onError, onError);
 });
 
+// ---- the connection ------------------------------------------------------------------
+
+test("subscribeConnection listens on Firebase's own connection flag, not on a site", () => {
+    const seen = [];
+    const onError = () => {};
+    const unsubscribe = data.subscribeConnection((online) => seen.push(online), onError);
+
+    assert.deepEqual(paths("onValue"), [".info/connected"], "the flag is the special .info location");
+    assert.equal(sdk.listeners[0].onError, onError);
+    unsubscribe();
+    assert.equal(calls("unsubscribe").length, 1);
+
+    listener(".info/connected").onData(snapshot(true));
+    assert.deepEqual(seen, [true]);
+});
+
+test("only a plain true counts as online: anything else, above all null, means the app is working offline", () => {
+    const seen = [];
+    data.subscribeConnection((online) => seen.push(online), () => {});
+
+    for (const value of [false, null, undefined, "true", 1, {}]) {
+        listener(".info/connected").onData(snapshot(value));
+    }
+    assert.deepEqual(seen, [false, false, false, false, false, false]);
+    assert.equal(new Set(seen).size, 1, "no value but true may be reported as online");
+});
+
 // ---- materials ---------------------------------------------------------------------
 
 test("B3: subscribeMaterials listens on one site's node and returns the SDK's unsubscribe function", () => {
@@ -264,6 +292,44 @@ test("recordMovement increments the quantity and writes the movement in the same
 test("recordMovement never sends a quantity the phone computed", async () => {
     await data.recordMovement("A", "m1", { name: "Cement", units: "bags", quantity: 5 }, { type: "received", delta: 3 }, USER).done;
     assert.equal(typeof only("update").args[1]["materials/A/m1/quantity"], "object");
+});
+
+// The rules require movements/<siteId>/<movementId>/at to equal the server's `now`
+// (tests/rules/movements.test.js: "with a time in the past" is refused). So a replayed offline
+// movement has to be stamped by the server on arrival: sending the phone's own reading time would be
+// refused whole and the reading would never land. This is the test that would have caught the replay
+// handing Firebase the original `at`, which unit and E2E fakes (that do not check `now`) let pass.
+test("a movement recorded with no signal is replayed with the server's time, never the phone's", async () => {
+    // The write cannot reach the server, so the movement stays on the device (src/outbox.js).
+    sdk.updateError = new Error("Network unavailable");
+
+    const recordedAt = 1_700_000_000_000; // the reading was made well before the signal came back
+    const realNow = Date.now;
+    Date.now = () => recordedAt;
+    let id;
+    let failed;
+    try {
+        ({ id, done: failed } = data.recordMovement(
+            "A", "m1", { name: "Cement", units: "bags" }, { type: "used", delta: -2 }, USER,
+        ));
+        await assert.rejects(failed, { message: "Network unavailable" });
+    } finally {
+        Date.now = realNow;
+    }
+
+    // Signal is back and the movement is not already in the database, so the queue sends it again.
+    sdk.updateError = null;
+    sdk.getValue = null;
+    sdk.calls.length = 0;
+    await data.replayOutbox();
+
+    const replay = calls("update").find((call) => `movements/A/${id}` in call.args[1]);
+    assert.ok(replay, "the queued movement was sent");
+    const movement = replay.args[1][`movements/A/${id}`];
+    assert.deepEqual(movement.at, TIMESTAMP, "the server stamps the time");
+    assert.notEqual(movement.at, recordedAt, "never the phone's clock");
+    // The increment still goes up in the same update, so the replay lands or is refused as one.
+    assert.deepEqual(replay.args[1]["materials/A/m1/quantity"], { ".sv": { increment: -2 } });
 });
 
 test("B1: updateMaterial writes only the given fields and the update time, never the quantity", async () => {

@@ -76,6 +76,8 @@ const pendingInviteList = document.getElementById('pendingInviteList');
 const leaveSiteButton = document.getElementById('leaveSiteButton');
 const membersClose = document.getElementById('membersClose');
 const mainContent = document.querySelector('.main-content');
+const offlineBanner = document.getElementById('offlineBanner');
+const offlineMessage = document.getElementById('offlineMessage');
 const drawerAccount = document.getElementById('drawerAccount');
 const siteNameInput = document.getElementById('siteName');
 
@@ -324,6 +326,93 @@ function usable(...candidates) {
     return candidates.find((el) => el && el.isConnected && (!el.checkVisibility || el.checkVisibility())) || null;
 }
 
+// ---- The connection, and what is waiting to be sent ---------------------------------
+//
+// The indicator belongs to the app rather than to an account or a site, so it starts here at module
+// level and stays for the life of the page. A write made while it is showing is not lost: src/outbox.js
+// holds the movement on this device and sends it when the connection comes back, so the banner says
+// what is happening rather than telling somebody their reading failed. A viewer who never writes sees
+// it too, which is right, because what the table shows them is then the last copy this device knew about.
+//
+// `.info/connected` answers false before the socket is even open, on every single load. Acting on that
+// first answer would flash "Offline" at somebody standing next to a router, so a false is only believed
+// once the flag has said true, or once the browser itself says there is no network (airplane mode), or
+// once the handshake has had its chance. A flag that never answers at all leaves the banner exactly as
+// it was found: the app does not guess.
+const CONNECT_GRACE_MS = 4000;
+
+let online = false;          // the last value the database's own connection flag gave
+let answered = false;        // whether it has given one at all
+let believed = false;        // whether that value is acted on yet (see above)
+let queued = 0;              // movements recorded on this device that the server has not confirmed
+
+function renderConnection() {
+    const offline = believed && !online;
+    offlineBanner.hidden = !offline;
+    if (!offline) {
+        return;
+    }
+    // The count is only shown while there is no connection. While there is one, an entry is in the
+    // queue for as long as a normal write takes to be acknowledged, and nothing is worth saying.
+    offlineMessage.textContent = queued
+        ? `Offline. ${queued} ${queued === 1 ? "change" : "changes"} waiting to send. It will sync when the connection comes back.`
+        : "Offline. Changes will sync when the connection comes back.";
+}
+
+const connectGrace = setTimeout(() => {
+    if (answered) {
+        believed = true;
+        renderConnection();
+    }
+}, CONNECT_GRACE_MS);
+
+// Whatever an earlier session could not send goes up as soon as there is a connection and somebody is
+// signed in. The account has to come first: the database refuses a write with no user, and a refused
+// replay drops the movement from the queue, so sending one too early would lose it.
+function sendQueued() {
+    if (!currentUser || !online) {
+        return;
+    }
+    data.replayOutbox().catch(reportError);
+}
+
+data.subscribeConnection((connected) => {
+    online = connected;
+    answered = true;
+    if (connected) {
+        believed = true;
+        clearTimeout(connectGrace);
+    } else if (!navigator.onLine) {
+        believed = true; // the browser says the device has no network: this false is not the handshake
+    }
+    renderConnection();
+    sendQueued();
+}, () => {
+    // The flag itself could not be read. Leave the banner alone rather than claim to know either way.
+});
+
+// A write can fail without a refusal and without the connection flag moving (a request the SDK has not
+// retried yet, a signal that vanished before the socket noticed). The entry stays queued but the block
+// above does not run again, so the browser's own online signal and coming back to the page each give it
+// another try. Both go through sendQueued, which does nothing while the database still says offline.
+window.addEventListener("online", sendQueued);
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        sendQueued();
+    }
+});
+
+data.observeOutbox((report) => {
+    queued = report.pending;
+    for (const refusal of report.refused) {
+        // Recorded earlier, and the database has now said it will never take it. The movement has been
+        // dropped from the queue, so this is the only place anybody hears about it. It does not say
+        // "wait": that promise cannot be kept for this one.
+        showToast(`A movement recorded on this device could not be sent (${refusal.message}). Please record it again.`, { kind: "error" });
+    }
+    renderConnection();
+});
+
 // ---- Session ------------------------------------------------------------------------
 
 function renderUser() {
@@ -358,6 +447,7 @@ auth.onUser((user) => {
     currentUser = user;
     renderUser();
     syncInvites();
+    sendQueued(); // anything an earlier session recorded and could not send goes up now
     if (!sessionStarted) {
         sessionStarted = true;
         // Fetch and display this user's sites in the sidebar

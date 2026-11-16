@@ -3,7 +3,7 @@
 // the phone viewport (375px wide), and that database text never becomes markup.
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, SEED } from "./helpers.js";
+import { startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, focusOn, SEED } from "./helpers.js";
 
 let server;
 let baseUrl;
@@ -152,6 +152,7 @@ describe("variant A: the Received / Used sheet", () => {
         await useButton.click();
         await page.keyboard.press("Escape");
         await closed(page, "#movementContainer");
+        await focusOn(page, useButton);
         focus = await focusedInfo(page);
         assert.ok(focus.className.includes("btn-use") && focus.row === "m1", `after Escape: ${JSON.stringify(focus)}`);
 
@@ -241,10 +242,12 @@ describe("variant A: accessibility", () => {
 
     it("History closes with Escape and focus returns to its button", async () => {
         const { context, page } = await open();
-        await row(page, "Sand").locator(".btn-history").click();
+        const historyButton = row(page, "Sand").locator(".btn-history");
+        await historyButton.click();
         await page.locator("#historyContainer").waitFor({ state: "visible" });
         await page.keyboard.press("Escape");
         await closed(page, "#historyContainer");
+        await focusOn(page, historyButton);
         const focus = await focusedInfo(page);
         assert.ok(focus.className.includes("btn-history") && focus.row === "m2", JSON.stringify(focus));
         await context.close();
