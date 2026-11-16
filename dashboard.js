@@ -251,6 +251,8 @@ function renderStatus() {
     const siteCount = Object.keys(sitesById).length;
     if (sitesError) {
         sitesStatus.textContent = "Could not load sites.";
+    } else if (!sitesLoaded && databaseIsOffline()) {
+        sitesStatus.textContent = "Offline. Reconnect to load your sites.";
     } else if (!sitesLoaded) {
         sitesStatus.textContent = "Loading sites...";
     } else if (siteCount === 0) {
@@ -265,6 +267,8 @@ function renderStatus() {
     if (!currentSiteId) {
         if (sitesError) {
             materialsStatus.textContent = "";
+        } else if (!sitesLoaded && databaseIsOffline()) {
+            materialsStatus.textContent = "Reconnect to load your sites and materials.";
         } else if (!sitesLoaded) {
             materialsStatus.textContent = "Loading...";
         } else if (siteCount === 0) {
@@ -274,6 +278,8 @@ function renderStatus() {
         }
     } else if (materialsError) {
         materialsStatus.textContent = "Could not load materials for this site.";
+    } else if (!materialsLoaded && databaseIsOffline()) {
+        materialsStatus.textContent = "Offline. Reconnect to load this site's materials.";
     } else if (!materialsLoaded) {
         materialsStatus.textContent = "Loading materials...";
     } else if (rows === 0) {
@@ -346,10 +352,15 @@ let answered = false;        // whether it has given one at all
 let believed = false;        // whether that value is acted on yet (see above)
 let queued = 0;              // movements recorded on this device that the server has not confirmed
 
+function databaseIsOffline() {
+    return believed && !online;
+}
+
 function renderConnection() {
     const offline = believed && !online;
     offlineBanner.hidden = !offline;
     if (!offline) {
+        renderStatus();
         return;
     }
     // The count is only shown while there is no connection. While there is one, an entry is in the
@@ -357,6 +368,7 @@ function renderConnection() {
     offlineMessage.textContent = queued
         ? `Offline. ${queued} ${queued === 1 ? "change" : "changes"} waiting to send. It will sync when the connection comes back.`
         : "Offline. Changes will sync when the connection comes back.";
+    renderStatus(); // Replace data-loading text with the reason a fresh offline page cannot load it.
 }
 
 const connectGrace = setTimeout(() => {
