@@ -56,6 +56,11 @@ async function phoneOnSite(seed = SEEDED, width = 375) {
 
 const expanded = (page) => page.getAttribute("#sitePickerButton", "aria-expanded");
 const activeId = (page) => page.evaluate(() => document.activeElement.id);
+// Escape is closed by the browser itself, which fires the dialog's `close` event a moment later, and
+// that event is what gives focus back (src/dialog.js). So wait for focus to return rather than reading
+// it while the event is still queued, which would fail intermittently under load.
+const focusReturnsTo = (page, id) =>
+    page.waitForFunction((wanted) => document.activeElement.id === wanted, id, { timeout: 5000 });
 
 describe("the drawer on a phone", () => {
     it("the Close button folds it away and focus returns to the picker", async () => {
@@ -141,7 +146,7 @@ describe("the delete-site dialog, reached through the drawer on a phone", () => 
         assert.equal(await page.locator("#siteDeleteConfirm").isDisabled(), false);
         await page.keyboard.press("Escape");
         assert.equal(await page.evaluate(() => document.getElementById("siteDeleteContainer").open), false);
-        assert.equal(await activeId(page), "sitePickerButton");
+        await focusReturnsTo(page, "sitePickerButton");
         await page.click("#sitePickerButton");
         await page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn").click();
         assert.equal(await page.inputValue("#siteDeleteInput"), "", "the typed name is gone after closing");

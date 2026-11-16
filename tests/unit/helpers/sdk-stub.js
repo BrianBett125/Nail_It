@@ -1,6 +1,6 @@
 // Recording stand-in for firebase-app.js and firebase-database.js. Every call lands in
 // globalThis.__sdk.calls so tests can assert exactly what src/data.js asked Firebase to do.
-const sdk = (globalThis.__sdk = { calls: [], getValue: null, listeners: [], keyCounter: 0 });
+const sdk = (globalThis.__sdk = { calls: [], getValue: null, listeners: [], keyCounter: 0, updateError: null });
 
 const record = (name, ...args) => sdk.calls.push({ name, args });
 
@@ -64,12 +64,15 @@ export function get(target) {
     }
     // sdk.getValues maps a path to its value; anything else gets sdk.getValue.
     const value = sdk.getValues && target.path in sdk.getValues ? sdk.getValues[target.path] : sdk.getValue;
-    return Promise.resolve({ val: () => value });
+    // exists() as the real snapshot has it: what src/data.js asks the outbox's replay before sending
+    // a movement that may already be in the database.
+    return Promise.resolve({ val: () => value, exists: () => value !== null && value !== undefined });
 }
 
 export function update(target, values) {
     record("update", target, values);
-    return Promise.resolve();
+    // sdk.updateError: the write did not reach the server, which is what a queue has to survive.
+    return sdk.updateError ? Promise.reject(sdk.updateError) : Promise.resolve();
 }
 
 export function set(target, value) {

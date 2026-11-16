@@ -63,7 +63,12 @@ export const SEED = {
 // options.beforeLoad runs in the page before any page script, for example to set flags the
 // fake data layer reads or to break localStorage.
 async function newPage(browser, seed, options) {
-    const context = await browser.newContext();
+    // Service workers are off here on purpose. Playwright does not route requests a worker answers, so a
+    // running worker would serve src/data.js from its own cache and the fake below would never be called:
+    // the page would load the real Firebase modules and talk to the real database. Every test that wants
+    // the fake data layer needs the worker out of the way. tests/e2e/offline.test.js is the one place the
+    // worker runs, on the real files, with no fake in front of them.
+    const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await context.newPage();
     const state = { dialogs: [], toasts: [], blocked: [], pageErrors: [] };
 
@@ -182,6 +187,23 @@ export async function waitForRows(page, names) {
         },
         names,
     );
+}
+
+// Escape closes a <dialog> by the browser, which fires its `close` event a moment later, and that
+// event is what returns focus to the opener (src/dialog.js). So read focus only once it has landed,
+// rather than the instant the key is pressed, which fails intermittently when the suite runs loaded.
+// Returns true once `locator` holds the focus; false after the deadline so the caller can report.
+export async function focusOn(page, locator, { timeout = 5000 } = {}) {
+    const deadline = Date.now() + timeout;
+    for (;;) {
+        if (await locator.evaluate((el) => el === el.ownerDocument.activeElement)) {
+            return true;
+        }
+        if (Date.now() > deadline) {
+            return false;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+    }
 }
 
 export const wrote = (page) => page.evaluate(() => window.__nailit.writes);

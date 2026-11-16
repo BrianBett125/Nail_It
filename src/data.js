@@ -31,6 +31,7 @@ import {
     serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { app } from "./firebase-app.js";
+import { createOutbox } from "./outbox.js";
 import { buildSiteDeleteUpdates } from "./logic.js";
 import {
     buildMovementUpdates,
@@ -51,6 +52,76 @@ const sv = { timestamp: serverTimestamp, increment };
 // A key for a movement, made on this device. It sorts by creation time and is unique, so the
 // movement and the material that points at it can be written in one update before the server answers.
 const newMovementId = (siteId) => push(ref(db, `movements/${siteId}`)).key;
+
+// ---- The outbox: a movement that has not been acknowledged yet -------------------------
+// The Firebase web SDK keeps an unacknowledged write in memory only (it has no disk persistence and no
+// enablePersistence call, unlike the mobile SDKs), so a reload, a crash or a phone dying loses it while
+// the person who recorded it has already been told it was saved. src/outbox.js holds the movement on
+// the device until the server confirms it and replays it on the next start. It is a plain module, so
+// tests/unit/outbox.test.js drives the whole queue without a browser.
+
+// Blocked site data makes reading localStorage itself throw, not just writing to it.
+function browserStorage() {
+    try {
+        return localStorage;
+    } catch {
+        return null;
+    }
+}
+
+// A replayed movement is stamped by the server like every other one. database.rules.json requires
+// movements/<siteId>/<movementId>/at to equal the server's `now`, so the only value it accepts is a
+// server timestamp written on arrival: handing it the old reading time would be refused whole,
+// increment included, and the movement would never land. The movement therefore carries the time it
+// reached the database. The movementId is a push id, so several readings made in one offline spell
+// still sort in the order they were made, and the entry's own `at` is kept for the queue only.
+//
+// get() waits for the server when the movement is not cached, so with no signal the check below would
+// never settle and the queue would stop draining for the life of the page. Give up, and try again on
+// the next reconnect.
+const REPLAY_READ_TIMEOUT_MS = 8000;
+
+const outbox = createOutbox({
+    storage: browserStorage(),
+    write: (entry) => update(ref(db), buildMovementUpdates({
+        siteId: entry.siteId,
+        materialId: entry.materialId,
+        movementId: entry.movementId,
+        material: entry.material,
+        movement: entry.movement,
+        user: entry.user,
+        sv,
+    })),
+    // Already in the database? Then the movement landed during a write whose acknowledgement went
+    // missing, and the increment landed in the same atomic update. Replaying it is refused whole by
+    // database.rules.json, so this only saves a pointless rejected write.
+    landed: (entry) => withTimeout(
+        get(ref(db, `movements/${entry.siteId}/${entry.movementId}`)).then((snapshot) => snapshot.exists()),
+        REPLAY_READ_TIMEOUT_MS,
+    ),
+});
+
+const outboxListeners = new Set();
+
+outbox.subscribe((report) => {
+    for (const listener of [...outboxListeners]) {
+        listener(report);
+    }
+});
+
+// What the page needs to say: how many movements are waiting to be sent, and anything the database
+// refused since the last report. Called once on subscribe, then on every change to the queue.
+export function observeOutbox(onData) {
+    outboxListeners.add(onData);
+    onData(outbox.snapshot());
+    return () => outboxListeners.delete(onData);
+}
+
+// Send anything an earlier session could not. Called once somebody is signed in and again whenever the
+// connection comes back; the queue itself makes sure two callers cannot send the same movement twice.
+export function replayOutbox() {
+    return outbox.replay();
+}
 
 // Each subscribe returns its unsubscribe function. Callers must keep it and call it
 // before subscribing again, or listeners pile up.
@@ -129,6 +200,15 @@ export function subscribeMaterials(siteId, onData, onError) {
     return onValue(ref(db, `materials/${siteId}`), (snapshot) => onData(snapshot.val() || {}), onError);
 }
 
+// True while the database is reachable, false while the app is working from its own copy. The Firebase
+// web SDK keeps an unacknowledged write in memory and nothing more, so the app does not rely on it to
+// hold anything: a movement goes to the outbox above as well, and that is what survives a reload. This
+// listener exists so the page can say what is happening instead of leaving somebody to wonder whether
+// their reading was recorded.
+export function subscribeConnection(onData, onError) {
+    return onValue(ref(db, ".info/connected"), (snapshot) => onData(snapshot.val() === true), onError);
+}
+
 // Creates the site and makes `user` its owner in one update. push() makes the key on the
 // client, so the id is known immediately. `done` settles when the server acknowledges the write.
 export function addSite(site, user) {
@@ -158,12 +238,21 @@ export function addMaterial(siteId, material, user) {
 
 // Received (+) or Used (-). `movement` is { type, delta, note? } from movements.planMovement.
 // `material` is the material as the page shows it: its name and units are copied into the history.
+//
+// The movement is written to the outbox before the database is asked, and leaves it when the server
+// acknowledges. Nobody types stock twice because of a reload: the same movementId goes up, and
+// database.rules.json accepts that path only when the movement is not there yet, so a replay of
+// something that already landed is refused whole.
 export function recordMovement(siteId, materialId, material, movement, user) {
-    const id = newMovementId(siteId);
-    const done = update(ref(db), buildMovementUpdates({
-        siteId, materialId, movementId: id, material, movement, user, sv,
-    }));
-    return { id, done };
+    return outbox.record({
+        movementId: newMovementId(siteId),
+        siteId,
+        materialId,
+        material: { name: material.name, units: material.units },
+        movement,
+        user: { uid: user.uid, email: user.email },
+        at: Date.now(),
+    });
 }
 
 // Name, unit or low-stock level. The quantity cannot be set here.

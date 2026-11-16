@@ -318,6 +318,33 @@ td button:hover {
     cursor: pointer;
 }
 
+/* Phase 7: the offline indicator. Informational, not an error: a write made while this is showing is
+   queued by the database SDK, not lost, so it uses the calm slate rather than the amber of a warning.
+   It stays at the top of the scrolling content while it is showing, so it is still there when the
+   person looks up from whatever they were recording. */
+.offline-banner {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px 14px;
+    border-left: 4px solid #4a5866;
+    border-radius: 3px;
+    background: #e7ecf1;
+    color: #17212b;
+}
+
+.offline-dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4a5866;
+}
+
 .invites-panel {
     margin: 10px 5px;
     padding: 10px;
@@ -1333,6 +1360,8 @@ td .btn-delete:hover { background: var(--out); border-color: var(--out); color: 
 @media (max-width: 768px) {
     /* What happened lately comes before the long list of materials, not after it. */
     .main-content { display: flex; flex-direction: column; }
+    /* The offline indicator is about everything below it, so it comes before even the verify banner. */
+    .main-content > .offline-banner { order: -2; }
     .main-content > .verify-banner { order: -1; }
     .main-content > .content-header { order: 0; }
     .main-content > #materialsStatus { order: 1; }
