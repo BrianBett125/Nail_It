@@ -47,6 +47,7 @@ export const SHELL_ASSETS = [
     "/dashboard.js",
     "/overview.js",
     "/login.js",
+    "/styles/tokens.css",
     "/styles/index.css",
     "/styles/dashboard.css",
     "/styles/insights.css",
