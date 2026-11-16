@@ -27,11 +27,11 @@ test("the policy has no 'unsafe-inline', 'unsafe-eval' or wildcard source", () =
     assert.doesNotMatch(text, /(^|\s)https?:(\s|;|$)/, "a bare scheme allows every host");
 });
 
-test("scripts come from this site, Google's Firebase CDN and the RTDB long-poll endpoint", () => {
+test("scripts come from this site, Google's Firebase CDN and the project's RTDB host", () => {
     assert.deepEqual(directive("script-src"), [
         "'self'",
         "https://www.gstatic.com",
-        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app/.lp",
+        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app",
     ]);
     assert.deepEqual(directive("style-src"), ["'self'"]);
     assert.deepEqual(directive("object-src"), ["'none'"]);
