@@ -131,6 +131,30 @@ describe("Firebase works under the policy", () => {
     });
 });
 
+// Regression guard for the incident where no site would load. With forceLongPolling() in src/data.js the
+// SDK loads its responses as <script> tags from a dynamic shard host under *.firebasedatabase.app, and
+// frames shard hosts too. A policy that allows only the one canonical RTDB host refuses those, the
+// connection never settles, and every page reads as offline. This runs the real policy in real Chrome
+// against probe hosts that are deliberately NOT the canonical host: the old exact-host policy fails here
+// (script-src/frame-src violation) and the namespace policy passes.
+describe("the RTDB shard hosts are allowed (regression: sites would not load)", () => {
+    it("a script and a frame from the RTDB namespace are not refused by the policy", async () => {
+        const { context, page } = await watched(`${realUrl}/login.html`);
+        await page.evaluate(() => {
+            const script = document.createElement("script");
+            script.src = "https://s-gke-euw1-probe.europe-west1.firebasedatabase.app/x.lp";
+            document.head.append(script);
+            const frame = document.createElement("iframe");
+            frame.src = "https://s-gke-euw1-probe.europe-west1.firebasedatabase.app/x.lp";
+            document.body.append(frame);
+        });
+        await page.waitForTimeout(800);
+        const refused = (await violations(page)).filter((v) => /firebasedatabase\.app/.test(v));
+        assert.deepEqual(refused, [], `the shard namespace must be allowed by script-src and frame-src: ${JSON.stringify(refused)}`);
+        await context.close();
+    });
+});
+
 describe("the policy is really enforced", () => {
     it("an inline script, an inline style block and a foreign script are all refused", async () => {
         const { context, page } = await watched(`${realUrl}/about-us.html`);
