@@ -27,8 +27,12 @@ test("the policy has no 'unsafe-inline', 'unsafe-eval' or wildcard source", () =
     assert.doesNotMatch(text, /(^|\s)https?:(\s|;|$)/, "a bare scheme allows every host");
 });
 
-test("scripts come from this site and Google's Firebase CDN only", () => {
-    assert.deepEqual(directive("script-src"), ["'self'", "https://www.gstatic.com"]);
+test("scripts come from this site, Google's Firebase CDN and the RTDB long-poll endpoint", () => {
+    assert.deepEqual(directive("script-src"), [
+        "'self'",
+        "https://www.gstatic.com",
+        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app/.lp",
+    ]);
     assert.deepEqual(directive("style-src"), ["'self'"]);
     assert.deepEqual(directive("object-src"), ["'none'"]);
     assert.deepEqual(directive("frame-ancestors"), ["'none'"]);
@@ -56,7 +60,11 @@ test("the database, sign-in and token hosts the app really talks to are allowed 
 });
 
 test("the project's own auth domain, and no other, may be framed", () => {
-    assert.deepEqual(directive("frame-src"), ["https://nail-it-6b883.firebaseapp.com"]);
+    assert.deepEqual(directive("frame-src"), [
+        "'self'",
+        "https://nail-it-6b883.firebaseapp.com",
+        "https://nail-it-6b883-default-rtdb.europe-west1.firebasedatabase.app",
+    ]);
 });
 
 test("the pictures and the manifest are allowed, and nothing else is", () => {
