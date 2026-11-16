@@ -1,11 +1,12 @@
 /* Phase 6: the Reports dialog. Uses the sheet pieces from dialogs.css; this file only adds what
-   is new: the quick-range chips, the two date fields side by side, and the Share / Print pair. */
+   is new: the quick-range chips, the two date fields side by side, and the Share / Print pair.
+   Every colour and length comes from styles/tokens.css. */
 
 /* The print heading exists only on paper (styles/print.css shows it). */
 .print-header { display: none; }
 
 .reports-dialog h3 {
-    margin: 20px 0 8px;
+    margin: var(--sp-5) 0 var(--sp-2);
     font-size: 17px;
 }
 
@@ -18,37 +19,48 @@
 .report-presets {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 12px;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-3);
 }
 
 .report-presets button {
     box-sizing: border-box;
     min-height: 44px;
     padding: 0 14px;
-    border: 2px solid var(--ink);
-    border-radius: 22px;
-    background: #fff;
+    border: 2px solid var(--line);
+    border-radius: var(--r-pill);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.report-presets button:hover {
+    border-color: var(--ink);
 }
 
 .report-presets button[aria-pressed="true"] {
-    background: var(--ink);
-    color: #fff;
+    border-color: var(--accent, var(--ink));
+    background: var(--accent, var(--ink));
+    color: var(--on-amber);
+}
+
+.report-presets button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
 }
 
 .report-range {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: var(--sp-3);
 }
 
 .report-range > div { min-width: 0; }
-.report-range .field { min-width: 0; max-width: 100%; padding: 0 8px; }
+.report-range .field { min-width: 0; max-width: 100%; padding: 0 var(--sp-2); }
 .report-range .sheet-label { margin-top: 0; }
 
 .report-send {

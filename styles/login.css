@@ -1,3 +1,7 @@
+/* Sign in: one card on the sparks photograph. The card is near-black with an amber crown, and the
+   primary button is the same amber CTA as the landing page, so the two pages read as one product.
+   Reads from styles/tokens.css (loaded first). */
+
 * {
     margin: 0;
     padding: 0;
@@ -5,90 +9,94 @@
 }
 
 body {
-    margin: 0;  
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-    /* A dark layer over the picture, not backdrop-filter: the filter repaints the whole screen and is slow on a phone. */
-    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/sparks-1600.webp');
     display: flex;
     align-items: center;
-    flex-direction: column;
     justify-content: center;
     min-height: 100vh;
+    padding: var(--sp-6) var(--sp-4);
+    /* A dark layer over the picture, not backdrop-filter: the filter repaints the whole screen
+       and is slow on a phone. */
+    background: linear-gradient(var(--scrim), var(--scrim-strong)),
+        url('../assets/sparks-1600.webp');
     background-size: cover;
     background-position: center;
-    padding: 16px;
+    color: var(--chrome-text);
 }
 
 .login {
-    border: 1px solid black;
-    width: 400px;
+    box-sizing: border-box;
+    width: 420px;
     max-width: 100%;
-    min-height: 500px;
-    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../assets/hammer-600.webp');
-    color: antiquewhite;
-    background-size: cover;
-    background-position: center;
     overflow: hidden;
-    border-radius: 30px;
-    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--chrome-line);
+    border-radius: var(--r-xl);
+    background: var(--chrome);
+    box-shadow: var(--e-3);
+}
+
+/* The strip above the form: the hammer photograph, dimmed, so the card carries the same
+   construction imagery as the rest of the app without costing a second element. */
+.login::before {
+    content: "";
+    display: block;
+    height: 104px;
+    border-bottom: 1px solid var(--chrome-line);
+    background: linear-gradient(var(--scrim-soft), var(--scrim-strong)),
+        url('../assets/hammer-600.webp') center/cover;
 }
 
 form {
     box-sizing: border-box;
-    padding: 40px;
-    width: 100%;
-    min-height: 500px;
-    flex-direction: column;
     display: flex;
-    gap: 5px;
+    flex-direction: column;
+    width: 100%;
+    padding: var(--sp-8) var(--sp-8) var(--sp-6);
 }
 
 h1 {
+    margin-bottom: var(--sp-6);
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: var(--caps);
     text-align: center;
-    margin-bottom: 30px;
-    font-weight: normal;
-    font-size: 30px;
-    text-shadow: 0px 0px 2px rgba(0,0,0,0.5);
-
+    text-transform: uppercase;
 }
 
 label {
-    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 6px;
+    padding-left: 2px;
+    color: var(--chrome-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: var(--caps);
     text-transform: uppercase;
-    /* font-size: 16px; */
-    letter-spacing: 2px;
-    padding-left: 10px;
 }
 
 input {
-    background: rgba(0, 0, 0, 0.8);
-    height: 40px;
-    line-height: 40px;
-    border-radius: 20px;
-    padding: 0px 20px;
-    border: none;
-    margin-bottom: 20px;
-    color: white;
+    height: 52px;
+    margin-bottom: var(--sp-4);
+    padding: 0 16px;
+    border: 1px solid var(--chrome-line);
+    border-radius: var(--r-md);
+    background: var(--tint);
+    color: var(--on-dark);
+    font: inherit;
+    font-size: 16px;
 }
 
-button {
-    background: #1b6ca8;
-    color: white;
-    border: none;
-    height: 40px;
-    line-height: 40px;
-    border-radius: 40px;
-    font-size: 18px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-    margin: 10px 0px;
+input::placeholder {
+    color: var(--chrome-muted);
+}
+
+input:focus-visible {
+    border-color: var(--amber);
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
 }
 
 .field-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
 }
 
 .field-group[hidden],
@@ -97,56 +105,111 @@ button {
     display: none;
 }
 
+button {
+    min-height: 52px;
+    margin: 8px 0 0;
+    border: 0;
+    border-radius: var(--r-md);
+    background: var(--amber);
+    color: var(--on-amber);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+button:hover {
+    background: var(--amber-strong);
+}
+
+button:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
 button:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: wait;
 }
 
 .auth-message {
-    margin: 0 10px 10px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.7);
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    background: var(--tint);
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.45;
 }
 
 .auth-message.error {
-    border-left: 4px solid #ff6b5e;
-    color: #ffd6d1;
+    border-left: 4px solid var(--out-bright);
+    color: var(--out-bright-soft);
 }
 
 .auth-message.ok {
-    border-left: 4px solid #5ed67a;
-    color: #d6f5dd;
+    border-left: 4px solid var(--in-bright);
+    color: var(--in-bright-soft);
 }
 
 .auth-links {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-top: 10px;
 }
 
 button.link {
+    min-height: 44px;
+    margin: 2px 0;
+    padding: 10px 14px;
+    border: 0;
     background: none;
-    box-shadow: none;
-    height: auto;
-    margin: 4px 0;
-    padding: 6px;
+    color: var(--chrome-muted);
     font-size: 14px;
+    font-weight: 600;
     letter-spacing: 0;
+    text-transform: none;
     text-decoration: underline;
-    color: antiquewhite;
 }
 
+button.link:hover {
+    color: var(--amber);
+}
+
+/* The phone keeps the smaller sparks photograph behind the same gradient. */
 @media (max-width: 768px) {
-    body { background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/sparks-800.webp'); }
+    body {
+        background-image: linear-gradient(var(--scrim), var(--scrim-strong)), url('../assets/sparks-800.webp');
+    }
 }
 
 /* Phase 5: every control is at least 44px to hit, and the card never outgrows a 320px screen. */
 @media (max-width: 768px) {
-    form { padding: 28px 20px; }
-    input { height: 48px; font-size: 16px; }
-    button { min-height: 48px; }
-    button.link { min-height: 44px; padding: 10px 14px; }
+    body {
+        padding: 16px;
+    }
+
+    .login::before {
+        height: 80px;
+    }
+
+    form {
+        padding: var(--sp-6);
+    }
+
+    input {
+        height: 52px;
+    }
+
+    button {
+        min-height: 52px;
+    }
+
+    button.link {
+        min-height: 44px;
+        padding: 10px 14px;
+    }
 }

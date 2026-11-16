@@ -1,9 +1,13 @@
 /* ==== Phase 5: native dialogs ===========================================================
    Every form and sheet on the dashboard is a <dialog> opened with showModal(): a bottom sheet on a phone,
-   a centred card on a larger screen. One language for all seven: a grip, a scrolling body, and the
-   buttons pinned under it so a thumb always reaches them, with one big primary action on top.
-   Loaded after dashboard.css and insights.css, which define the tokens (--ink, --line, --focus, ...)
-   and the Phase 3 pieces (amount field, chips, history rows) that live inside the sheets. */
+   a centred card on a larger screen. One language for all eight: a grip, an accent rule across the top,
+   a scrolling body, and the buttons pinned under it so a thumb always reaches them, with one big primary
+   action on top.
+
+   Loaded after dashboard.css and insights.css, which define the Phase 3 pieces (amount field, chips,
+   history rows) that live inside the sheets. The palette itself is in tokens.css; --accent is the one
+   value a dialog sets for itself, so a Receive sheet is green and a Delete sheet is red without either
+   one inventing a colour. */
 
 /* ---- the dialog element: transparent, the .sheet inside is what you see ---- */
 .sheet-dialog {
@@ -21,7 +25,7 @@
 }
 
 .sheet-dialog::backdrop {
-    background: rgba(12, 20, 28, 0.62);
+    background: var(--backdrop);
 }
 
 .sheet {
@@ -35,17 +39,31 @@
     padding: 8px 0 0;
     overflow: hidden;
     border-top: 6px solid var(--accent);
-    border-radius: 18px 18px 0 0;
-    background: #fff;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    background: var(--surface);
     color: var(--ink);
     text-align: left;
-    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--e-3);
     animation: sheet-up 0.16s ease-out;
 }
 
-.sheet-form,
-.members-dialog { --accent: #1b6ca8; }
+/* A form is the app's amber: the same action colour as Add Site and Add Material. Members and the
+   delete confirmation keep their own accent so the sheet says what it is before you read it. */
+.sheet-form { --accent: var(--amber); }
+.members-dialog { --accent: var(--link); }
 .sheet-danger { --accent: var(--out); }
+
+.sheet-form .sheet-primary {
+    background: var(--amber);
+    color: var(--on-amber);
+}
+
+.members-dialog .sheet-primary,
+.sheet-danger .sheet-primary,
+.sheet-received .sheet-primary,
+.sheet-used .sheet-primary {
+    color: var(--on-dark);
+}
 
 .sheet-body {
     flex: 1 1 auto;
@@ -60,10 +78,10 @@
     display: grid;
     flex: none;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid var(--line);
-    background: #fff;
+    gap: var(--sp-2);
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line-soft);
+    background: var(--surface);
 }
 
 .sheet-actions .sheet-primary,
@@ -81,7 +99,8 @@
 }
 
 .sheet-primary:disabled {
-    background: #5d6b79;
+    background: var(--muted);
+    color: var(--on-dark);
     cursor: not-allowed;
 }
 
@@ -98,12 +117,16 @@
     min-height: 48px;
     margin: 0 0 14px;
     padding: 0 12px;
-    border: 2px solid var(--ink);
-    border-radius: 10px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     font-size: 16px; /* 16px or more: iOS Safari zooms the page in on smaller text */
+}
+
+.field:hover {
+    border-color: var(--slate-3);
 }
 
 .field:focus-visible,
@@ -124,8 +147,10 @@
 
 /* ---- members ---- */
 .members-dialog h3 {
-    margin: 20px 0 6px;
-    font-size: 17px;
+    margin: var(--sp-5) 0 6px;
+    font-size: 16px;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .member-list {
@@ -138,15 +163,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--sp-2);
     padding: 10px 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-soft);
 }
 
 .member-list .member-name {
     flex: 1 1 100%;
     min-width: 0;
-    font-weight: bold;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
@@ -159,9 +184,9 @@
     flex: 1 1 140px;
     min-height: 44px;
     padding: 0 8px;
-    border: 2px solid var(--ink);
-    border-radius: 10px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--ink);
     font-size: 16px;
 }
@@ -169,13 +194,18 @@
 .member-list button {
     min-height: 44px;
     padding: 0 16px;
-    border: 2px solid var(--out);
-    border-radius: 10px;
-    background: #fff;
+    border: 1px solid var(--out);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--out);
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+}
+
+.member-list button:hover {
+    background: var(--out);
+    color: var(--on-dark);
 }
 
 .member-list button:disabled {
@@ -216,16 +246,15 @@
     .sheet {
         max-height: calc(var(--vh, 100dvh) - 48px);
         border-top-width: 8px;
-        border-radius: 14px;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+        border-radius: var(--r-lg);
     }
 
     .sheet-grip { display: none; }
-    .sheet-body { padding: 6px 26px 10px; }
-    .sheet-actions { padding: 12px 26px 22px; }
+    .sheet-body { padding: 6px var(--sp-6) 10px; }
+    .sheet-actions { padding: var(--sp-3) var(--sp-6) var(--sp-5); }
 
     .sheet-dialog .sheet-history {
         height: min(640px, calc(var(--vh, 100dvh) - 48px));
-        padding: 22px 26px 26px;
+        padding: var(--sp-6);
     }
 }

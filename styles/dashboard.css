@@ -1,325 +1,482 @@
-/* Reset some default styles */
+/* =============================================================================
+   The app shell: top bar, site rail, content column, table, banners, toasts, and the
+   Phase 3 movement pieces (amount field, chips, history, activity).
+
+   Everything here reads from styles/tokens.css, which every page loads first. There is no
+   colour, typeface, shadow, radius or spacing value in this file that is not a token: that is
+   what keeps a button in the table and a button in a dialog looking like the same button.
+
+   The shape of the phone layout (768px and below) is in "the phone shell" further down, and
+   the geometry the tests pin is called out where it matters.
+   ============================================================================= */
+
+/* Reset */
 body, h1, h2, h3, ul, li, table, th, td {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Base styles */
 body {
-    font-family: Arial, sans-serif;
     height: 100vh;
+    background: var(--ground);
+    color: var(--ink);
 }
 
-/* Header styling */
+/* Phase 2: nothing that is [hidden] is ever painted, whatever else sets display. The offline
+   banner and the verify banner both depend on this, and so does every dialog's empty state. */
+[hidden] {
+    display: none !important;
+}
+
+/* ==== the top bar ===========================================================
+   Fixed, near-black, with a single hairline under it. min-height is --header-h so the rail and
+   the content column can line up under it without anybody hard-coding 56px. */
 header {
-    background-color: #000;
-    color: antiquewhite;
-    padding: 10px 20px;
+    box-sizing: border-box;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
     position: fixed;
     top: 0;
-    width: 100%;
+    right: 0;
+    left: 0;
     z-index: 1000;
+    min-height: var(--header-h);
+    padding: 6px var(--sp-5);
+    background: var(--chrome);
+    color: var(--chrome-text);
+    border-bottom: 1px solid var(--chrome-line);
 }
 
 .nav-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 95%;
+    gap: var(--sp-4);
+    width: 100%;
 }
 
 .logo {
-    font-size: 24px;
-    font-weight: bold;
-    font-family: 'Times New Roman', Times, serif;
+    font-size: 20px;
+    color: var(--chrome-text);
 }
 
 .nav-links {
     display: flex;
     align-items: center;
+    gap: var(--sp-1);
     margin-left: auto;
 }
 
 .nav-links a {
-    color: antiquewhite;
+    padding: 6px 0;
+    margin: 0 12px;
+    color: var(--chrome-muted);
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    font-weight: 600;
     text-decoration: none;
-    margin: 0 15px;
-    font-size: 16px;
+    transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Dashboard layout */
+.nav-links a:hover,
+.nav-links a:focus-visible {
+    color: var(--chrome-text);
+    border-bottom-color: var(--amber);
+}
+
+/* On a phone the underline above is switched off and a 44px box replaces it, so the colour change
+   is the only cue left and it is far too faint to count. The ring is the cue, over the chrome. */
+.nav-links a:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
+.nav-links a[aria-current="page"] {
+    color: var(--chrome-text);
+}
+
+/* ==== dashboard layout ====================================================== */
 .dashboard {
     display: flex;
-    margin-top: 48px; /* Adjust this if header height changes */
-    height: calc(100vh - 68px);
+    margin-top: var(--header-h);
+    height: calc(100vh - var(--header-h));
 }
 
-/* Sidebar styling */
+/* ==== the site rail =========================================================
+   The identity piece: a dark slate rail under the near-black bar. A selected site is marked with
+   an amber rail on its leading edge plus a tint, not a solid amber block, so the label stays
+   readable and the accent stays an accent. */
 .sidebar {
-    width: 220px;
-    max-width: fit-content;
-    background-color: #2c3e50;
-    color: #ecf0f1;
-    height: calc(100vh - 68px);
-    /* height: 100%; */
-    padding: 10px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     position: fixed;
-    top: 48px; /* Adjust this if header height changes */
+    top: var(--header-h);
     bottom: 0;
+    width: var(--rail);
+    max-width: fit-content;
+    height: calc(100vh - var(--header-h));
+    padding: var(--sp-2);
+    background: var(--chrome-2);
+    color: var(--on-slate);
+    overflow-y: auto;
 }
 
 .sidebar h2 {
-    margin: 5px;
-    margin-top: 0px;
-    color: antiquewhite;
+    margin: 0 0 var(--sp-2);
+    padding: 0 4px;
+    color: var(--chrome-text);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .sidebar ul {
-    list-style-type: none;
     flex: 1;
+    margin: 0;
+    list-style: none;
     overflow-y: auto;
 }
 
 .sidebar ul li {
-    margin-bottom: 10px;
+    margin-bottom: 2px;
 }
 
 .sidebar ul li a {
-    color: #ecf0f1;
-    text-decoration: none;
     display: flex;
     justify-content: space-between;
-    padding: 10px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
+    align-items: center;
+    padding: 10px 12px;
+    border-left: 3px solid transparent;
+    border-radius: var(--r-sm);
+    color: var(--on-slate);
+    font-size: 15px;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .sidebar ul li a:hover {
-    background-color: #34495e;
+    background: var(--slate-2);
 }
 
-/* CSS for the selected site */
+/* The selected site: amber rail, amber-tinted wash, ink-light label. */
 .sidebar ul li.selected a {
-    background-color: #d3a269;
-    color: #1b1b1b;
-    font-weight: bold;
-    border-left: 5px solid #b38150;
+    border-left-color: var(--amber);
+    background: var(--slate-3);
+    color: var(--on-dark);
+    font-weight: 700;
 }
 
-/* Active link styling */
 .sidebar ul li a.active {
-    background-color: black;
-    font-weight: bold;
+    border-left-color: var(--amber);
+    color: var(--on-dark);
+    font-weight: 700;
 }
 
+/* The rail's own button (Add Site on a desktop). One shape for every primary action in the app.
+   44px is the floor for anything a person aims at, on a mouse as well as a thumb: the header row,
+   the rail and the banners all come off the same number so they cannot drift apart again. */
 .sidebar button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #d3a269;
-    color: #1b1b1b;
+    min-height: 44px;
+    padding: 0 14px;
+    margin-top: var(--sp-2);
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--amber);
+    color: var(--on-amber);
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s;
-    margin-top: 10px;
+    transition: background-color 0.15s ease;
 }
 
 .sidebar button:hover {
-    background-color: #b38150;
+    background: var(--amber-strong);
 }
 
-/* Main content styling */
+.sidebar button:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
+/* ==== the content column ==================================================== */
 .main-content {
     flex: 1;
-    background-color: #ecf0f1;
-    padding: 20px;
+    height: calc(100vh - var(--header-h));
+    margin-left: var(--rail);
+    padding: var(--sp-5);
+    background: var(--ground);
     overflow-y: auto;
-    margin-left: 220px; /* Match the sidebar width */
-    height: calc(100vh - 69px);
 }
 
 .content-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
 }
 
 .content-header h1 {
+    margin-right: auto;
     font-size: 24px;
+    letter-spacing: -0.01em;
 }
 
-/* Table styling */
+/* ==== the materials table ===================================================
+   A dark header band over a light body: the one place the chrome eats into the content, which is
+   what makes a long stock list scannable. Hairline rows, a hover wash, and the amber kept for the
+   header labels only. */
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
+    background: var(--surface);
 }
 
 th, td {
-    padding: 15px;
+    padding: 14px 15px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--line-soft);
 }
 
 th {
-    background-color: #2c3e50;
-    color: #d3a269;
+    background: var(--chrome-2);
+    color: var(--amber);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding-left: 12px;
+    padding-right: 12px;
 }
 
 td button {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 3px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: var(--r-sm);
     cursor: pointer;
 }
 
-td button:hover {
-    background-color: #b38150;
-    color: white;
-}
-
-/* Add Material Button styling */
+/* ==== primary buttons in the header row ===================================== */
 #addMaterialButton {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #d3a269;
-    color: #1b1b1b;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--amber);
+    color: var(--on-amber);
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s;
+    box-shadow: var(--e-1);
+    transition: background-color 0.15s ease;
 }
 
 #addMaterialButton:hover {
-    background-color: #b38150;
+    background: var(--amber-strong);
 }
 
-/* Phase 1: dropdowns, status lines, toasts */
+#addMaterialButton:focus-visible,
+.sidebar button:focus-visible,
+#reportsButton:focus-visible,
+#membersButton:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* The ghost pair: Reports and Members. Quiet until pointed at. */
+#reportsButton,
+#membersButton {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+#reportsButton:hover,
+#membersButton:hover {
+    border-color: var(--slate);
+    background: var(--surface-3);
+}
+
+/* ==== status lines ========================================================= */
 .sidebar #addSiteButton {
-    margin: 5px 5px 10px;
+    margin: var(--sp-1) var(--sp-1) var(--sp-2);
 }
 
 .status {
-    margin: 5px;
-    color: #bdc3c7;
+    margin: var(--sp-1);
+    color: var(--chrome-muted);
     font-size: 14px;
 }
 
 .status-main {
-    color: #555;
+    margin: var(--sp-5) 0;
+    color: var(--muted);
     font-size: 16px;
-    margin: 20px 0;
 }
 
+/* ==== toasts ================================================================ */
 .toasts {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2000;
     display: flex;
     flex-direction: column;
-    gap: 8px;
     align-items: center;
+    gap: var(--sp-2);
+    position: fixed;
+    bottom: var(--sp-5);
+    left: 50%;
+    z-index: 2000;
     width: max-content;
     max-width: calc(100vw - 32px);
+    transform: translateX(-50%);
 }
 
 .toast {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--sp-3);
     padding: 12px 16px;
-    border-radius: 5px;
-    background: #2c3e50;
-    color: #ecf0f1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--chrome-line);
+    border-radius: var(--r-md);
+    background: var(--chrome-2);
+    color: var(--chrome-text);
+    font-size: 15px;
+    box-shadow: var(--e-3);
 }
 
 .toast-error {
-    background: #922b21;
+    border-color: var(--out);
+    background: var(--out-strong);
+    color: var(--on-dark);
 }
 
 .toast-action {
-    border: 1px solid #ecf0f1;
-    border-radius: 3px;
     padding: 6px 12px;
+    border: 1px solid currentColor;
+    border-radius: var(--r-sm);
     background: transparent;
-    color: #ecf0f1;
-    font-weight: bold;
+    color: inherit;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .toast-action:hover {
-    background: #ecf0f1;
-    color: #2c3e50;
+    background: var(--chrome-text);
+    color: var(--chrome-2);
 }
 
-/* Phase 2: accounts, roles, members */
-[hidden] {
-    display: none !important;
+.toast-error .toast-action:hover {
+    background: var(--surface);
+    color: var(--out-strong);
 }
 
+.toast-action:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
+/* ==== accounts, roles, members ============================================= */
 .user-area {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-left: 15px;
+    gap: var(--sp-2);
+    margin-left: var(--sp-4);
     font-size: 14px;
 }
 
 .user-area #userEmail {
     max-width: 200px;
+    color: var(--chrome-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .user-area button {
-    padding: 5px 10px;
-    border: 1px solid antiquewhite;
-    border-radius: 3px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--chrome-line);
+    border-radius: var(--r-sm);
     background: transparent;
-    color: antiquewhite;
+    color: var(--chrome-text);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .user-area button:hover {
-    background: antiquewhite;
-    color: #000;
+    background: var(--chrome-text);
+    color: var(--chrome);
 }
 
+.user-area button:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
+.role-badge {
+    padding: 4px 12px;
+    border-radius: var(--r-pill);
+    background: var(--chrome-2);
+    color: var(--on-slate);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.role-tag {
+    padding: 2px 9px;
+    margin-left: 4px;
+    border-radius: var(--r-pill);
+    background: var(--amber);
+    color: var(--on-amber);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ==== banners ============================================================== */
 .verify-banner {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px 14px;
-    border-left: 4px solid #d3a269;
-    border-radius: 3px;
-    background: #fdf3e3;
-    color: #5a4021;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    padding: 12px 14px;
+    border: 1px solid var(--amber-line);
+    border-left: 4px solid var(--amber);
+    border-radius: var(--r-sm);
+    background: var(--warn-soft);
+    color: var(--warn-text);
+    font-size: 15px;
 }
 
 .verify-banner button {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 3px;
-    background: #d3a269;
-    color: #1b1b1b;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--amber-strong);
+    color: var(--on-dark);
+    font-weight: 700;
     cursor: pointer;
 }
 
-/* Phase 7: the offline indicator. Informational, not an error: a write made while this is showing is
-   queued by the database SDK, not lost, so it uses the calm slate rather than the amber of a warning.
+.verify-banner button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* Phase 7: the offline indicator. Informational, not an error: a write made while this is showing
+   is queued by the outbox, not lost, so it uses the calm slate rather than the amber of a warning.
    It stays at the top of the scrolling content while it is showing, so it is still there when the
    person looks up from whatever they were recording. */
 .offline-banner {
@@ -328,13 +485,15 @@ td button:hover {
     z-index: 3;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px 14px;
-    border-left: 4px solid #4a5866;
-    border-radius: 3px;
-    background: #e7ecf1;
-    color: #17212b;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--muted);
+    border-radius: var(--r-sm);
+    background: var(--surface-3);
+    color: var(--ink);
+    font-size: 15px;
 }
 
 .offline-dot {
@@ -342,96 +501,45 @@ td button:hover {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #4a5866;
+    background: var(--muted);
 }
 
+/* ==== invitations panel in the rail ======================================== */
 .invites-panel {
-    margin: 10px 5px;
-    padding: 10px;
-    border-radius: 5px;
-    background: #34495e;
+    margin: var(--sp-2) var(--sp-1);
+    padding: var(--sp-3);
+    border: 1px solid var(--chrome-line);
+    border-radius: var(--r-sm);
+    background: var(--tint);
     font-size: 14px;
 }
 
 .invites-panel h3 {
     margin-bottom: 6px;
-    color: antiquewhite;
-    font-size: 15px;
+    color: var(--chrome-text);
+    font-size: 14px;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .invites-panel li {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: var(--sp-2);
 }
 
 .invites-panel button {
+    min-height: 44px;
     margin: 0 6px 0 0;
-    padding: 5px 10px;
+    padding: 0 12px;
+    font-size: 14px;
 }
 
-.content-header {
-    gap: 10px;
-}
-
-.content-header h1 {
-    margin-right: auto;
-}
-
-.role-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: #2c3e50;
-    color: antiquewhite;
-    font-size: 13px;
-}
-
-#reportsButton,
-#membersButton {
-    padding: 10px;
-    border: 1px solid #2c3e50;
-    border-radius: 5px;
-    background: transparent;
-    color: #2c3e50;
-    cursor: pointer;
-}
-
-#reportsButton:hover,
-#membersButton:hover {
-    background: #2c3e50;
-    color: #fff;
-}
-
-.role-tag {
-    margin-left: 4px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: #d3a269;
-    color: #1b1b1b;
-    font-size: 12px;
-}
-
-/* A viewer sees the table without the Edit column. The Stock column stays: History is for everyone. */
-table.readonly th:nth-child(6),
-table.readonly td.cell-manage {
-    display: none;
-}
-
-/* ==== Phase 3: Received / Used, history, activity ======================================
+/* ==== Phase 3: Received / Used, history, activity ==========================
    Variant "Sheet": modal dialogs that are a bottom sheet on phones and a centred card on
    larger screens. Colours are picked for glare: dark text on white, white on deep green/red,
-   and every colour also has a sign or a word next to it. */
-:root {
-    --ink: #17212b;
-    --muted: #4a5866;
-    --line: #c9d1d9;
-    --in: #14693a;
-    --in-soft: #def5e6;
-    --out: #a8201a;
-    --out-soft: #fde7e5;
-    --focus: #0b57d0;
-}
+   and every colour also has a sign or a word next to it. The palette itself lives in tokens.css. */
 
 .row-btn:focus-visible,
 .sheet button:focus-visible,
@@ -439,6 +547,12 @@ table.readonly td.cell-manage {
 td button:focus-visible {
     outline: 3px solid var(--focus);
     outline-offset: 2px;
+}
+
+/* A viewer sees the table without the Edit column. The Stock column stays: History is for everyone. */
+table.readonly th:nth-child(6),
+table.readonly td.cell-manage {
+    display: none;
 }
 
 /* Table cells that hold buttons */
@@ -454,6 +568,7 @@ td button:focus-visible {
     padding-bottom: 8px;
 }
 
+/* The three primary row actions. Receive and Use carry the ledger colours; History stays neutral. */
 .row-btn,
 td .btn-edit,
 td .btn-delete {
@@ -463,22 +578,19 @@ td .btn-delete {
     margin: 2px 4px 2px 0;
     padding: 0 14px;
     border: 2px solid var(--ink);
-    border-radius: 8px;
-    background: #fff;
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--ink);
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 td .btn-edit,
 td .btn-delete {
     border-color: var(--line);
-    font-weight: normal;
-}
-
-td .btn-delete {
-    color: var(--out);
+    font-weight: 400;
 }
 
 .row-btn-sign {
@@ -488,33 +600,58 @@ td .btn-delete {
 }
 
 td .row-btn-receive {
-    border-color: var(--in);
+    border-color: var(--in-strong);
     background: var(--in);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 td .row-btn-use {
-    border-color: var(--out);
+    border-color: var(--out-strong);
     background: var(--out);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 td .row-btn-receive:hover {
-    background: #0e4f2b;
-    border-color: #0e4f2b;
+    background: var(--in-strong);
+    border-color: var(--in-strong);
 }
 
 td .row-btn-use:hover {
-    background: #85150f;
-    border-color: #85150f;
+    background: var(--out-strong);
+    border-color: var(--out-strong);
 }
 
-td .row-btn-history:hover,
-td .btn-edit:hover,
-td .btn-delete:hover {
+td .row-btn-history:hover {
     background: var(--ink);
     border-color: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
+}
+
+/* Edit and Delete are quiet text affordances, so they never compete with Receive / Use / History. */
+td .btn-edit,
+td .btn-delete {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    text-decoration: underline;
+}
+
+td .btn-delete {
+    color: var(--muted);
+}
+
+td .btn-edit:hover {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+td .btn-delete:hover {
+    background: transparent;
+    border-color: transparent;
+    color: var(--out);
+    text-decoration: none;
 }
 
 .sheet-received { --accent: var(--in); }
@@ -554,23 +691,21 @@ td .btn-delete:hover {
     display: block;
     margin: 4px 0 6px;
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .amount-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--sp-2);
     padding: 0 14px;
-    border: 3px solid var(--ink);
-    border-radius: 12px;
-    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: var(--r-md);
+    background: var(--surface);
 }
 
 .amount-row:focus-within {
     border-color: var(--accent);
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
 }
 
 /* The ring is on the row, so the bare input shows none of its own. */
@@ -584,24 +719,25 @@ td .btn-delete:hover {
     background: transparent;
     color: var(--ink);
     font-size: 40px;
-    font-weight: bold;
+    font-weight: 700; /* the amount is the star of this dialog */
+    font-variant-numeric: tabular-nums;
 }
 
 .sheet .amount-row input::placeholder {
-    color: #8a96a3;
+    color: var(--chrome-muted);
 }
 
 .amount-units {
     color: var(--muted);
     font-size: 20px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
 }
 
 .chip {
@@ -610,17 +746,17 @@ td .btn-delete:hover {
     min-height: 48px;
     padding: 0 16px;
     border: 2px solid var(--ink);
-    border-radius: 24px;
-    background: #fff;
+    border-radius: var(--r-pill);
+    background: var(--surface);
     color: var(--ink);
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .chip:active {
     background: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .chip-all {
@@ -634,28 +770,35 @@ td .btn-delete:hover {
     font-size: 16px;
 }
 
+/* No dead gap when there is no "after" line. */
+.sheet-after:empty {
+    min-height: 0;
+    margin: 0;
+}
+
 .sheet-after-bad {
     color: var(--out);
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .sheet-error {
     margin: 0 0 10px;
     padding: 10px 12px;
+    border: 1px solid var(--out);
     border-left: 5px solid var(--out);
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     background: var(--out-soft);
-    color: #6e130f;
+    color: var(--low-text);
     font-size: 17px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 /* The note is there, but the amount is the star. */
 .sheet-label-note {
-    margin-top: 8px;
+    margin-top: var(--sp-2);
     color: var(--muted);
     font-size: 14px;
-    font-weight: normal;
+    font-weight: 400;
 }
 
 .sheet .note-input {
@@ -665,8 +808,8 @@ td .btn-delete:hover {
     margin: 0 0 14px;
     padding: 0 12px;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    background: #f6f8fa;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font-size: 16px;
 }
@@ -676,7 +819,7 @@ td .btn-delete:hover {
     box-sizing: border-box;
     display: block;
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     cursor: pointer;
 }
 
@@ -685,9 +828,9 @@ td .btn-delete:hover {
     padding: 0 16px;
     border: 0;
     background: var(--accent);
-    color: #fff;
+    color: var(--on-dark);
     font-size: 20px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .sheet-primary:active {
@@ -696,12 +839,19 @@ td .btn-delete:hover {
 
 .sheet-secondary {
     min-height: 48px;
-    margin-top: 8px;
-    border: 2px solid var(--line);
-    background: #fff;
+    margin-top: var(--sp-2);
+    border: 1px solid var(--line);
+    background: var(--surface);
     color: var(--ink);
     font-size: 17px;
-    font-weight: bold;
+    font-weight: 700;
+}
+
+/* An impossible amount: the big button says so instead of looking ready to record it. */
+.sheet-submit-over {
+    border: 2px solid var(--out);
+    background: var(--surface);
+    color: var(--out);
 }
 
 /* ---- history ---- */
@@ -717,7 +867,7 @@ td .btn-delete:hover {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--sp-3);
 }
 
 .history-heading {
@@ -729,20 +879,28 @@ td .btn-delete:hover {
     min-width: 72px;
     min-height: 44px;
     padding: 0 16px;
-    border: 2px solid var(--ink);
-    border-radius: 8px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--ink);
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+}
+
+.sheet-close:hover {
+    border-color: var(--slate);
+    background: var(--surface-3);
 }
 
 .history-body {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
     padding: 4px 2px 8px;
+    overflow-y: auto;
+    /* A hint that the list scrolls: the top edge fades instead of cutting a card in half. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--paper) 22px);
+    mask-image: linear-gradient(to bottom, transparent 0, var(--paper) 22px);
 }
 
 .history-status,
@@ -758,8 +916,9 @@ td .btn-delete:hover {
     gap: 2px;
     margin: 4px 0 12px;
     padding: 10px 12px;
-    border: 2px dashed var(--line);
-    border-radius: 10px;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
     color: var(--ink);
     font-size: 17px;
 }
@@ -771,56 +930,64 @@ td .btn-delete:hover {
 
 .history-list {
     margin: 0 0 0 12px;
-    padding: 0 0 0 20px;
+    padding: 0 0 0 var(--sp-5);
+    border-left: 2px solid var(--line);
     list-style: none;
-    border-left: 3px solid var(--line);
 }
 
 .history-row {
     position: relative;
     display: grid;
     grid-template-columns: 1fr auto;
-    column-gap: 12px;
+    column-gap: var(--sp-3);
     row-gap: 4px;
     margin: 0 0 12px;
     padding: 10px 12px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fff;
+    border-radius: var(--r-md);
+    background: var(--surface);
 }
 
 .history-row::before {
     content: "";
     position: absolute;
-    left: -31px;
+    left: -32px;
     top: 16px;
+    box-sizing: content-box;
     width: 13px;
     height: 13px;
-    border: 3px solid #fff;
+    border: 3px solid var(--surface);
     border-radius: 50%;
     background: var(--in);
-    box-sizing: content-box;
 }
 
 .history-out::before {
     background: var(--out);
 }
 
+/* The word is the primary cue, the colour the second: solid pills, readable in glare. */
 .history-type {
+    display: inline-flex;
+    align-items: center;
     justify-self: start;
-    padding: 2px 10px;
-    border-radius: 12px;
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: var(--r-pill);
+    background: var(--in);
+    color: var(--on-dark);
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 700;
+    line-height: 1;
 }
 
-.history-in .history-type { background: var(--in-soft); color: #0b4a28; }
-.history-out .history-type { background: var(--out-soft); color: #7a1510; }
+.history-out .history-type {
+    background: var(--out);
+}
 
 .history-delta {
     text-align: right;
     font-size: 22px;
-    font-weight: bold;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
 
@@ -830,7 +997,7 @@ td .btn-delete:hover {
 .history-who {
     overflow-wrap: anywhere;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .history-balance {
@@ -850,25 +1017,38 @@ td .btn-delete:hover {
     grid-column: 1 / -1;
     margin-top: 4px;
     padding: 6px 10px;
-    border-radius: 6px;
-    background: #f1f4f7;
+    border-radius: var(--r-sm);
+    background: var(--surface-3);
     font-size: 15px;
     overflow-wrap: anywhere;
 }
 
 /* ---- activity feed ---- */
 .activity-panel {
-    margin-top: 24px;
+    margin-top: var(--sp-6);
     padding: 14px 16px;
-    border-radius: 6px;
-    background: #fff;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    background: var(--surface);
     color: var(--ink);
+    box-shadow: var(--e-1);
 }
 
 .activity-panel h2 {
-    margin: 0 0 8px;
-    font-size: 18px;
+    margin: 0 0 var(--sp-2);
+    font-size: 16px;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
+
+.activity-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+
+.activity-toggle { display: none; }
 
 .activity-empty {
     margin: 4px 0;
@@ -882,9 +1062,9 @@ td .btn-delete:hover {
 .activity-item {
     display: flex;
     align-items: baseline;
-    gap: 10px;
+    gap: var(--sp-2);
     padding: 9px 0;
-    border-top: 1px solid #e3e8ed;
+    border-top: 1px solid var(--line-soft);
     font-size: 16px;
 }
 
@@ -894,12 +1074,12 @@ td .btn-delete:hover {
     height: 22px;
     border-radius: 50%;
     text-align: center;
-    font-weight: bold;
+    font-weight: 700;
     line-height: 22px;
 }
 
-.activity-in .activity-sign { background: var(--in-soft); color: var(--in); }
-.activity-out .activity-sign { background: var(--out-soft); color: var(--out); }
+.activity-in .activity-sign { background: var(--in-soft); color: var(--in-strong); }
+.activity-out .activity-sign { background: var(--out-soft); color: var(--out-strong); }
 
 .activity-text {
     flex: 1;
@@ -914,7 +1094,11 @@ td .btn-delete:hover {
     white-space: nowrap;
 }
 
-/* ==== Phase 5: the phone shell ===========================================================
+/* The activity feed waits for the materials: it would otherwise be on screen while they load and get
+   pushed down when they arrive. */
+.main-content:not(.is-ready) .activity-panel { display: none; }
+
+/* ==== Phase 5: the phone shell =============================================
    Variant "Drawer". At 768px and below the page is: the top bar (logo, the other page, Sign out),
    then ONE row, the site bar (the site picker with the open site's name, the role, Add Site), then the
    materials. The picker opens the sites nav as a drawer that slides down from under the bar, with the
@@ -954,15 +1138,16 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         width: 100%;
     }
 
-    .logo { font-size: 22px; }
-    .nav-links { margin-left: auto; }
+    .logo { font-size: 16px; }
+    .nav-links { margin-left: auto; gap: 0; }
 
     .nav-links a {
         display: inline-flex;
         align-items: center;
         min-height: 44px;
         margin: 0;
-        padding: 0 12px;
+        padding: 0 10px;
+        border-bottom: 0;
     }
 
     /* Home and About Us are on the public pages; the page you are on is not a link you need. */
@@ -984,7 +1169,8 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         height: auto;
     }
 
-    /* ---- the site bar: one row, stuck under the top bar while the page scrolls ---- */
+    /* ---- the site bar: one row, stuck under the top bar while the page scrolls ----
+       Kept under 90px (tests/e2e/phase5-ui-A). The amber rule under it is the identity piece. */
     .site-bar {
         position: sticky;
         top: 0;
@@ -992,12 +1178,15 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--sp-2);
         min-height: 64px;
-        padding: 8px 68px 8px 12px; /* the right padding is Add Site's place, reserved so nothing jumps when it arrives */
-        border-bottom: 3px solid #d3a269;
-        background: #2c3e50;
-        color: #ecf0f1;
+        padding: var(--sp-2) calc(var(--tap) + var(--sp-3) + var(--sp-2)) var(--sp-2) var(--sp-3);
+        /* ^ the right padding is Add Site's place: the button --tap wide, --sp-3 in from the edge,
+             with --sp-2 of air before the picker. Computed rather than a bare 68px so the reserve
+             can never go stale when the button is resized. */
+        border-bottom: 3px solid var(--amber);
+        background: var(--chrome-2);
+        color: var(--on-slate);
     }
 
     .site-picker {
@@ -1013,21 +1202,25 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         min-height: 48px;
         margin: 0;
         padding: 4px 12px;
-        border: 2px solid rgba(255, 255, 255, 0.4);
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.22);
-        color: #fff;
+        border: 1px solid var(--chrome-line);
+        border-radius: var(--r-md);
+        background: var(--tint);
+        color: var(--on-dark);
         font: inherit;
         font-size: 18px;
-        font-weight: bold;
+        font-weight: 700;
         text-align: left;
         cursor: pointer;
+    }
+
+    .site-picker:hover {
+        background: var(--tint-strong);
     }
 
     .site-picker:focus-visible,
     .drawer-close:focus-visible,
     .site-bar > #addSiteButton:focus-visible {
-        outline: 3px solid #ffd27d;
+        outline: 3px solid var(--focus-chrome);
         outline-offset: 2px;
     }
 
@@ -1046,7 +1239,7 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         flex: none;
         width: 22px;
         height: 22px;
-        transition: transform 0.15s;
+        transition: transform 0.15s ease;
     }
 
     .site-bar.is-open .picker-chevron { transform: rotate(180deg); }
@@ -1056,12 +1249,12 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         z-index: 1;
         display: inline-block;
         flex: none;
-        padding: 4px 10px;
-        border-radius: 12px;
-        background: #d3a269;
-        color: #1b1b1b;
+        padding: 4px 11px;
+        border-radius: var(--r-pill);
+        background: var(--amber);
+        color: var(--on-amber);
         font-size: 13px;
-        font-weight: bold;
+        font-weight: 700;
     }
 
     /* Add Site is one element that lives in the sidebar on a desktop and in this bar on a phone. */
@@ -1070,16 +1263,16 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         top: 8px;
         right: 12px;
         z-index: 1;
-        width: 48px;
-        height: 48px;
+        width: var(--tap);
+        height: var(--tap);
         margin: 0;
         padding: 0;
         border: 0;
-        border-radius: 12px;
-        background: #d3a269;
-        color: #1b1b1b;
+        border-radius: var(--r-md);
+        background: var(--amber);
+        color: var(--on-amber);
         font-size: 30px;
-        font-weight: bold;
+        font-weight: 700;
         line-height: 1;
         cursor: pointer;
     }
@@ -1114,9 +1307,9 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         max-height: 70dvh;
         padding: 10px 12px 16px;
         overflow-y: auto;
-        border-radius: 0 0 18px 18px;
-        background: #2c3e50;
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+        border-radius: 0 0 var(--r-lg) var(--r-lg);
+        background: var(--chrome-2);
+        box-shadow: var(--e-3);
     }
 
     .site-bar.is-open .sidebar {
@@ -1133,18 +1326,18 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         z-index: 0;
         display: block;
         height: 100dvh;
-        background: rgba(12, 20, 28, 0.62);
+        background: var(--backdrop);
     }
 
     .drawer-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: var(--sp-3);
         margin-bottom: 6px;
     }
 
-    .sidebar h2 { margin: 0; font-size: 18px; }
+    .sidebar h2 { margin: 0; font-size: 16px; }
 
     .sidebar .drawer-close {
         display: inline-flex;
@@ -1152,12 +1345,12 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         min-height: 44px;
         margin: 0;
         padding: 0 16px;
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        border-radius: 10px;
+        border: 1px solid var(--chrome-line);
+        border-radius: var(--r-sm);
         background: transparent;
-        color: #fff;
+        color: var(--on-dark);
         font-size: 16px;
-        font-weight: bold;
+        font-weight: 700;
         cursor: pointer;
     }
 
@@ -1170,7 +1363,7 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
     .sidebar ul li a {
@@ -1183,7 +1376,6 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         overflow-wrap: anywhere;
     }
 
-    .sidebar ul li a.active { box-shadow: inset 5px 0 0 #d3a269; }
     .sidebar .role-tag { flex: none; margin: 0; }
 
     .sidebar .delete-site-btn {
@@ -1195,26 +1387,26 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         min-height: 48px;
         margin: 0;
         padding: 0;
-        border: 2px solid rgba(255, 255, 255, 0.4);
+        border: 1px solid var(--chrome-line);
         background: transparent;
-        color: #ecf0f1;
+        color: var(--on-slate);
     }
 
-    .sidebar .delete-site-btn:hover { background: #922b21; }
+    .sidebar .delete-site-btn:hover { background: var(--out-strong); }
     .sidebar .status { margin: 8px 4px; font-size: 16px; }
     .invites-panel li { gap: 8px; }
 
     .invites-panel button {
         min-height: 44px;
-        margin: 0 8px 0 0;
-        padding: 0 18px;
+        margin: 0 var(--sp-2) 0 0;
+        padding: 0 var(--sp-4);
         font-size: 16px;
     }
 
     .drawer-account {
         display: block;
         margin: 8px 4px 0;
-        color: #c9d3dd;
+        color: var(--chrome-muted);
         font-size: 13px;
         overflow-wrap: anywhere;
     }
@@ -1242,16 +1434,12 @@ body:has(.site-bar.is-open) { overflow: hidden; }
     .content-header { margin-bottom: 12px; }
 }
 
-/* The activity feed waits for the materials: it would otherwise be on screen while they load and get
-   pushed down when they arrive. */
-.main-content:not(.is-ready) .activity-panel { display: none; }
-
 @media (prefers-reduced-motion: reduce) {
     .site-bar.is-open .sidebar { animation: none; }
 }
 
 /* ---- phones ----
-   The shell (top bar, site bar, drawer) is above. At 700px and below each material also becomes a
+   The shell (top bar, site bar, drawer) is above. At 768px and below each material also becomes a
    card, with big Receive / Use / History buttons. */
 @media (max-width: 768px) {
     .content-header { flex-wrap: wrap; }
@@ -1278,8 +1466,9 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         column-gap: 6px;
         margin-bottom: 12px;
         padding: 12px 12px 8px;
-        border-radius: 10px;
-        background: #fff;
+        border-radius: var(--r-md);
+        background: var(--surface);
+        box-shadow: var(--e-1);
     }
 
     #materialsTable td {
@@ -1287,8 +1476,8 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         border-bottom: 0;
     }
 
-    #materialsTable td:nth-child(1) { grid-column: 1; font-size: 19px; font-weight: bold; overflow-wrap: anywhere; }
-    #materialsTable td:nth-child(2) { grid-column: 2; font-size: 30px; font-weight: bold; text-align: right; }
+    #materialsTable td:nth-child(1) { grid-column: 1; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
+    #materialsTable td:nth-child(2) { grid-column: 2; font-size: 30px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
     #materialsTable td:nth-child(3) { grid-column: 3; color: var(--muted); font-size: 16px; }
     #materialsTable td:nth-child(4) { grid-column: 1 / -1; margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
     #materialsTable td:nth-child(4)::before { content: "Updated "; }
@@ -1312,7 +1501,8 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         grid-column: 1 / -1;
         display: flex;
         justify-content: flex-end;
-        gap: 8px;
+        gap: 16px;
+        margin-top: 10px; /* kept apart from the three primary buttons, so a thumb aimed at Use cannot land on Delete */
         padding: 0;
     }
 
@@ -1322,42 +1512,6 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         margin: 6px 0 0;
     }
 
-    .activity-panel { margin-top: 8px; }
-}
-
-/* ---- review fixes: what the blind critic of the Phase 3 sheets asked for ---- */
-
-/* History pills: solid, centred, readable in glare. The word is the primary cue, the colour the second. */
-.history-type {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 12px;
-    line-height: 1;
-    color: #fff;
-}
-
-.history-in .history-type { background: var(--in); color: #fff; }
-.history-out .history-type { background: var(--out); color: #fff; }
-
-/* An impossible amount: the big button says so instead of looking ready to record it. */
-.sheet-submit-over {
-    border: 2px solid var(--out);
-    background: #fff;
-    color: var(--out);
-}
-
-/* No dead gap when there is no "after" line. */
-.sheet-after:empty {
-    min-height: 0;
-    margin: 0;
-}
-
-/* Delete is the one action that must not look like Use: neutral until it is pointed at. */
-td .btn-delete { color: var(--ink); }
-td .btn-delete:hover { background: var(--out); border-color: var(--out); color: #fff; }
-
-@media (max-width: 768px) {
     /* What happened lately comes before the long list of materials, not after it. */
     .main-content { display: flex; flex-direction: column; }
     /* The offline indicator is about everything below it, so it comes before even the verify banner. */
@@ -1365,58 +1519,23 @@ td .btn-delete:hover { background: var(--out); border-color: var(--out); color: 
     .main-content > .verify-banner { order: -1; }
     .main-content > .content-header { order: 0; }
     .main-content > #materialsStatus { order: 1; }
-    .main-content > .activity-panel { order: 5; margin: 12px 0; }
     .main-content > #materialsTable { order: 3; }
+    .main-content > .activity-panel { order: 5; margin: 12px 0; }
 
+    .activity-panel { margin-top: 8px; }
     .activity-list { max-height: 11rem; overflow-y: auto; }
 
-    /* Edit and Delete sit apart from the three primary buttons, so a thumb aimed at Use cannot land on Delete. */
-    #materialsTable .cell-manage { margin-top: 10px; gap: 16px; }
-}
-
-/* ---- review fixes, round 2 ---- */
-
-.activity-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.activity-toggle { display: none; }
-
-/* A hint that the history scrolls: the top edge fades instead of cutting a card in half. */
-.history-body {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
-}
-
-/* Edit and Delete are quiet text buttons, so they never compete with Receive / Use / History. */
-td .btn-edit,
-td .btn-delete {
-    border-color: transparent;
-    background: transparent;
-    color: var(--muted);
-    text-decoration: underline;
-}
-
-td .btn-edit:hover,
-td .btn-delete:hover {
-    text-decoration: none;
-}
-
-@media (max-width: 768px) {
     /* One line of activity until opened: the materials stay the first thing on the screen. */
     .activity-toggle {
         display: inline-block;
         min-height: 44px;
         padding: 0 14px;
-        border: 2px solid var(--line);
-        border-radius: 8px;
-        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--surface);
         color: var(--ink);
         font-size: 15px;
-        font-weight: bold;
+        font-weight: 700;
     }
 
     .activity-panel:not(.activity-open) .activity-list {
@@ -1428,7 +1547,7 @@ td .btn-delete:hover {
     .activity-panel.activity-open .activity-list { max-height: 16rem; overflow-y: auto; }
 }
 
-/* ---- inline SVG icons (src/icons.js) ---- */
+/* ==== inline SVG icons (src/icons.js) ====================================== */
 .icon {
     width: 1.15em;
     height: 1.15em;

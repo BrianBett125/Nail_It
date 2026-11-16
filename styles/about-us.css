@@ -1,3 +1,7 @@
+/* About us: the story behind the tool. The architecture photograph, dimmed, with the story on a
+   solid near-black panel so the text sits on a colour axe can measure rather than on a picture.
+   Reads from styles/tokens.css (loaded first). */
+
 * {
     margin: 0;
     padding: 0;
@@ -5,115 +9,134 @@
 }
 
 body {
-    margin: 0;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-    background: url('../assets/architecture-1600.webp');
-    backdrop-filter: brightness(0.5);
-    background-color: #ecf0f1;
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    height: 100vh;
+    align-items: center;
+    min-height: 100vh;
+    padding: calc(var(--header-h) + 56px) var(--sp-5) var(--sp-20);
+    /* A dark layer over the picture, not backdrop-filter: the filter repaints the whole screen
+       and is slow on a phone. */
+    background: linear-gradient(var(--scrim), var(--scrim-strong)),
+        url('../assets/architecture-1600.webp');
     background-size: cover;
     background-position: center;
-    overflow: auto;
+    color: var(--chrome-text);
 }
 
-
+/* ---- the top bar: the same near-black chrome as the rest of the app ---- */
 header {
-    background-color: #000;
-    color: antiquewhite;
-    padding: 10px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-sizing: border-box;
+    min-height: var(--header-h);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-    /* new changes */
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
+    padding: 6px var(--sp-6);
+    background: var(--chrome);
+    color: var(--chrome-text);
+    border-bottom: 1px solid var(--chrome-line);
 }
 
 .nav-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 95%;
+    gap: 16px;
+    width: 100%;
 }
 
 .logo {
-    font-size: 24px;
-    font-weight: bold;
-    font-family: 'Times New Roman', Times, serif;
+    font-size: 20px;
+    color: var(--chrome-text);
 }
 
 .nav-links {
     display: flex;
     align-items: center;
+    gap: 4px;
     margin-left: auto;
 }
 
 .nav-links a {
-    color: antiquewhite;
+    color: var(--chrome-muted);
     text-decoration: none;
-    margin: 0 15px;
-    font-size: 16px;
+    margin: 0 10px;
+    padding: 6px 0;
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    font-weight: 600;
+    transition: color 0.15s ease, border-color 0.15s ease;
 }
 
+.nav-links a:hover,
+.nav-links a:focus-visible {
+    color: var(--chrome-text);
+    border-bottom-color: var(--amber);
+}
+
+/* On a phone the underline above is switched off and a 44px box replaces it, so the colour change
+   is the only cue left and it is far too faint to count. The ring is the cue, over the chrome. */
+.nav-links a:focus-visible {
+    outline: 3px solid var(--focus-chrome);
+    outline-offset: 2px;
+}
+
+/* ---- the story ---- */
 #story-behind-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    padding: 20px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    color: whitesmoke;
-    width: 80%;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 780px;
     margin: 0 auto;
-    height: auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-
-/* Additional styling for headings and paragraphs */
-h2 {
-    font-size: 24px;
-    margin-bottom: 10px;
-    color: antiquewhite;
-    font-family: 'Times New Roman', Times, serif;
-}
-
-p {
-    font-size: 19.5px;
-    /* line-height: 1.5; */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 10px;
-}
-
-@media (max-width: 768px) {
-    body { background-image: url('../assets/architecture-800.webp'); }
+    padding: var(--sp-12) var(--sp-10);
+    border: 1px solid var(--chrome-line);
+    border-left: 6px solid var(--amber);
+    border-radius: var(--r-lg);
+    background: var(--chrome-2);
+    box-shadow: var(--e-3);
+    color: var(--chrome-text);
 }
 
 #story-behind-section h1 {
-    font-size: 1.5em;
-    margin-bottom: 0.5em;
+    margin-bottom: var(--sp-5);
+    font-size: clamp(26px, 4vw, 34px);
+    font-weight: 800;
+    letter-spacing: -0.015em;
 }
 
-/* Phase 5: a phone-sized top bar with links big enough to hit (44px) that never pushes the page sideways. */
+#story-behind-section p {
+    margin: 0 0 16px;
+    color: var(--chrome-text);
+    font-size: 17px;
+    line-height: 1.75;
+}
+
+#story-behind-section p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    body {
+        background-image: linear-gradient(var(--scrim), var(--scrim-strong)), url('../assets/architecture-800.webp');
+    }
+}
+
 @media (max-width: 768px) {
     header {
-        box-sizing: border-box;
         padding: 6px 12px;
     }
 
-    .nav-bar { width: 100%; gap: 6px; }
-    .logo { font-size: 20px; }
+    .nav-bar {
+        width: 100%;
+        gap: 8px;
+    }
+
+    .logo {
+        font-size: 16px;
+    }
 
     .nav-links a {
         display: inline-flex;
@@ -121,16 +144,19 @@ p {
         min-height: 44px;
         margin: 0;
         padding: 0 8px;
+        border-bottom: 0;
         font-size: 15px;
     }
-}
 
-@media (max-width: 768px) {
-    #story-behind-section {
-        box-sizing: border-box;
-        width: calc(100% - 24px);
-        max-width: 100%;
+    body {
+        padding: calc(var(--header-h) + 32px) 14px var(--sp-12);
     }
 
-    #story-behind-section p { font-size: 17px; }
+    #story-behind-section {
+        padding: var(--sp-8) var(--sp-6);
+    }
+
+    #story-behind-section p {
+        font-size: 16px;
+    }
 }

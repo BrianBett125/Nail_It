@@ -1,0 +1,178 @@
+/* ==== Design tokens: one industrial system for the whole app ==============================
+   Every page loads this first. Before it, the app ran two competing palettes (a #2c3e50 /
+   #d3a269 chrome and the Phase 3/4 ink-green-red tokens) and four type systems (Times New
+   Roman, Arial, Segoe UI, system-ui), none of them sharing a spacing or radius scale.
+
+   Constraints this file has to live inside:
+     - style-src 'self'  -> no page ships an inline style; every value a page needs is a token here.
+     - font-src  'self'  -> no webfont; the type system is the device's own system stack.
+     - no build step     -> plain CSS custom properties, read by hand.
+
+   The identity is kept on purpose: near-black chrome, slate, one amber accent. What changes is
+   that they are now variables with a scale behind them, so a button in a dialog and a button in
+   a card can no longer drift apart. */
+
+:root {
+    /* ---- palette: surfaces and ink ---- */
+    --ink: #111820;
+    --ink-2: #1c2733;
+    --muted: #4f6070;
+    --line: #d3dbe3;
+    --line-soft: #e7edf2;
+
+    --ground: #eef1f5;
+    --surface: #ffffff;
+    --surface-2: #f6f8fa;
+    --surface-3: #eef2f6;
+
+    /* ---- the chrome: a near-black top bar over a slate rail ---- */
+    --chrome: #10161d;
+    --chrome-2: #1a242f;
+    --chrome-line: rgba(255, 255, 255, 0.14);
+    --chrome-text: #e9eef3;
+    --chrome-muted: #aebac6;
+
+    --slate: #2c3e50;
+    --slate-2: #36495c;
+    --slate-3: #41566a;
+    --on-slate: #eef2f6;
+
+    /* ---- one amber accent, carrying the construction identity ---- */
+    --amber: #d9a461;
+    --amber-strong: #b8813f;
+    --amber-soft: #fbf1e2;
+    --amber-line: #cfa163;
+    --on-amber: #1a1408;
+
+    /* ---- the ledger: in, out, and what is running low ---- */
+    --in: #14693a;
+    --in-strong: #0d4f2b;
+    --in-soft: #dff3e6;
+    --out: #a8201a;
+    --out-strong: #85150f;
+    --out-soft: #fde7e5;
+
+    --low: #a8201a;
+    --low-deep: #5c0f0b;
+    --low-soft: #fdecea;
+    --low-text: #6e130f;
+    --calm: #14693a;
+    --calm-soft: #e4f3ea;
+    --calm-text: #0b4a28;
+    --flash: #ffe08a;
+
+    /* ---- "this has not moved in a while": a warning, not a shortage. Warm brown, never red. ---- */
+    --warn: #c98a2b;
+    --warn-soft: #fdf3e3;
+    --warn-text: #6b4409;
+
+    /* ---- the three values that are not a brand decision ---- */
+    --on-dark: #ffffff; /* text or an icon over a filled colour: green, red, slate, chrome */
+    --paper: #ffffff;   /* printed output, and the mask stop on the scrolling history */
+    --paper-ink: #000000;
+
+    /* ---- links, focus ----
+       One ring, one geometry: 3px, offset 2px, so the ring never sits on the thing it is marking.
+       The one exception is an element that is full-bleed inside a scrolling container, which a
+       table row is: that inverts the offset to -3px so the ring lands inside the row instead of
+       being clipped by the table. Two tokens because there are two backdrops: --focus is for a
+       ring over a light surface, --focus-chrome for one over the near-black bar or the slate rail. */
+    --link: #1f5a96;
+    --focus: #0b57d0;
+    --focus-chrome: #ffd27d;
+
+    /* ---- the only translucent values in the system: the scrim over a photograph, the dim behind
+           an open dialog, and the faint white tint a control takes on the near-black chrome ---- */
+    --scrim-soft: rgba(9, 14, 19, 0.3);
+    --scrim: rgba(9, 14, 19, 0.78);
+    --scrim-strong: rgba(9, 14, 19, 0.9);
+    --backdrop: rgba(12, 20, 28, 0.62);
+    --tint: rgba(255, 255, 255, 0.06);
+    --tint-strong: rgba(255, 255, 255, 0.11);
+
+    /* ---- in / out, brightened for text on the near-black chrome or the photo scrim ---- */
+    --in-bright: #6ede8a;
+    --in-bright-soft: #d6f5dd;
+    --out-bright: #ff7a6e;
+    --out-bright-soft: #ffd6d1;
+
+    /* ---- type: one system stack, one letter-spacing for the small caps labels ---- */
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --caps: 0.08em;
+
+    /* ---- space: --sp-N is N quarters, so the whole scale reads off one number. The
+           small end stops at 8 and the half steps below it (2, 6, 10, 14) are optical nudges
+           tuned to the type they sit with, not rhythm: a gap between a label and its value is
+           not the same decision as the gap between two sections. Everything structural reads
+           a --sp-* token; nothing structural is written as a raw pixel. */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+    --sp-10: 40px;
+    --sp-12: 48px;
+    --sp-16: 64px;
+    --sp-20: 80px;
+
+    /* ---- radius ---- */
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 20px;
+    --r-pill: 999px;
+
+    /* ---- elevation: three steps, and no page invents a fourth ---- */
+    --e-1: 0 1px 2px rgba(16, 22, 29, 0.06), 0 1px 3px rgba(16, 22, 29, 0.07);
+    --e-2: 0 2px 6px rgba(16, 22, 29, 0.08), 0 8px 20px rgba(16, 22, 29, 0.10);
+    --e-3: 0 14px 34px rgba(16, 22, 29, 0.20), 0 3px 10px rgba(16, 22, 29, 0.12);
+
+    /* ---- the shell and control measurements, so nothing has to guess them. The rail is a token
+           because the sidebar is that wide and the content column is pushed clear of it by the
+           same number: written twice by hand, those two drift apart and the layout breaks by an
+           amount nobody can see in the diff. --tap is the same story for the phone's inline
+           controls: the site bar reserves a slice for the Add Site button, and the slice is
+           computed from this, so resizing the button cannot leave the reserve stale. ---- */
+    --header-h: 56px;
+    --rail: 220px;
+    --tap: 48px;
+}
+
+/* The base every page inherits. A page overrides its own background or colour; it does not
+   restate the font, which is why no stylesheet names a typeface any more. */
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: var(--font);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* The wordmark: a heavy, wide-tracked uppercase lockup, the one piece of "brand" in the chrome. */
+.logo {
+    font-family: var(--font);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* Motion is decoration. A transition is 200ms or under, and nothing in the app animates longer than
+   that. A highlight that is meant to stay put (a row lit after you jumped to it) is a state, not
+   motion, and is the one timed thing allowed past that budget. Anyone who asked their system to
+   stop it gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}

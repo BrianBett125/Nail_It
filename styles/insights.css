@@ -1,18 +1,9 @@
 /* ==== Phase 4: "are we running out of anything?" ========================================
    Variant "At a glance": three stat tiles with a loud low-stock tile, a Needs attention strip of
    tappable pills, one control row (search, chips, sort), and tinted low rows with a word badge.
-   Loaded after dashboard.css, which defines --ink, --muted, --line and --focus. Colours are picked
-   for glare: white on deep red, dark text on pale tints, and every colour also has a word. */
-:root {
-    --low: #a8201a;
-    --low-deep: #5c0f0b;
-    --low-soft: #fdecea;
-    --low-text: #6e130f;
-    --calm: #14693a;
-    --calm-soft: #e4f3ea;
-    --calm-text: #0b4a28;
-    --flash: #ffe08a;
-}
+
+   Every value here is a token from styles/tokens.css. A colour is never the only cue: the loud
+   tile carries the number, a pill carries its state word, and a low row carries the LOW badge. */
 
 .sr-only {
     position: absolute;
@@ -29,15 +20,15 @@
 .insights {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
 }
 
 /* ---- the three tiles ---- */
 .site-summary {
     display: grid;
     grid-template-columns: 1fr 1.5fr 1fr;
-    gap: 12px;
+    gap: var(--sp-3);
 }
 
 .stat {
@@ -48,19 +39,21 @@
     min-width: 0;
     min-height: 104px;
     margin: 0;
-    padding: 12px 16px;
-    border: 2px solid var(--line);
-    border-radius: 14px;
-    background: #fff;
+    padding: 14px 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-lg);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     text-align: left;
+    box-shadow: var(--e-1);
 }
 
 .stat-num {
     font-size: 44px;
     font-weight: 800;
     line-height: 1.05;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
@@ -68,17 +61,21 @@
 .stat-label {
     margin-top: 2px;
     color: var(--muted);
-    font-size: 16px;
-    font-weight: bold;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .stat-activity .stat-num {
     font-size: 28px;
 }
 
-/* The low tile is the one that shouts. */
+/* The low tile is the one that shouts: a red slab carrying the count in the biggest type on the
+   page. It is a button, so it also has to read as one. */
 .stat-low {
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .stat-low .stat-num {
@@ -87,31 +84,41 @@
 }
 
 .stat-low .stat-label {
-    font-size: 18px;
+    font-size: 16px;
+}
+
+.stat-low:hover {
+    border-color: var(--slate);
 }
 
 .stat-low.is-alert {
     border-color: var(--low);
     background: var(--low);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(168, 32, 26, 0.35);
+    color: var(--on-dark);
+    box-shadow: var(--e-2);
+}
+
+.stat-low.is-alert .stat-num {
+    color: var(--on-dark);
 }
 
 .stat-low.is-alert .stat-label {
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .stat-low.is-alert:hover {
-    background: #8c1914;
+    background: var(--out-strong);
+    border-color: var(--out-strong);
 }
 
 .stat-low.is-alert[aria-pressed="true"] {
-    outline: 4px solid var(--ink);
+    outline: 3px solid var(--ink);
     outline-offset: 2px;
 }
 
 .stat-low.is-calm {
     border-color: var(--calm);
+    border-top: 4px solid var(--calm);
     background: var(--calm-soft);
     color: var(--calm-text);
 }
@@ -125,30 +132,31 @@
 }
 
 .stat-low:focus-visible {
-    outline: 4px solid var(--focus);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
 }
 
 /* ---- Needs attention ---- */
 .needs-attention {
-    padding: 10px 14px 12px;
+    padding: 12px 14px 14px;
     border-left: 6px solid var(--low);
-    border-radius: 6px 12px 12px 6px;
+    border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm);
     background: var(--low-soft);
 }
 
 .needs-attention h2 {
-    margin: 0 0 8px;
+    margin: 0 0 var(--sp-2);
     color: var(--low-text);
-    font-size: 15px;
-    letter-spacing: 0.04em;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: var(--caps);
     text-transform: uppercase;
 }
 
 .attention-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--sp-2);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -165,17 +173,18 @@
     min-height: 52px;
     margin: 0;
     padding: 6px 12px;
-    border: 2px solid var(--low);
-    border-radius: 12px;
-    background: #fff;
+    border: 1px solid var(--low);
+    border-radius: var(--r-md);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: background-color 0.15s ease;
 }
 
 .attention-pill:hover {
-    background: #fff6f5;
+    background: var(--out-soft);
 }
 
 .attention-pill:focus-visible {
@@ -186,18 +195,20 @@
 .pill-name {
     overflow: hidden;
     font-size: 17px;
-    font-weight: bold;
+    font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .pill-state {
-    padding: 1px 9px;
-    border-radius: 10px;
+    padding: 1px 10px;
+    border-radius: var(--r-pill);
     background: var(--low);
-    color: #fff;
-    font-size: 13px;
+    color: var(--on-dark);
+    font-size: 12px;
     font-weight: 800;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .attention-pill.is-out .pill-state {
@@ -218,7 +229,7 @@
     min-width: 88px;
     border-style: dashed;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 /* ---- search, chips, sort in one row ---- */
@@ -240,9 +251,9 @@
     height: 48px;
     margin: 0;
     padding: 0 14px;
-    border: 2px solid var(--ink);
-    border-radius: 12px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
     color: var(--ink);
     font-size: 16px;
 }
@@ -256,7 +267,7 @@
 
 .control-chips {
     display: flex;
-    gap: 8px;
+    gap: var(--sp-2);
 }
 
 .filter-chip {
@@ -265,13 +276,14 @@
     min-height: 44px;
     margin: 0;
     padding: 0 16px;
-    border: 2px solid var(--ink);
-    border-radius: 22px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: var(--surface);
     color: var(--ink);
-    font-size: 16px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 #filterLow {
@@ -280,23 +292,27 @@
 }
 
 .filter-chip[aria-pressed="true"] {
+    border-color: var(--ink);
     background: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 #filterLow[aria-pressed="true"] {
     border-color: var(--low);
     background: var(--low);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .control-sort {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sp-2);
     margin-left: auto;
-    font-size: 15px;
-    font-weight: bold;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: var(--caps);
+    text-transform: uppercase;
 }
 
 .control-sort select {
@@ -304,11 +320,13 @@
     min-height: 44px;
     margin: 0;
     padding: 0 10px;
-    border: 2px solid var(--ink);
-    border-radius: 10px;
-    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--ink);
     font-size: 16px;
+    letter-spacing: normal;
+    text-transform: none;
 }
 
 /* ---- low rows ---- */
@@ -318,7 +336,7 @@
 
 #materialsTable tr.is-low td:first-child {
     box-shadow: inset 8px 0 0 var(--low);
-    font-weight: bold;
+    font-weight: 700;
 }
 
 #materialsTable tr.is-out td:first-child {
@@ -327,7 +345,7 @@
 
 #materialsTable tr.is-low td:nth-child(2) {
     color: var(--low);
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .cell-status {
@@ -343,13 +361,13 @@
 
 .badge-low {
     display: inline-block;
-    padding: 3px 11px;
-    border-radius: 12px;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
     background: var(--low);
-    color: #fff;
-    font-size: 14px;
+    color: var(--on-dark);
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--caps);
     text-transform: uppercase;
 }
 
@@ -361,30 +379,26 @@
     margin-left: 8px;
     color: var(--low-text);
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
-/* A pill was tapped: this row is the one to look at. */
+/* A pill was tapped: this row is the one to look at. It is a state, not motion: the highlight is
+   there the instant the class lands and holds until src/ui-insights.js takes the class off again.
+   The only thing that moves is the short fade when it does. The ring is inset because a table row
+   is full-bleed: an outset ring would be clipped by the scrolling container. */
 #materialsTable tr.row-flash {
     outline: 3px solid var(--focus);
     outline-offset: -3px;
 }
 
 #materialsTable tr.row-flash td {
-    animation: row-flash 2.2s ease-out;
+    background-color: var(--flash);
+    transition: background-color 0.15s ease;
 }
 
 #materialsTable tr:focus {
     outline: 3px solid var(--focus);
     outline-offset: -3px;
-}
-
-@keyframes row-flash {
-    0%, 45% { background-color: var(--flash); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #materialsTable tr.row-flash td { animation: none; }
 }
 
 /* Seven columns on a wide screen: a little less air in each, so the table never outgrows the page. */
@@ -400,9 +414,44 @@
     }
 }
 
-/* ---- phones ---- */
+/* An empty result looks like a state, not a blank: a dashed card with a way out. */
+.status-card {
+    margin: var(--sp-3) 0 var(--sp-2);
+    padding: var(--sp-5) var(--sp-4);
+    border: 2px dashed var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    text-align: center;
+}
+
+.clear-view {
+    display: block;
+    min-height: 44px;
+    margin: 0 auto var(--sp-4);
+    padding: 0 var(--sp-5);
+    border: 1px solid var(--ink);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.clear-view:hover {
+    background: var(--ink);
+    color: var(--on-dark);
+}
+
+.clear-view[hidden] { display: none; }
+
+/* ---- phones ----
+   The list is what people came for, so the figures above it are kept tight: the low tile and the
+   first pill must both land on the first screen (tests/e2e/insights-ui-B). */
 @media (max-width: 768px) {
-    .insights { gap: 10px; margin-bottom: 12px; }
+    .insights { gap: 8px; margin-bottom: 10px; }
 
     .site-summary {
         grid-template-columns: 1fr 1.35fr 1fr;
@@ -410,31 +459,27 @@
     }
 
     .stat {
-        min-height: 88px;
+        min-height: 78px;
         padding: 8px 10px;
-        border-radius: 12px;
+        border-radius: var(--r-md);
     }
 
     .stat-num { font-size: 34px; }
     .stat-low .stat-num { font-size: 46px; }
     .stat-activity .stat-num { font-size: 21px; }
-    .stat-label { font-size: 13px; }
-    .stat-low .stat-label { font-size: 14px; }
+    .stat-label { font-size: 11px; }
+    .stat-low .stat-label { font-size: 12px; }
 
-    /* One line of pills that scrolls sideways inside the strip: the page itself never does. */
-    .needs-attention { padding: 8px 10px 10px; }
-    .needs-attention h2 { margin-bottom: 6px; font-size: 13px; }
+    /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
+    .needs-attention { padding: 6px 10px 8px; }
+    .needs-attention h2 { margin-bottom: 6px; font-size: 12px; }
 
-    .attention-list {
-        flex-wrap: nowrap;
-        margin: 0 -10px;
-        padding: 0 10px 2px;
-        overflow-x: auto;
-        scroll-snap-type: x proximity;
-        -webkit-overflow-scrolling: touch;
-    }
+    .attention-list { gap: 6px; }
 
-    .attention-list li { flex: none; scroll-snap-align: start; }
+    .attention-list li { flex: 1 1 100%; }
+    .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
+
+    .attention-pill { min-height: 46px; padding: 4px 12px; }
 
     /* Row one: search. Row two: the two chips and the sort menu, each at least 44px tall. */
     .control-search { flex: 1 1 100%; max-width: none; }
@@ -442,7 +487,7 @@
     .filter-chip { padding: 0 14px; }
     .control-sort { flex: 1 1 0; min-width: 0; margin-left: 0; }
     /* The word "Sort" stays visible on a phone: an arrow alone does not say what the menu does. */
-    .control-sort label { flex: none; font-size: 15px; font-weight: bold; }
+    .control-sort label { flex: none; font-size: 14px; font-weight: 700; }
     .control-sort select { flex: 1; width: 100%; min-width: 0; padding: 0 6px; font-size: 15px; text-overflow: ellipsis; }
 
     /* Cards: the tint and the accent go on the card, the cells stay clear. */
@@ -480,67 +525,11 @@
     #materialsTable .cell-status:empty { display: none; }
     .low-detail { margin-left: 0; font-size: 15px; }
 
-    #materialsTable tr { transition: background-color 0.5s; }
+    #materialsTable tr { transition: background-color 0.15s ease; }
     #materialsTable tr.row-flash { background: var(--flash); }
-    #materialsTable tr.row-flash td { animation: none; }
-}
 
-
-/* ---- review fixes: what the blind critic of the Phase 4 screens asked for ---- */
-
-/* An empty result looks like a state, not a blank: a dashed card with a way out. */
-.status-card {
-    margin: 12px 0 8px;
-    padding: 18px 16px;
-    border: 2px dashed var(--line, #c9d1d8);
-    border-radius: 12px;
-    background: #fff;
-    color: var(--ink, #1b2733);
-    font-size: 16px;
-    text-align: center;
-}
-
-.clear-view {
-    display: block;
-    min-height: 44px;
-    margin: 0 auto 16px;
-    padding: 0 20px;
-    border: 2px solid var(--ink, #1b2733);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--ink, #1b2733);
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.clear-view[hidden] { display: none; }
-
-@media (max-width: 768px) {
-    /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
-    .attention-list {
-        flex-wrap: wrap;
-        margin: 0;
-        padding: 0;
-        overflow: visible;
-    }
-
-    .attention-list li { flex: 1 1 100%; }
-    .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
-}
-
-@media (max-width: 768px) {
     /* Reports, Members and Add Material share one row instead of one standing alone on its own. */
     .content-header { gap: 8px; }
     .content-header h1 { flex: 1 1 auto; }
     #reportsButton, #membersButton, #addMaterialButton { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
-}
-
-/* Phase 5: on a phone the list is what people came for, so the figures above it are a little tighter. */
-@media (max-width: 768px) {
-    .stat { min-height: 78px; }
-    .attention-pill { min-height: 46px; padding: 4px 12px; }
-    .needs-attention { padding: 6px 10px 8px; }
-    .attention-list { gap: 6px; }
-    .insights { gap: 8px; margin-bottom: 8px; }
 }

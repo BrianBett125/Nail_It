@@ -1,10 +1,10 @@
 /* The owner overview: a grid of site cards, trouble first. The header and the buttons come from
-   dashboard.css, the tokens (--low, --calm, ...) from insights.css. Healthy sites are quiet
-   grey-green, troubled ones are warm, and every colour is backed by a number or a word. */
+   dashboard.css, every colour and length from styles/tokens.css. Healthy sites are quiet
+   grey-green, troubled ones carry a red rail, and every colour is backed by a number or a word. */
 body.overview-page {
     height: auto;
     min-height: 100vh;
-    background: #ecf0f1;
+    background: var(--ground);
     color: var(--ink);
 }
 
@@ -12,15 +12,15 @@ body.overview-page {
     box-sizing: border-box;
     max-width: 1280px;
     margin: 0 auto;
-    padding: 76px 24px 40px; /* the header is fixed on wide screens */
+    padding: calc(var(--header-h) + var(--sp-5)) var(--sp-6) var(--sp-10); /* the header is fixed on wide screens */
 }
 
 .overview-head {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 16px;
-    margin-bottom: 18px;
+    gap: var(--sp-2) var(--sp-4);
+    margin-bottom: var(--sp-5);
 }
 
 .overview-head h1 {
@@ -30,27 +30,27 @@ body.overview-page {
 
 .overview-totals {
     margin: 0;
-    padding: 8px 16px;
+    padding: var(--sp-2) var(--sp-4);
     border: 2px solid var(--calm);
-    border-radius: 22px;
+    border-radius: var(--r-pill);
     background: var(--calm-soft);
     color: var(--calm-text);
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .overview-totals.has-low {
     border-color: var(--low);
     background: var(--low);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .overview-status {
-    margin: 24px 0;
-    padding: 28px 20px;
+    margin: var(--sp-6) 0;
+    padding: var(--sp-8) var(--sp-5);
     border: 2px dashed var(--line);
-    border-radius: 14px;
-    background: #f7f9fa;
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
     color: var(--muted);
     font-size: 18px;
     text-align: center;
@@ -59,7 +59,7 @@ body.overview-page {
 .overview-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-    gap: 16px;
+    gap: var(--sp-4);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -70,35 +70,34 @@ body.overview-page {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--sp-3);
     min-width: 0;
-    padding: 16px 18px;
-    border: 2px solid #c5d6ca;
+    padding: var(--sp-4);
+    border: 1px solid var(--line);
     border-left-width: 8px;
-    border-left-color: #6f9a80;
-    border-radius: 14px;
-    background: #eef3ef;
+    border-left-color: var(--calm);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--e-1);
 }
 
 .overview-site.is-trouble {
-    border-color: #e6b8a6;
     border-left-color: var(--low);
-    background: #fff3ec;
-    box-shadow: 0 3px 12px rgba(168, 32, 26, 0.16);
+    background: var(--low-soft);
+    box-shadow: var(--e-2);
 }
 
 .overview-site.is-empty,
 .overview-site.is-error {
-    border-color: var(--line);
-    border-left-color: #8a96a3;
-    background: #f4f6f8;
+    border-left-color: var(--muted);
+    background: var(--surface-2);
 }
 
 .overview-top {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--sp-3);
 }
 
 .overview-title {
@@ -123,13 +122,13 @@ body.overview-page {
 }
 
 .overview-role {
-    margin-top: 4px;
+    margin-top: var(--sp-1);
     padding: 1px 10px;
-    border-radius: 10px;
+    border-radius: var(--r-pill);
     background: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .overview-figure {
@@ -141,6 +140,7 @@ body.overview-page {
 }
 
 .overview-bignum {
+    font-family: var(--font-num);
     font-size: 56px;
     font-weight: 800;
     line-height: 1;
@@ -151,7 +151,7 @@ body.overview-page {
     margin-top: 2px;
     color: var(--muted);
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .is-trouble .overview-bignum,
@@ -166,20 +166,16 @@ body.overview-page {
 
 .overview-bar {
     height: 10px;
-    border-radius: 5px;
-    background: #cfdcd3;
+    border-radius: var(--r-pill);
+    background: var(--line-soft);
     overflow: hidden;
-}
-
-.is-trouble .overview-bar {
-    background: #ecd3c8;
 }
 
 .overview-bar-fill {
     display: block;
     width: var(--share, 0%);
     height: 100%;
-    border-radius: 5px;
+    border-radius: var(--r-pill);
     background: var(--low);
 }
 
@@ -187,7 +183,7 @@ body.overview-page {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 2px 12px;
+    gap: 2px var(--sp-3);
     margin: 0;
     color: var(--muted);
     font-size: 15px;
@@ -206,15 +202,16 @@ body.overview-page {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 2px 8px;
+    gap: 2px var(--sp-2);
     padding: 6px 10px;
-    border-radius: 8px;
-    background: #fff;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     font-size: 16px;
 }
 
 .overview-item-name {
-    font-weight: bold;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
@@ -227,7 +224,7 @@ body.overview-page {
     margin: 0;
     color: var(--low-text);
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .overview-open {
@@ -237,24 +234,27 @@ body.overview-page {
     justify-content: center;
     min-height: 48px;
     margin-top: auto;
-    padding: 0 16px;
-    border: 2px solid var(--ink);
-    border-radius: 10px;
-    background: #fff;
+    padding: 0 var(--sp-4);
+    border: 2px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
     color: var(--ink);
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
     text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .is-trouble .overview-open {
+    border-color: var(--ink);
     background: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .overview-open:hover {
+    border-color: var(--ink);
     background: var(--ink);
-    color: #fff;
+    color: var(--on-dark);
 }
 
 .overview-open:focus-visible {
@@ -265,15 +265,15 @@ body.overview-page {
 /* The top bar is not fixed at 768px and below (dashboard.css), so the page does not need room for it. */
 @media (max-width: 768px) {
     .overview {
-        padding: 14px 12px 28px;
+        padding: 14px var(--sp-3) var(--sp-8);
     }
 }
 
 @media (max-width: 700px) {
 
     .overview-head h1 { font-size: 24px; }
-    .overview-list { grid-template-columns: 1fr; gap: 12px; }
-    .overview-site { gap: 8px; padding: 12px 14px; }
+    .overview-list { grid-template-columns: 1fr; gap: var(--sp-3); }
+    .overview-site { gap: var(--sp-2); padding: var(--sp-3) 14px; }
     /* Number and word side by side: a card is a few lines shorter, which counts with 20 sites. */
     .overview-figure { flex-direction: row; align-items: baseline; gap: 6px; }
     .overview-bignum { font-size: 40px; }
@@ -284,37 +284,37 @@ body.overview-page {
 
 /* ---- review fixes ---- */
 .overview-bar-caption {
-    margin: 4px 0 0;
-    color: var(--muted, #52606d);
+    margin: var(--sp-1) 0 0;
+    color: var(--muted);
     font-size: 14px;
 }
 
 /* A site that has not moved in a month reads as stale, in words and in tone. */
-.overview-activity.is-stale { font-style: italic; color: #8a4b00; }
+.overview-activity.is-stale { font-style: italic; color: var(--warn-text); }
 
 .overview-add {
     display: block;
     text-align: center;
     width: fit-content;
     min-height: 44px;
-    margin: 0 auto 24px;
-    padding: 12px 20px;
+    margin: 0 auto var(--sp-6);
+    padding: var(--sp-3) var(--sp-5);
     box-sizing: border-box;
-    border: 2px solid var(--ink, #1b2733);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--ink, #1b2733);
-    font-weight: bold;
+    border: 2px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 700;
     text-decoration: none;
 }
 
 .overview-add[hidden] { display: none; }
 
 .overview-stale-tag {
-    padding: 2px 8px;
-    border: 1px solid #8a4b00;
-    border-radius: 10px;
-    color: #8a4b00;
+    padding: 2px var(--sp-2);
+    border: 1px solid var(--warn);
+    border-radius: var(--r-pill);
+    color: var(--warn-text);
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
 }
