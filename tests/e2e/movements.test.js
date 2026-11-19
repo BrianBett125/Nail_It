@@ -460,6 +460,8 @@ describe("material history", () => {
         const { context, page } = await open();
         await button(page, "Sand", ".btn-history").click();
         await page.locator("#historyContainer").waitFor({ state: "visible" });
+        // The sheet opens empty and fills once the movement read lands: wait for the Before-history line.
+        await page.locator("#historyBefore").waitFor({ state: "visible" });
         assert.equal(await page.locator("#historyList .history-row").count(), 0);
         assert.match(await page.textContent("#historyBefore"), /10/);
         assert.match(await page.textContent("#historyEmpty"), /No movements/i);
