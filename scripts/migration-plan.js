@@ -24,7 +24,8 @@ const MAX = { siteName: 100, location: 120, materialName: 100, units: 20, quanti
 const DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
 
 const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-const isLegacyMaterial = (value) => isObject(value) && typeof value.siteId === "string" && value.siteId !== "";
+const isLegacyMaterial = (value) =>
+    isObject(value) && typeof value.siteId === "string" && value.siteId !== "";
 
 // A node under /materials that is a per-site container written by the new app: every child is a material.
 function isSiteContainer(value) {
@@ -77,15 +78,30 @@ function repairSite(site, now) {
     const known = BUILDING_TYPES.find((type) => type.toLowerCase() === typed.toLowerCase());
     const buildingType = known || "Other";
     if (buildingType !== site.buildingType) {
-        note("buildingType", site.buildingType, buildingType, known ? "fixed the capital letters" : "not in the new list");
+        note(
+            "buildingType",
+            site.buildingType,
+            buildingType,
+            known ? "fixed the capital letters" : "not in the new list",
+        );
     }
 
     // Sites made since Phase 1 already carry createdAt (and no date): keep it. Older ones have a date.
     const isoDate = parseIsoDate(site.date);
-    const hasCreatedAt = typeof site.createdAt === "number" && Number.isFinite(site.createdAt) && site.createdAt > 0;
-    const createdAt = hasCreatedAt ? site.createdAt : isoDate ? Date.parse(`${isoDate}T00:00:00Z`) : now;
+    const hasCreatedAt =
+        typeof site.createdAt === "number" && Number.isFinite(site.createdAt) && site.createdAt > 0;
+    const createdAt = hasCreatedAt
+        ? site.createdAt
+        : isoDate
+          ? Date.parse(`${isoDate}T00:00:00Z`)
+          : now;
     if (!hasCreatedAt) {
-        note("createdAt", site.date, createdAt, isoDate ? "from the old date" : "no usable date, set to the migration time");
+        note(
+            "createdAt",
+            site.date,
+            createdAt,
+            isoDate ? "from the old date" : "no usable date, set to the migration time",
+        );
     }
 
     if ("date" in site) {
@@ -104,20 +120,34 @@ function repairMaterial(material, now) {
     }
     const quantity = parseQuantity(material.quantity);
     if (quantity === null || quantity > MAX.quantity) {
-        return { skip: `the quantity is not a number from 0 to ${MAX.quantity} (${JSON.stringify(material.quantity)})` };
+        return {
+            skip: `the quantity is not a number from 0 to ${MAX.quantity} (${JSON.stringify(material.quantity)})`,
+        };
     }
     if (typeof material.quantity !== "number") {
-        changes.push({ field: "quantity", before: material.quantity, after: quantity, why: "text converted to a number" });
+        changes.push({
+            field: "quantity",
+            before: material.quantity,
+            after: quantity,
+            why: "text converted to a number",
+        });
     }
     const units = normalizeName(material.units);
     if (!units || units.length > MAX.units) {
-        return { skip: `the units are empty or longer than ${MAX.units} characters (${JSON.stringify(material.units)})` };
+        return {
+            skip: `the units are empty or longer than ${MAX.units} characters (${JSON.stringify(material.units)})`,
+        };
     }
     let lastUpdated = typeof material.lastUpdated === "string" ? material.lastUpdated.trim() : "";
     if (!validCalendarDate(lastUpdated)) {
         const isoDate = parseIsoDate(lastUpdated);
         const repaired = isoDate || todayISO(new Date(now));
-        changes.push({ field: "lastUpdated", before: material.lastUpdated, after: repaired, why: isoDate ? "time of day removed" : "no usable date, set to the migration day" });
+        changes.push({
+            field: "lastUpdated",
+            before: material.lastUpdated,
+            after: repaired,
+            why: isoDate ? "time of day removed" : "no usable date, set to the migration day",
+        });
         lastUpdated = repaired;
     }
     return { value: { name, quantity, units, lastUpdated }, changes };
@@ -133,7 +163,7 @@ export function planMigration(legacy, { ownerUid, ownerEmail, now = Date.now() }
     const materialsRoot = isObject(legacy.materials) ? legacy.materials : {};
     const updates = {};
     const report = { sites: [], materials: [], skipped: [] };
-    const takenSites = new Set();   // sites owned by somebody else: hands off, with their materials
+    const takenSites = new Set(); // sites owned by somebody else: hands off, with their materials
 
     for (const [siteId, site] of Object.entries(sites)) {
         if (!isObject(site)) {
@@ -142,13 +172,24 @@ export function planMigration(legacy, { ownerUid, ownerEmail, now = Date.now() }
         }
         if (site.ownerUid && site.ownerUid !== ownerUid) {
             takenSites.add(siteId);
-            report.sites.push({ id: siteId, name: site.name, action: "skipped", reason: "already owned by another account", changes: [] });
+            report.sites.push({
+                id: siteId,
+                name: site.name,
+                action: "skipped",
+                reason: "already owned by another account",
+                changes: [],
+            });
             continue;
         }
         if (site.ownerUid === ownerUid) {
             // Done before, and its owner entries were written with it in one update. Writing them
             // again would be refused: the rules let an owner create their entry, never rewrite it.
-            report.sites.push({ id: siteId, name: site.name, action: "already migrated", changes: [] });
+            report.sites.push({
+                id: siteId,
+                name: site.name,
+                action: "already migrated",
+                changes: [],
+            });
             continue;
         }
         const { value, changes } = repairSite(site, now);
@@ -165,29 +206,65 @@ export function planMigration(legacy, { ownerUid, ownerEmail, now = Date.now() }
         }
         const path = `materials/${key}`;
         if (!isLegacyMaterial(value)) {
-            report.skipped.push({ path, reason: "no siteId: junk left behind by an old bug, or not a material" });
+            report.skipped.push({
+                path,
+                reason: "no siteId: junk left behind by an old bug, or not a material",
+            });
             continue;
         }
         const siteId = value.siteId;
         if (!(siteId in sites) || !isObject(sites[siteId])) {
-            report.materials.push({ id: key, siteId, name: value.name, action: "skipped", reason: "its site no longer exists", changes: [] });
+            report.materials.push({
+                id: key,
+                siteId,
+                name: value.name,
+                action: "skipped",
+                reason: "its site no longer exists",
+                changes: [],
+            });
             continue;
         }
         if (takenSites.has(siteId)) {
-            report.materials.push({ id: key, siteId, name: value.name, action: "skipped", reason: "its site belongs to another account", changes: [] });
+            report.materials.push({
+                id: key,
+                siteId,
+                name: value.name,
+                action: "skipped",
+                reason: "its site belongs to another account",
+                changes: [],
+            });
             continue;
         }
         if (isObject(materialsRoot[siteId]) && isObject(materialsRoot[siteId][key])) {
-            report.materials.push({ id: key, siteId, name: value.name, action: "already migrated", changes: [] });
+            report.materials.push({
+                id: key,
+                siteId,
+                name: value.name,
+                action: "already migrated",
+                changes: [],
+            });
             continue;
         }
         const repaired = repairMaterial(value, now);
         if (repaired.skip) {
-            report.materials.push({ id: key, siteId, name: value.name, action: "skipped", reason: repaired.skip, changes: [] });
+            report.materials.push({
+                id: key,
+                siteId,
+                name: value.name,
+                action: "skipped",
+                reason: repaired.skip,
+                changes: [],
+            });
             continue;
         }
         updates[`materials/${siteId}/${key}`] = repaired.value;
-        report.materials.push({ id: key, siteId, name: repaired.value.name, action: "copy", changes: repaired.changes });
+        report.materials.push({
+            id: key,
+            siteId,
+            name: repaired.value.name,
+            action: "copy",
+            changes: repaired.changes,
+        });
     }
 
     const count = (list, action) => list.filter((entry) => entry.action === action).length;
@@ -204,7 +281,8 @@ export function planMigration(legacy, { ownerUid, ownerEmail, now = Date.now() }
 }
 
 const csvCell = (value) => {
-    const text = value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value);
+    const text =
+        value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value);
     return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
@@ -212,7 +290,13 @@ const csvCell = (value) => {
 export function reportCsv(report) {
     const rows = [["kind", "id", "site", "name", "action", "field", "before", "after", "why"]];
     const add = (kind, entry, extra = {}) => {
-        const common = [kind, entry.id ?? entry.path, entry.siteId ?? "", entry.name ?? "", entry.action ?? "skipped"];
+        const common = [
+            kind,
+            entry.id ?? entry.path,
+            entry.siteId ?? "",
+            entry.name ?? "",
+            entry.action ?? "skipped",
+        ];
         if (entry.changes && entry.changes.length) {
             for (const change of entry.changes) {
                 rows.push([...common, change.field, change.before, change.after, change.why]);
@@ -223,6 +307,8 @@ export function reportCsv(report) {
     };
     report.sites.forEach((entry) => add("site", entry));
     report.materials.forEach((entry) => add("material", entry));
-    report.skipped.forEach((entry) => add("junk", { id: entry.path, action: "skipped" }, { reason: entry.reason }));
+    report.skipped.forEach((entry) =>
+        add("junk", { id: entry.path, action: "skipped" }, { reason: entry.reason }),
+    );
     return rows.map((row) => row.map(csvCell).join(",")).join("\n") + "\n";
 }

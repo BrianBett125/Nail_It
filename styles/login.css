@@ -16,8 +16,8 @@ body {
     padding: var(--sp-6) var(--sp-4);
     /* A dark layer over the picture, not backdrop-filter: the filter repaints the whole screen
        and is slow on a phone. */
-    background: linear-gradient(var(--scrim), var(--scrim-strong)),
-        url('../assets/sparks-1600.webp');
+    background:
+        linear-gradient(var(--scrim), var(--scrim-strong)), url("../assets/sparks-1600.webp");
     background-size: cover;
     background-position: center;
     color: var(--chrome-text);
@@ -41,8 +41,9 @@ body {
     display: block;
     height: 104px;
     border-bottom: 1px solid var(--chrome-line);
-    background: linear-gradient(var(--scrim-soft), var(--scrim-strong)),
-        url('../assets/hammer-600.webp') center/cover;
+    background:
+        linear-gradient(var(--scrim-soft), var(--scrim-strong)),
+        url("../assets/hammer-600.webp") center/cover;
 }
 
 form {
@@ -182,7 +183,8 @@ button.link:hover {
 /* The phone keeps the smaller sparks photograph behind the same gradient. */
 @media (max-width: 768px) {
     body {
-        background-image: linear-gradient(var(--scrim), var(--scrim-strong)), url('../assets/sparks-800.webp');
+        background-image:
+            linear-gradient(var(--scrim), var(--scrim-strong)), url("../assets/sparks-800.webp");
     }
 }
 

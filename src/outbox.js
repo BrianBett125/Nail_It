@@ -49,15 +49,27 @@ function withQueued(error, queued) {
 }
 
 function isEntry(entry) {
-    return Boolean(entry)
-        && typeof entry.movementId === "string" && entry.movementId !== ""
-        && typeof entry.siteId === "string" && entry.siteId !== ""
-        && typeof entry.materialId === "string" && entry.materialId !== ""
-        && typeof entry.at === "number" && Number.isFinite(entry.at)
-        && Boolean(entry.movement) && typeof entry.movement.delta === "number" && Number.isFinite(entry.movement.delta)
-        && typeof entry.movement.type === "string"
-        && Boolean(entry.material) && typeof entry.material.name === "string" && typeof entry.material.units === "string"
-        && Boolean(entry.user) && typeof entry.user.uid === "string" && typeof entry.user.email === "string";
+    return (
+        Boolean(entry) &&
+        typeof entry.movementId === "string" &&
+        entry.movementId !== "" &&
+        typeof entry.siteId === "string" &&
+        entry.siteId !== "" &&
+        typeof entry.materialId === "string" &&
+        entry.materialId !== "" &&
+        typeof entry.at === "number" &&
+        Number.isFinite(entry.at) &&
+        Boolean(entry.movement) &&
+        typeof entry.movement.delta === "number" &&
+        Number.isFinite(entry.movement.delta) &&
+        typeof entry.movement.type === "string" &&
+        Boolean(entry.material) &&
+        typeof entry.material.name === "string" &&
+        typeof entry.material.units === "string" &&
+        Boolean(entry.user) &&
+        typeof entry.user.uid === "string" &&
+        typeof entry.user.email === "string"
+    );
 }
 
 // What a caller needs to send one entry back to the database: the same shape movements.js builds from,
@@ -193,7 +205,10 @@ export function createOutbox({ storage, write, landed }) {
                     // drains and a message that never stops promising to sync.
                     remove(entry.movementId);
                 }
-                throw withQueued(error, durable && entries.some((e) => e.movementId === entry.movementId));
+                throw withQueued(
+                    error,
+                    durable && entries.some((e) => e.movementId === entry.movementId),
+                );
             });
         return { id: entry.movementId, done };
     }

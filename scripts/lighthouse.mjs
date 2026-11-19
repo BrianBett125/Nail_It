@@ -18,7 +18,13 @@ import { createServer } from "./serve.mjs";
 const LIGHTHOUSE = "lighthouse@12.2.1";
 const BAR = 90;
 const GATED = ["performance", "accessibility"];
-const PAGES = ["index.html", "about-us.html", "login.html", "dashboard.html?site=sA", "overview.html"];
+const PAGES = [
+    "index.html",
+    "about-us.html",
+    "login.html",
+    "dashboard.html?site=sA",
+    "overview.html",
+];
 
 const only = process.argv.slice(2);
 const pages = only.length > 0 ? only : PAGES;
@@ -35,15 +41,26 @@ for (const page of pages) {
     // Async, not spawnSync: this process is also the web server Lighthouse is loading the page from.
     const run = await new Promise((resolve) => {
         const child = spawn("npx", [
-            "--yes", LIGHTHOUSE, `${base}/${page}`,
+            "--yes",
+            LIGHTHOUSE,
+            `${base}/${page}`,
             "--only-categories=performance,accessibility,best-practices",
-            `--chrome-path=${chrome}`, "--chrome-flags=--headless=new --no-sandbox",
-            "--form-factor=mobile", "--output=json", `--output-path=${file}`, "--quiet",
+            `--chrome-path=${chrome}`,
+            "--chrome-flags=--headless=new --no-sandbox",
+            "--form-factor=mobile",
+            "--output=json",
+            `--output-path=${file}`,
+            "--quiet",
         ]);
         let stderr = "";
-        child.stderr.on("data", (chunk) => { stderr += chunk; });
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk;
+        });
         const timer = setTimeout(() => child.kill(), 240_000);
-        child.on("close", (status) => { clearTimeout(timer); resolve({ status, stderr }); });
+        child.on("close", (status) => {
+            clearTimeout(timer);
+            resolve({ status, stderr });
+        });
     });
     if (run.status !== 0 || !fs.existsSync(file)) {
         console.error(`Lighthouse failed on ${page}: ${run.stderr || run.error}`);
@@ -71,7 +88,15 @@ for (const row of rows) {
         console.log(row.page.padEnd(26), "FAILED TO RUN");
         continue;
     }
-    console.log(row.page.padEnd(26), String(row.performance).padEnd(4), String(row.accessibility).padEnd(4), String(row.bestPractices).padEnd(4), String(row.lcp).padEnd(6), String(row.cls).padEnd(5), row.tbt);
+    console.log(
+        row.page.padEnd(26),
+        String(row.performance).padEnd(4),
+        String(row.accessibility).padEnd(4),
+        String(row.bestPractices).padEnd(4),
+        String(row.lcp).padEnd(6),
+        String(row.cls).padEnd(5),
+        row.tbt,
+    );
 }
 const below = rows.filter((row) => row.failed || GATED.some((key) => row[key] < BAR));
 if (below.length > 0) {

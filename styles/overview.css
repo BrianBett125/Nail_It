@@ -242,7 +242,10 @@ body.overview-page {
     font-size: 16px;
     font-weight: 700;
     text-decoration: none;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .is-trouble .overview-open {
@@ -270,17 +273,33 @@ body.overview-page {
 }
 
 @media (max-width: 700px) {
-
-    .overview-head h1 { font-size: 24px; }
-    .overview-list { grid-template-columns: 1fr; gap: var(--sp-3); }
-    .overview-site { gap: var(--sp-2); padding: var(--sp-3) 14px; }
+    .overview-head h1 {
+        font-size: 24px;
+    }
+    .overview-list {
+        grid-template-columns: 1fr;
+        gap: var(--sp-3);
+    }
+    .overview-site {
+        gap: var(--sp-2);
+        padding: var(--sp-3) 14px;
+    }
     /* Number and word side by side: a card is a few lines shorter, which counts with 20 sites. */
-    .overview-figure { flex-direction: row; align-items: baseline; gap: 6px; }
-    .overview-bignum { font-size: 40px; }
-    .overview-name { font-size: 20px; }
-    .overview-open { min-height: 44px; }
+    .overview-figure {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 6px;
+    }
+    .overview-bignum {
+        font-size: 40px;
+    }
+    .overview-name {
+        font-size: 20px;
+    }
+    .overview-open {
+        min-height: 44px;
+    }
 }
-
 
 /* ---- review fixes ---- */
 .overview-bar-caption {
@@ -290,7 +309,10 @@ body.overview-page {
 }
 
 /* A site that has not moved in a month reads as stale, in words and in tone. */
-.overview-activity.is-stale { font-style: italic; color: var(--warn-text); }
+.overview-activity.is-stale {
+    font-style: italic;
+    color: var(--warn-text);
+}
 
 .overview-add {
     display: block;
@@ -308,7 +330,9 @@ body.overview-page {
     text-decoration: none;
 }
 
-.overview-add[hidden] { display: none; }
+.overview-add[hidden] {
+    display: none;
+}
 
 .overview-stale-tag {
     padding: 2px var(--sp-2);

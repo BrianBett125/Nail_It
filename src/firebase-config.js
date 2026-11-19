@@ -10,5 +10,9 @@ export const firebaseConfig = {
 // A placeholder key (the old "REPLACE_..." value) counts as not configured, so sign-in says
 // "not set up yet" instead of failing in a confusing way.
 export function isConfigured(config = firebaseConfig) {
-    return typeof config.apiKey === "string" && config.apiKey.length > 0 && !config.apiKey.startsWith("REPLACE");
+    return (
+        typeof config.apiKey === "string" &&
+        config.apiKey.length > 0 &&
+        !config.apiKey.startsWith("REPLACE")
+    );
 }

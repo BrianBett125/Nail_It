@@ -33,35 +33,85 @@ test("parseQuantity accepts zero and positive numbers as numbers (B8)", () => {
 });
 
 test("parseQuantity rejects empty, negative, NaN and infinite input (B8)", () => {
-    for (const bad of ["", "   ", "-1", "-0.5", "abc", "1,5", "Infinity", "-Infinity", "NaN", null, undefined, NaN, Infinity, -2, {}, []]) {
+    for (const bad of [
+        "",
+        "   ",
+        "-1",
+        "-0.5",
+        "abc",
+        "1,5",
+        "Infinity",
+        "-Infinity",
+        "NaN",
+        null,
+        undefined,
+        NaN,
+        Infinity,
+        -2,
+        {},
+        [],
+    ]) {
         assert.equal(parseQuantity(bad), null, `should reject ${String(bad)}`);
     }
 });
 
 test("validateSite trims, stamps createdAt itself and has no date field", () => {
-    const ok = validateSite({ name: "  Mombasa ", location: "Nyali", buildingType: "Residential" }, 1700000000000);
+    const ok = validateSite(
+        { name: "  Mombasa ", location: "Nyali", buildingType: "Residential" },
+        1700000000000,
+    );
     assert.deepEqual(ok, {
         ok: true,
-        value: { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1700000000000 },
+        value: {
+            name: "Mombasa",
+            location: "Nyali",
+            buildingType: "Residential",
+            createdAt: 1700000000000,
+        },
     });
     assert.equal("date" in ok.value, false);
     for (const field of ["name", "location", "buildingType"]) {
         const input = { name: "a", location: "b", buildingType: "Other", [field]: "   " };
-        assert.deepEqual(validateSite(input), { ok: false, error: REQUIRED_MESSAGE }, `blank ${field}`);
+        assert.deepEqual(
+            validateSite(input),
+            { ok: false, error: REQUIRED_MESSAGE },
+            `blank ${field}`,
+        );
     }
 });
 
 test("validateSite ignores a date the caller still sends", () => {
-    const result = validateSite({ name: "a", location: "b", buildingType: "Other", date: "2024-01-01" }, 5);
-    assert.deepEqual(result.value, { name: "a", location: "b", buildingType: "Other", createdAt: 5 });
+    const result = validateSite(
+        { name: "a", location: "b", buildingType: "Other", date: "2024-01-01" },
+        5,
+    );
+    assert.deepEqual(result.value, {
+        name: "a",
+        location: "b",
+        buildingType: "Other",
+        createdAt: 5,
+    });
 });
 
 test("validateSite accepts every dropdown building type and nothing else", () => {
     for (const buildingType of BUILDING_TYPES) {
-        assert.equal(validateSite({ name: "a", location: "b", buildingType }).ok, true, buildingType);
+        assert.equal(
+            validateSite({ name: "a", location: "b", buildingType }).ok,
+            true,
+            buildingType,
+        );
     }
-    assert.deepEqual(validateSite({ name: "a", location: "b", buildingType: "Castle" }), { ok: false, error: BUILDING_TYPE_MESSAGE });
-    assert.deepEqual(BUILDING_TYPES, ["Residential", "Commercial", "Industrial", "Road/Civil", "Other"]);
+    assert.deepEqual(validateSite({ name: "a", location: "b", buildingType: "Castle" }), {
+        ok: false,
+        error: BUILDING_TYPE_MESSAGE,
+    });
+    assert.deepEqual(BUILDING_TYPES, [
+        "Residential",
+        "Commercial",
+        "Industrial",
+        "Road/Civil",
+        "Other",
+    ]);
 });
 
 test("validateSite keeps markup as text, it never interprets it (S2)", () => {
@@ -72,18 +122,33 @@ test("validateSite keeps markup as text, it never interprets it (S2)", () => {
 
 test("validateMaterial accepts every dropdown unit and rejects others", () => {
     const base = { name: "Cement", quantity: "1" };
-    assert.deepEqual(UNITS, ["kg", "tonnes", "bags", "pieces", "metres", "litres", "bundles", "sheets"]);
+    assert.deepEqual(UNITS, [
+        "kg",
+        "tonnes",
+        "bags",
+        "pieces",
+        "metres",
+        "litres",
+        "bundles",
+        "sheets",
+    ]);
     for (const units of UNITS) {
         assert.equal(validateMaterial({ ...base, units }, "s").ok, true, units);
     }
-    assert.deepEqual(validateMaterial({ ...base, units: "cubits" }, "s"), { ok: false, error: UNITS_MESSAGE });
+    assert.deepEqual(validateMaterial({ ...base, units: "cubits" }, "s"), {
+        ok: false,
+        error: UNITS_MESSAGE,
+    });
 });
 
 test("validateMaterial lets an edit keep a legacy unit that is not in the dropdown", () => {
     const input = { name: "Nails", units: "kgs" };
     assert.equal(validateMaterialEdit(input).ok, false);
     assert.equal(validateMaterialEdit(input, { legacyUnit: "kgs" }).ok, true);
-    assert.equal(validateMaterialEdit({ ...input, units: "cubits" }, { legacyUnit: "kgs" }).ok, false);
+    assert.equal(
+        validateMaterialEdit({ ...input, units: "cubits" }, { legacyUnit: "kgs" }).ok,
+        false,
+    );
 });
 
 test("normalizeName trims and collapses inner whitespace, nameKey ignores case", () => {
@@ -103,16 +168,18 @@ test("canonicalName reuses the existing spelling", () => {
 });
 
 test("validateMaterial stores the canonical spelling of a known name", () => {
-    const result = validateMaterial(
-        { name: "cement", quantity: "2", units: "bags" },
-        "s",
-        { knownNames: ["Cement"] },
-    );
+    const result = validateMaterial({ name: "cement", quantity: "2", units: "bags" }, "s", {
+        knownNames: ["Cement"],
+    });
     assert.equal(result.value.name, "Cement");
 });
 
 test("suggestNames dedupes by key, keeps the first spelling and sorts", () => {
-    assert.deepEqual(suggestNames(["sand", "Cement", "Sand", " cement ", "", "Nails"]), ["Cement", "Nails", "sand"]);
+    assert.deepEqual(suggestNames(["sand", "Cement", "Sand", " cement ", "", "Nails"]), [
+        "Cement",
+        "Nails",
+        "sand",
+    ]);
     assert.deepEqual(suggestNames([]), []);
 });
 
@@ -151,50 +218,97 @@ test("validateMaterial stores quantity as a number and leaves the siteId out (B8
 });
 
 test("validateMaterial carries no date: the database stamps the time", () => {
-    const result = validateMaterial({ name: "Cement", quantity: "5", units: "bags", lastUpdated: "2024-05-25" }, "site1");
+    const result = validateMaterial(
+        { name: "Cement", quantity: "5", units: "bags", lastUpdated: "2024-05-25" },
+        "site1",
+    );
     assert.equal("lastUpdated" in result.value, false);
 });
 
 test("validateMaterial takes an optional low-stock level, and says what is wrong with a bad one", () => {
     const base = { name: "Cement", quantity: "5", units: "bags" };
-    assert.deepEqual(validateMaterial({ ...base, minLevel: "10" }, "s").value, { name: "Cement", quantity: 5, units: "bags", minLevel: 10 });
+    assert.deepEqual(validateMaterial({ ...base, minLevel: "10" }, "s").value, {
+        name: "Cement",
+        quantity: 5,
+        units: "bags",
+        minLevel: 10,
+    });
     assert.deepEqual(validateMaterial({ ...base, minLevel: "0" }, "s").value.minLevel, 0);
     for (const blank of ["", "  ", undefined, null]) {
-        assert.equal("minLevel" in validateMaterial({ ...base, minLevel: blank }, "s").value, false);
+        assert.equal(
+            "minLevel" in validateMaterial({ ...base, minLevel: blank }, "s").value,
+            false,
+        );
     }
     for (const bad of ["-1", "abc", "1e3x"]) {
-        assert.deepEqual(validateMaterial({ ...base, minLevel: bad }, "s"), { ok: false, error: LOW_STOCK_MESSAGE }, bad);
+        assert.deepEqual(
+            validateMaterial({ ...base, minLevel: bad }, "s"),
+            { ok: false, error: LOW_STOCK_MESSAGE },
+            bad,
+        );
     }
 });
 
 test("validateMaterial allows an opening balance of zero", () => {
-    assert.equal(validateMaterial({ name: "Sand", quantity: "0", units: "tonnes" }, "s").value.quantity, 0);
+    assert.equal(
+        validateMaterial({ name: "Sand", quantity: "0", units: "tonnes" }, "s").value.quantity,
+        0,
+    );
 });
 
 test("validateMaterial separates a bad quantity from a missing field (B8)", () => {
     const base = { name: "Cement", units: "bags" };
-    assert.deepEqual(validateMaterial({ ...base, quantity: "-5" }, "s"), { ok: false, error: QUANTITY_MESSAGE });
-    assert.deepEqual(validateMaterial({ ...base, quantity: "" }, "s"), { ok: false, error: QUANTITY_MESSAGE });
-    assert.deepEqual(validateMaterial({ ...base, name: "", quantity: "5" }, "s"), { ok: false, error: REQUIRED_MESSAGE });
+    assert.deepEqual(validateMaterial({ ...base, quantity: "-5" }, "s"), {
+        ok: false,
+        error: QUANTITY_MESSAGE,
+    });
+    assert.deepEqual(validateMaterial({ ...base, quantity: "" }, "s"), {
+        ok: false,
+        error: QUANTITY_MESSAGE,
+    });
+    assert.deepEqual(validateMaterial({ ...base, name: "", quantity: "5" }, "s"), {
+        ok: false,
+        error: REQUIRED_MESSAGE,
+    });
 });
 
 test("validateMaterialEdit is name, unit and low-stock level only: never a quantity, a date or a siteId", () => {
     const result = validateMaterialEdit({
-        name: "Cement", units: "bags", minLevel: "5", quantity: "9", lastUpdated: "2024-05-26", siteId: "other",
+        name: "Cement",
+        units: "bags",
+        minLevel: "5",
+        quantity: "9",
+        lastUpdated: "2024-05-26",
+        siteId: "other",
     });
     assert.deepEqual(result, { ok: true, value: { name: "Cement", units: "bags", minLevel: 5 } });
 });
 
 test("validateMaterialEdit: a blank low-stock level means 'clear it' (null)", () => {
-    assert.deepEqual(validateMaterialEdit({ name: "Cement", units: "bags", minLevel: "" }).value.minLevel, null);
+    assert.deepEqual(
+        validateMaterialEdit({ name: "Cement", units: "bags", minLevel: "" }).value.minLevel,
+        null,
+    );
     assert.deepEqual(validateMaterialEdit({ name: "Cement", units: "bags" }).value.minLevel, null);
 });
 
 test("validateMaterialEdit rejects an empty name, a bad unit and a bad level", () => {
-    assert.deepEqual(validateMaterialEdit({ name: "", units: "bags" }), { ok: false, error: REQUIRED_MESSAGE });
-    assert.deepEqual(validateMaterialEdit({ name: "n", units: "" }), { ok: false, error: REQUIRED_MESSAGE });
-    assert.deepEqual(validateMaterialEdit({ name: "n", units: "cubits" }), { ok: false, error: UNITS_MESSAGE });
-    assert.deepEqual(validateMaterialEdit({ name: "n", units: "bags", minLevel: "-2" }), { ok: false, error: LOW_STOCK_MESSAGE });
+    assert.deepEqual(validateMaterialEdit({ name: "", units: "bags" }), {
+        ok: false,
+        error: REQUIRED_MESSAGE,
+    });
+    assert.deepEqual(validateMaterialEdit({ name: "n", units: "" }), {
+        ok: false,
+        error: REQUIRED_MESSAGE,
+    });
+    assert.deepEqual(validateMaterialEdit({ name: "n", units: "cubits" }), {
+        ok: false,
+        error: UNITS_MESSAGE,
+    });
+    assert.deepEqual(validateMaterialEdit({ name: "n", units: "bags", minLevel: "-2" }), {
+        ok: false,
+        error: LOW_STOCK_MESSAGE,
+    });
 });
 
 test("buildSiteDeleteUpdates is one object covering the site and everything under it (B4)", () => {
@@ -213,7 +327,13 @@ test("buildSiteDeleteUpdates is one object covering the site and everything unde
 });
 
 test("buildSiteDeleteUpdates for a site with no members or invites still removes the site and its materials", () => {
-    const expected = { "sites/A": null, "materials/A": null, "movements/A": null, "memberInfo/A": null, "siteInvites/A": null };
+    const expected = {
+        "sites/A": null,
+        "materials/A": null,
+        "movements/A": null,
+        "memberInfo/A": null,
+        "siteInvites/A": null,
+    };
     assert.deepEqual(buildSiteDeleteUpdates("A"), expected);
     assert.deepEqual(buildSiteDeleteUpdates("A", [], []), expected);
 });

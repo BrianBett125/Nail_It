@@ -31,7 +31,13 @@ test("with no real API key, sign-in says 'not set up' and sends nothing", async 
     ]) {
         await assert.rejects(attempt(), { message: errors.NOT_CONFIGURED_MESSAGE });
     }
-    assert.equal(calls("signIn").length + calls("createUser").length + calls("sendPasswordResetEmail").length, 0, "no request leaves the page");
+    assert.equal(
+        calls("signIn").length +
+            calls("createUser").length +
+            calls("sendPasswordResetEmail").length,
+        0,
+        "no request leaves the page",
+    );
 });
 
 test("isConfigured needs a real key", () => {
@@ -44,7 +50,13 @@ test("isConfigured needs a real key", () => {
 test("onUser reports the user as { uid, email, emailVerified }, and null when signed out", () => {
     const seen = [];
     auth.onUser((u) => seen.push(u));
-    state.listeners[0]({ uid: "u1", email: "sam@example.com", emailVerified: true, extra: "ignored", getIdToken: () => {} });
+    state.listeners[0]({
+        uid: "u1",
+        email: "sam@example.com",
+        emailVerified: true,
+        extra: "ignored",
+        getIdToken: () => {},
+    });
     state.listeners[0](null);
     assert.deepEqual(seen, [{ uid: "u1", email: "sam@example.com", emailVerified: true }, null]);
 });
@@ -63,7 +75,10 @@ test("signIn failures reach the caller with their Firebase code", async () => {
 test("signUp creates the account and sends the verification email", async () => {
     const user = await auth.signUp("sam@example.com", "secret1");
     assert.deepEqual(calls("createUser")[0].args, ["sam@example.com", "secret1"]);
-    assert.deepEqual(calls("sendEmailVerification").map((c) => c.args[0]), ["sam@example.com"]);
+    assert.deepEqual(
+        calls("sendEmailVerification").map((c) => c.args[0]),
+        ["sam@example.com"],
+    );
     assert.equal(user.emailVerified, false);
 });
 
@@ -110,7 +125,10 @@ test("refreshUser reloads the account and forces a new token, so the rules see t
     sdk.calls.length = 0;
     state.auth.currentUser.emailVerified = true;
     const user = await auth.refreshUser();
-    assert.deepEqual(sdk.calls.map((c) => c.name), ["user.reload", "user.getIdToken"]);
+    assert.deepEqual(
+        sdk.calls.map((c) => c.name),
+        ["user.reload", "user.getIdToken"],
+    );
     assert.equal(calls("user.getIdToken")[0].args[0], true, "force refresh");
     assert.equal(user.emailVerified, true);
 });
@@ -119,7 +137,11 @@ test("friendlyAuthError speaks plainly for each common failure", () => {
     const say = (code) => errors.friendlyAuthError({ code });
     assert.equal(say("auth/invalid-credential"), "Wrong email or password.");
     assert.equal(say("auth/wrong-password"), "Wrong email or password.");
-    assert.equal(say("auth/user-not-found"), "Wrong email or password.", "same words as a wrong password: no account lookup");
+    assert.equal(
+        say("auth/user-not-found"),
+        "Wrong email or password.",
+        "same words as a wrong password: no account lookup",
+    );
     assert.match(say("auth/email-already-in-use"), /already exists/);
     assert.match(say("auth/weak-password"), /at least 6/);
     assert.match(say("auth/network-request-failed"), /No connection/);
@@ -129,8 +151,14 @@ test("friendlyAuthError speaks plainly for each common failure", () => {
 });
 
 test("friendlyAuthError never leaks a raw code or message", () => {
-    assert.equal(errors.friendlyAuthError({ code: "auth/something-new", message: "internal detail" }), errors.GENERIC_AUTH_MESSAGE);
+    assert.equal(
+        errors.friendlyAuthError({ code: "auth/something-new", message: "internal detail" }),
+        errors.GENERIC_AUTH_MESSAGE,
+    );
     assert.equal(errors.friendlyAuthError(new Error("boom")), errors.GENERIC_AUTH_MESSAGE);
     assert.equal(errors.friendlyAuthError(undefined), errors.GENERIC_AUTH_MESSAGE);
-    assert.equal(errors.friendlyAuthError(new Error("API key not valid")), errors.NOT_CONFIGURED_MESSAGE);
+    assert.equal(
+        errors.friendlyAuthError(new Error("API key not valid")),
+        errors.NOT_CONFIGURED_MESSAGE,
+    );
 });

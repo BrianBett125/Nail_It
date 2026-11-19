@@ -42,41 +42,70 @@ test("every file in assets/ is used by a page or a stylesheet, and is one we hav
     const used = referenced();
     for (const file of assetFiles) {
         assert.ok(used.has(file), `assets/${file} is not used anywhere: delete it`);
-        assert.ok(file in BUDGET, `assets/${file} has no weight budget in tests/unit/assets.test.js`);
+        assert.ok(
+            file in BUDGET,
+            `assets/${file} has no weight budget in tests/unit/assets.test.js`,
+        );
     }
 });
 
 test("every picture a page or a stylesheet points at exists", () => {
     for (const [file, where] of referenced()) {
-        assert.ok(assetFiles.includes(file), `assets/${file} is missing (used by ${where.join(", ")})`);
+        assert.ok(
+            assetFiles.includes(file),
+            `assets/${file} is missing (used by ${where.join(", ")})`,
+        );
     }
 });
 
 test("every picture is inside its weight budget", () => {
     for (const file of assetFiles) {
-        assert.ok(kb(`assets/${file}`) <= BUDGET[file], `assets/${file} is ${kb(`assets/${file}`).toFixed(0)} KB, budget ${BUDGET[file]} KB`);
+        assert.ok(
+            kb(`assets/${file}`) <= BUDGET[file],
+            `assets/${file} is ${kb(`assets/${file}`).toFixed(0)} KB, budget ${BUDGET[file]} KB`,
+        );
     }
 });
 
 test("only WebP pictures: no jpg or png is left, and no file name has a typo", () => {
-    assert.deepEqual(assetFiles.filter((f) => !f.endsWith(".webp")), []);
-    assert.deepEqual(assetFiles.filter((f) => /architechture/.test(f)), []);
+    assert.deepEqual(
+        assetFiles.filter((f) => !f.endsWith(".webp")),
+        [],
+    );
+    assert.deepEqual(
+        assetFiles.filter((f) => /architechture/.test(f)),
+        [],
+    );
 });
 
 test("the home page loads under 250 KB of pictures, on a phone and on a desktop", () => {
     const home = read("index.html") + read("styles/index.css");
     const files = [...home.matchAll(/assets\/([A-Za-z0-9_.-]+)/g)].map((m) => m[1]);
-    const features = [...new Set(files.filter((f) => ["database.webp", "stock.webp", "storage.webp"].includes(f)))];
-    const desktop = kb("assets/sparks-1600.webp") + features.reduce((sum, f) => sum + kb(`assets/${f}`), 0);
-    const phone = kb("assets/sparks-800.webp") + features.reduce((sum, f) => sum + kb(`assets/${f}`), 0);
+    const features = [
+        ...new Set(
+            files.filter((f) => ["database.webp", "stock.webp", "storage.webp"].includes(f)),
+        ),
+    ];
+    const desktop =
+        kb("assets/sparks-1600.webp") + features.reduce((sum, f) => sum + kb(`assets/${f}`), 0);
+    const phone =
+        kb("assets/sparks-800.webp") + features.reduce((sum, f) => sum + kb(`assets/${f}`), 0);
     assert.ok(desktop < 250, `desktop ${desktop.toFixed(0)} KB`);
     assert.ok(phone < desktop && phone < 250, `phone ${phone.toFixed(0)} KB`);
 });
 
 test("phones get the smaller background where a page uses a big one", () => {
-    for (const [css, small] of [["styles/index.css", "sparks-800.webp"], ["styles/login.css", "sparks-800.webp"], ["styles/about-us.css", "architecture-800.webp"]]) {
+    for (const [css, small] of [
+        ["styles/index.css", "sparks-800.webp"],
+        ["styles/login.css", "sparks-800.webp"],
+        ["styles/about-us.css", "architecture-800.webp"],
+    ]) {
         const text = read(css);
-        assert.match(text, new RegExp(`@media \\(max-width: 768px\\)[^}]*${small.replace(".", "\\.")}`), `${css} has no phone background`);
+        assert.match(
+            text,
+            new RegExp(`@media \\(max-width: 768px\\)[^}]*${small.replace(".", "\\.")}`),
+            `${css} has no phone background`,
+        );
     }
 });
 

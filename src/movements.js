@@ -40,7 +40,10 @@ export function formatQuantity(value) {
         return "0";
     }
     const rounded = Math.round(value * 10 ** MAX_DECIMALS) / 10 ** MAX_DECIMALS;
-    return rounded.toLocaleString("en-US", { maximumFractionDigits: MAX_DECIMALS, useGrouping: false });
+    return rounded.toLocaleString("en-US", {
+        maximumFractionDigits: MAX_DECIMALS,
+        useGrouping: false,
+    });
 }
 
 // "+20" / "-5", for a column of movements.
@@ -131,9 +134,20 @@ function movementRecord({ materialId, material, user, sv }, { type, delta, note 
 
 // Received or Used on an existing material. The quantity is an increment, not a number the
 // phone computed, so two people recording at the same moment (or offline) both count.
-export function buildMovementUpdates({ siteId, materialId, movementId, material, movement, user, sv }) {
+export function buildMovementUpdates({
+    siteId,
+    materialId,
+    movementId,
+    material,
+    movement,
+    user,
+    sv,
+}) {
     return {
-        [`movements/${siteId}/${movementId}`]: movementRecord({ materialId, material, user, sv }, movement),
+        [`movements/${siteId}/${movementId}`]: movementRecord(
+            { materialId, material, user, sv },
+            movement,
+        ),
         [`materials/${siteId}/${materialId}/quantity`]: sv.increment(movement.delta),
         [`materials/${siteId}/${materialId}/lastMovementId`]: movementId,
         [`materials/${siteId}/${materialId}/updatedAt`]: sv.timestamp(),
@@ -142,7 +156,15 @@ export function buildMovementUpdates({ siteId, materialId, movementId, material,
 
 // A new material. With a starting quantity it gets an "opening" movement, so history starts
 // complete. `material` is { name, units, quantity, minLevel? }.
-export function buildAddMaterialUpdates({ siteId, materialId, movementId, material, user, sv, note }) {
+export function buildAddMaterialUpdates({
+    siteId,
+    materialId,
+    movementId,
+    material,
+    user,
+    sv,
+    note,
+}) {
     const { quantity, ...rest } = material;
     const stored = { ...rest, quantity, updatedAt: sv.timestamp() };
     const updates = { [`materials/${siteId}/${materialId}`]: stored };
@@ -171,14 +193,27 @@ export function buildRemoveMaterialUpdates({ siteId, materialId, movementId, mat
 
 // Undo of a delete: the material comes back at its old key with its old quantity, with an
 // "opening" movement that says so.
-export function buildRestoreMaterialUpdates({ siteId, materialId, movementId, material, user, sv }) {
+export function buildRestoreMaterialUpdates({
+    siteId,
+    materialId,
+    movementId,
+    material,
+    user,
+    sv,
+}) {
     const { name, units, quantity, minLevel } = material;
     const restored = { name, units, quantity };
     if (typeof minLevel === "number") {
         restored.minLevel = minLevel;
     }
     return buildAddMaterialUpdates({
-        siteId, materialId, movementId, material: restored, user, sv, note: "Restored after delete",
+        siteId,
+        materialId,
+        movementId,
+        material: restored,
+        user,
+        sv,
+        note: "Restored after delete",
     });
 }
 
@@ -198,12 +233,14 @@ export function buildEditMaterialUpdates({ siteId, materialId, fields, sv }) {
 
 // Oldest first. `at` is the server's time; ids (push ids) break ties in the order they were made.
 export function sortMovements(list) {
-    return [...list].sort((a, b) => (a.at - b.at) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    return [...list].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 // { id: movement } as the database returns it, to an array that carries each id.
 export function movementsFromObject(object) {
-    return sortMovements(Object.entries(object || {}).map(([id, movement]) => ({ id, ...movement })));
+    return sortMovements(
+        Object.entries(object || {}).map(([id, movement]) => ({ id, ...movement })),
+    );
 }
 
 // Each movement with the balance right after it. The balance is worked back from the quantity
@@ -230,12 +267,13 @@ export function reconciles(movements, quantity) {
 
 // Rounds away float noise (0.1 + 0.2). `|| 0` turns -0 into 0, which deepEqual and === both care about.
 function roundOff(value) {
-    return (Math.round(value * 10 ** (MAX_DECIMALS + 3)) / 10 ** (MAX_DECIMALS + 3)) || 0;
+    return Math.round(value * 10 ** (MAX_DECIMALS + 3)) / 10 ** (MAX_DECIMALS + 3) || 0;
 }
 
 // "Brian used 20 bags of cement" needs a name: the part of the email before the @.
 export function whoLabel(movement, members = {}) {
-    const email = (members[movement.byUid] && members[movement.byUid].email) || movement.byEmail || "";
+    const email =
+        (members[movement.byUid] && members[movement.byUid].email) || movement.byEmail || "";
     return email.split("@")[0] || "Someone";
 }
 
@@ -245,11 +283,16 @@ export function describeMovement(movement, members = {}) {
     const quantity = `${formatQuantity(Math.abs(movement.delta))} ${movement.units}`;
     const amount = `${quantity} of ${movement.materialName}`;
     switch (movement.type) {
-        case "received": return `${who} received ${amount}`;
-        case "used": return `${who} used ${amount}`;
-        case "opening": return `${who} added ${amount}`;
-        case "removed": return `${who} deleted ${movement.materialName} (${quantity} left)`;
-        default: return `${who} changed ${movement.materialName}`;
+        case "received":
+            return `${who} received ${amount}`;
+        case "used":
+            return `${who} used ${amount}`;
+        case "opening":
+            return `${who} added ${amount}`;
+        case "removed":
+            return `${who} deleted ${movement.materialName} (${quantity} left)`;
+        default:
+            return `${who} changed ${movement.materialName}`;
     }
 }
 

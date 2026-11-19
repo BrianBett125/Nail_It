@@ -32,7 +32,11 @@ test("materials that need nothing are skipped, each with its reason", () => {
     const plan = byId(planBackfill(SITES));
     assert.deepEqual([plan.m2.action, plan.m2.reason], ["skip", "no stock, nothing to explain"]);
     assert.deepEqual([plan.m3.action, plan.m3.reason], ["skip", "already has movements"]);
-    assert.deepEqual([plan.m4.action, plan.m4.reason], ["skip", "already has movements"], "a movement exists even without the pointer");
+    assert.deepEqual(
+        [plan.m4.action, plan.m4.reason],
+        ["skip", "already has movements"],
+        "a movement exists even without the pointer",
+    );
     assert.equal(plan.m5.action, "skip", "a text quantity is not touched, it is not a number");
 });
 
@@ -45,9 +49,12 @@ test("counts add up, and running the plan on an empty or null database is a no-o
 
 test("the CSV has one line per material, shows the history sum before and after, and quotes commas", () => {
     const csv = backfillCsv(planBackfill(SITES).items).trim().split("\n");
-    assert.equal(csv[0], "site,material,name,quantity,action,reason,movements_sum_before,movements_sum_after");
+    assert.equal(
+        csv[0],
+        "site,material,name,quantity,action,reason,movements_sum_before,movements_sum_after",
+    );
     assert.equal(csv.length, 1 + 6);
     assert.ok(csv.includes("s1,m1,Cement,5,backfill,,0,5"));
     assert.ok(csv.includes('s2,m6,"Gravel, coarse",2.5,backfill,,0,2.5'));
-    assert.ok(csv.includes("s1,m2,Sand,0,skip,\"no stock, nothing to explain\",,"));
+    assert.ok(csv.includes('s1,m2,Sand,0,skip,"no stock, nothing to explain",,'));
 });

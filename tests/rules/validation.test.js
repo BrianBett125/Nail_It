@@ -3,13 +3,29 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startEnv, reset, raw, as, ref, set, update, assertSucceeds, assertFails, MATERIAL, SITE,
+    startEnv,
+    reset,
+    raw,
+    as,
+    ref,
+    set,
+    update,
+    assertSucceeds,
+    assertFails,
+    MATERIAL,
+    SITE,
 } from "./helpers.js";
 
 let env;
-before(async () => { env = await startEnv(); });
-after(async () => { await env.cleanup(); });
-beforeEach(async () => { await reset(env); });
+before(async () => {
+    env = await startEnv();
+});
+after(async () => {
+    await env.cleanup();
+});
+beforeEach(async () => {
+    await reset(env);
+});
 
 const owner = () => as(env, "owner1");
 // A new material starts at zero: stock arrives through movements (tests/rules/movements.test.js).
@@ -21,7 +37,9 @@ describe("material validation", () => {
         await assertSucceeds(set(ref(owner(), "materials/s1/b"), newMaterial({ minLevel: 10 })));
         await assertSucceeds(set(ref(owner(), "materials/s1/c"), newMaterial({ minLevel: 0 })));
         await assertSucceeds(set(ref(owner(), "materials/s1/d"), newMaterial({ minLevel: 12.5 })));
-        await assertSucceeds(set(ref(owner(), "materials/s1/e"), { name: "Sand", quantity: 0, units: "tonnes" }));
+        await assertSucceeds(
+            set(ref(owner(), "materials/s1/e"), { name: "Sand", quantity: 0, units: "tonnes" }),
+        );
     });
 
     const bad = {
@@ -66,25 +84,37 @@ describe("material validation", () => {
     });
 
     it("a storekeeper is held to the same validation", async () => {
-        await assertFails(set(ref(as(env, "keeper1"), "materials/s1/x"), newMaterial({ quantity: -1 })));
+        await assertFails(
+            set(ref(as(env, "keeper1"), "materials/s1/x"), newMaterial({ quantity: -1 })),
+        );
     });
 
     it("accepts the migrated legacy unit 'kgs' (free text up to 20 characters)", async () => {
-        await assertSucceeds(set(ref(owner(), "materials/s1/legacy"), newMaterial({ units: "kgs" })));
+        await assertSucceeds(
+            set(ref(owner(), "materials/s1/legacy"), newMaterial({ units: "kgs" })),
+        );
     });
 });
 
 describe("site validation", () => {
-    const create = (patch, id = "n1") => set(ref(as(env, "newbie"), `sites/${id}`), { ...SITE, ownerUid: "newbie", ...patch });
-    const createAtomic = (patch, id = "n1") => update(ref(as(env, "newbie")), {
-        [`sites/${id}`]: { ...SITE, ownerUid: "newbie", ...patch },
-        [`members/${id}/newbie`]: "owner",
-        [`userSites/newbie/${id}`]: "owner",
-    });
+    const create = (patch, id = "n1") =>
+        set(ref(as(env, "newbie"), `sites/${id}`), { ...SITE, ownerUid: "newbie", ...patch });
+    const createAtomic = (patch, id = "n1") =>
+        update(ref(as(env, "newbie")), {
+            [`sites/${id}`]: { ...SITE, ownerUid: "newbie", ...patch },
+            [`members/${id}/newbie`]: "owner",
+            [`userSites/newbie/${id}`]: "owner",
+        });
 
     it("accepts every building type in the dropdown", async () => {
         let i = 0;
-        for (const buildingType of ["Residential", "Commercial", "Industrial", "Road/Civil", "Other"]) {
+        for (const buildingType of [
+            "Residential",
+            "Commercial",
+            "Industrial",
+            "Road/Civil",
+            "Other",
+        ]) {
             i += 1;
             await assertSucceeds(createAtomic({ buildingType }, `ok${i}`));
         }
@@ -111,9 +141,13 @@ describe("site validation", () => {
         for (const field of ["name", "location", "buildingType", "createdAt", "ownerUid"]) {
             const site = { ...SITE, ownerUid: "newbie" };
             delete site[field];
-            await assertFails(update(ref(as(env, "newbie")), {
-                "sites/n1": site, "members/n1/newbie": "owner", "userSites/newbie/n1": "owner",
-            }));
+            await assertFails(
+                update(ref(as(env, "newbie")), {
+                    "sites/n1": site,
+                    "members/n1/newbie": "owner",
+                    "userSites/newbie/n1": "owner",
+                }),
+            );
         }
     });
 
@@ -130,12 +164,22 @@ describe("site validation", () => {
 
 describe("role value validation", () => {
     it("rejects a role that is not one of the three", async () => {
-        await assertFails(update(ref(owner()), { "members/s1/viewer1": "admin", "userSites/viewer1/s1": "admin" }));
+        await assertFails(
+            update(ref(owner()), {
+                "members/s1/viewer1": "admin",
+                "userSites/viewer1/s1": "admin",
+            }),
+        );
         await assertFails(set(ref(owner(), "members/s1/viewer1"), true));
         await assertFails(set(ref(owner(), "members/s1/viewer1"), 5));
     });
     it("never lets the owner role go to anyone but the site's ownerUid", async () => {
-        await assertFails(update(ref(owner()), { "members/s1/viewer1": "owner", "userSites/viewer1/s1": "owner" }));
+        await assertFails(
+            update(ref(owner()), {
+                "members/s1/viewer1": "owner",
+                "userSites/viewer1/s1": "owner",
+            }),
+        );
         assert.equal(await raw(env, "members/s1/viewer1"), "viewer");
     });
 });

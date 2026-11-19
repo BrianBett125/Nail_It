@@ -18,7 +18,8 @@ const MESSAGES = {
 
 export const NOT_CONFIGURED_MESSAGE = "Sign-in is not set up yet (missing Firebase web API key).";
 export const GENERIC_AUTH_MESSAGE = "Something went wrong. Try again.";
-export const RESET_SENT_MESSAGE = "If an account exists for that email, a reset link is on its way.";
+export const RESET_SENT_MESSAGE =
+    "If an account exists for that email, a reset link is on its way.";
 
 export function friendlyAuthError(error) {
     const code = error && typeof error.code === "string" ? error.code : "";

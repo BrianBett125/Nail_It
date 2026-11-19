@@ -14,7 +14,9 @@ let fakeUrl;
 let browser;
 
 function listen(server) {
-    return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(`http://127.0.0.1:${server.address().port}`)));
+    return new Promise((resolve) =>
+        server.listen(0, "127.0.0.1", () => resolve(`http://127.0.0.1:${server.address().port}`)),
+    );
 }
 
 before(async () => {
@@ -35,7 +37,13 @@ after(async () => {
 async function watched(url) {
     const context = await browser.newContext();
     const page = await context.newPage();
-    const seen = { violations: [], consoleErrors: [], failed: [], requests: [], responses: new Map() };
+    const seen = {
+        violations: [],
+        consoleErrors: [],
+        failed: [],
+        requests: [],
+        responses: new Map(),
+    };
     await page.addInitScript(() => {
         window.__csp = [];
         document.addEventListener("securitypolicyviolation", (event) => {
@@ -47,7 +55,9 @@ async function watched(url) {
             seen.consoleErrors.push(message.text());
         }
     });
-    page.on("requestfailed", (request) => seen.failed.push(`${request.url()} ${request.failure() && request.failure().errorText}`));
+    page.on("requestfailed", (request) =>
+        seen.failed.push(`${request.url()} ${request.failure() && request.failure().errorText}`),
+    );
     page.on("request", (request) => seen.requests.push(request.url()));
     page.on("response", (response) => seen.responses.set(response.url(), response));
     const response = await page.goto(url);
@@ -59,7 +69,13 @@ const violations = (page) => page.evaluate(() => window.__csp);
 
 describe("the headers arrive", () => {
     it("every page is served with the security headers", async () => {
-        for (const file of ["index.html", "about-us.html", "login.html", "dashboard.html", "overview.html"]) {
+        for (const file of [
+            "index.html",
+            "about-us.html",
+            "login.html",
+            "dashboard.html",
+            "overview.html",
+        ]) {
             const { context, seen } = await watched(`${realUrl}/${file}`);
             const headers = seen.main.headers();
             assert.match(headers["content-security-policy"], /default-src 'self'/, file);
@@ -90,7 +106,10 @@ describe("the public pages run under the policy", () => {
             await page.waitForLoadState("networkidle");
             assert.deepEqual(await violations(page), []);
             assert.deepEqual(seen.failed, []);
-            assert.deepEqual(seen.consoleErrors.filter((e) => /Content Security Policy|Refused to/i.test(e)), []);
+            assert.deepEqual(
+                seen.consoleErrors.filter((e) => /Content Security Policy|Refused to/i.test(e)),
+                [],
+            );
             await context.close();
         });
     }
@@ -100,7 +119,11 @@ describe("the public pages run under the policy", () => {
         for (const file of ["index.html", "about-us.html", "login.html"]) {
             const { context, page, seen } = await watched(`${realUrl}/${file}`);
             await page.waitForLoadState("networkidle");
-            assert.deepEqual(seen.requests.filter((url) => !allowed.test(url)), [], file);
+            assert.deepEqual(
+                seen.requests.filter((url) => !allowed.test(url)),
+                [],
+                file,
+            );
             await context.close();
         }
     });
@@ -116,16 +139,26 @@ describe("Firebase works under the policy", () => {
         await page.locator("#authMessage:not([hidden])").waitFor({ timeout: 20000 });
         const message = (await page.textContent("#authMessage")).trim();
         assert.ok(message.length > 5, message);
-        assert.ok(seen.requests.some((url) => url.startsWith("https://identitytoolkit.googleapis.com/")), "the sign-in request went out");
+        assert.ok(
+            seen.requests.some((url) => url.startsWith("https://identitytoolkit.googleapis.com/")),
+            "the sign-in request went out",
+        );
         assert.deepEqual(await violations(page), []);
-        assert.doesNotMatch(message, /not set up|network|connect/i, `the answer came from Google, not from a blocked request: ${message}`);
+        assert.doesNotMatch(
+            message,
+            /not set up|network|connect/i,
+            `the answer came from Google, not from a blocked request: ${message}`,
+        );
         await context.close();
     });
 
     it("the Firebase modules load from gstatic and the app starts", async () => {
         const { context, page, seen } = await watched(`${realUrl}/login.html`);
         await page.waitForLoadState("networkidle");
-        assert.ok(seen.requests.some((url) => url.startsWith("https://www.gstatic.com/firebasejs/")), "the SDK was fetched");
+        assert.ok(
+            seen.requests.some((url) => url.startsWith("https://www.gstatic.com/firebasejs/")),
+            "the SDK was fetched",
+        );
         assert.deepEqual(await violations(page), []);
         await context.close();
     });
@@ -150,7 +183,11 @@ describe("the RTDB shard hosts are allowed (regression: sites would not load)", 
         });
         await page.waitForTimeout(800);
         const refused = (await violations(page)).filter((v) => /firebasedatabase\.app/.test(v));
-        assert.deepEqual(refused, [], `the shard namespace must be allowed by script-src and frame-src: ${JSON.stringify(refused)}`);
+        assert.deepEqual(
+            refused,
+            [],
+            `the shard namespace must be allowed by script-src and frame-src: ${JSON.stringify(refused)}`,
+        );
         await context.close();
     });
 });
@@ -172,9 +209,18 @@ describe("the policy is really enforced", () => {
         await page.waitForTimeout(300);
         assert.equal(await page.evaluate(() => window.__inline), undefined);
         const blocked = await violations(page);
-        assert.ok(blocked.some((v) => v.startsWith("script-src-elem") || v.startsWith("script-src")), JSON.stringify(blocked));
-        assert.ok(blocked.some((v) => v.startsWith("style-src")), JSON.stringify(blocked));
-        assert.ok(blocked.some((v) => /example\.com/.test(v)), JSON.stringify(blocked));
+        assert.ok(
+            blocked.some((v) => v.startsWith("script-src-elem") || v.startsWith("script-src")),
+            JSON.stringify(blocked),
+        );
+        assert.ok(
+            blocked.some((v) => v.startsWith("style-src")),
+            JSON.stringify(blocked),
+        );
+        assert.ok(
+            blocked.some((v) => /example\.com/.test(v)),
+            JSON.stringify(blocked),
+        );
         await context.close();
     });
 
@@ -186,7 +232,11 @@ describe("the policy is really enforced", () => {
         await page.setContent(`<iframe id="f" src="${realUrl}/login.html"></iframe>`);
         await page.waitForTimeout(500);
         const framed = await page.frames().find((f) => f.url().startsWith(realUrl));
-        assert.ok(!framed || (await framed.evaluate(() => document.body.children.length).catch(() => 0)) === 0, "the framed page did not render");
+        assert.ok(
+            !framed ||
+                (await framed.evaluate(() => document.body.children.length).catch(() => 0)) === 0,
+            "the framed page did not render",
+        );
         await context.close();
     });
 });
@@ -195,10 +245,16 @@ describe("the signed-in pages run under the policy", () => {
     it("the dashboard, its sheets and the overview raise no policy violation", async () => {
         const { context, page, seen } = await watched(`${fakeUrl}/dashboard.html?site=sA`);
         await page.waitForSelector("#materialTableBody tr");
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-use").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator(".btn-use")
+            .click();
         await page.waitForSelector("#movementContainer", { state: "visible" });
         await page.keyboard.press("Escape");
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-history").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator(".btn-history")
+            .click();
         await page.waitForSelector("#historyContainer", { state: "visible" });
         await page.keyboard.press("Escape");
         await page.click("#filterLow");
@@ -212,12 +268,20 @@ describe("the signed-in pages run under the policy", () => {
     it("the Reports dialog saves files and prints with no policy violation", async () => {
         const { context, page, seen } = await watched(`${fakeUrl}/dashboard.html?site=sA`);
         await page.waitForSelector("#materialTableBody tr");
-        await page.evaluate(() => { window.print = () => {}; });
+        await page.evaluate(() => {
+            window.print = () => {};
+        });
         await page.click("#reportsButton");
-        const [stock] = await Promise.all([page.waitForEvent("download"), page.click("#exportStock")]);
+        const [stock] = await Promise.all([
+            page.waitForEvent("download"),
+            page.click("#exportStock"),
+        ]);
         assert.match(stock.suggestedFilename(), /-stock-\d{4}-\d{2}-\d{2}\.csv$/);
         await page.fill("#reportFrom", "2000-01-01");
-        const [moves] = await Promise.all([page.waitForEvent("download"), page.click("#exportMovements")]);
+        const [moves] = await Promise.all([
+            page.waitForEvent("download"),
+            page.click("#exportMovements"),
+        ]);
         assert.match(moves.suggestedFilename(), /-movements-2000-01-01_to_/);
         await page.click("#reportShare");
         await page.click("#reportPrint");

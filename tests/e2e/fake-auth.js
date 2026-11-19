@@ -18,12 +18,22 @@ function notify() {
 
 window.__auth = {
     calls,
-    get user() { return user ? { ...user } : null; },
-    setUser(next) { user = next; notify(); },
-    failWith: null,   // { code } thrown by the next signIn / signUp / resetPassword
-    hold: false,      // sign-in / sign-up wait until releaseHold()
+    get user() {
+        return user ? { ...user } : null;
+    },
+    setUser(next) {
+        user = next;
+        notify();
+    },
+    failWith: null, // { code } thrown by the next signIn / signUp / resetPassword
+    hold: false, // sign-in / sign-up wait until releaseHold()
     verifyOnRefresh: false,
-    releaseHold() { if (release) { release(); release = null; } },
+    releaseHold() {
+        if (release) {
+            release();
+            release = null;
+        }
+    },
 };
 
 function maybeFail() {
@@ -36,7 +46,9 @@ function maybeFail() {
 
 async function maybeHold() {
     if (window.__auth.hold) {
-        await new Promise((resolve) => { release = resolve; });
+        await new Promise((resolve) => {
+            release = resolve;
+        });
     }
 }
 

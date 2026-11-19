@@ -60,7 +60,9 @@ header {
     border-bottom: 2px solid transparent;
     font-size: 15px;
     font-weight: 600;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition:
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .nav-links a:hover,
@@ -86,8 +88,9 @@ header {
     padding: calc(var(--header-h) + 40px) var(--sp-6) var(--sp-20);
     text-align: center;
     color: var(--on-dark);
-    background: linear-gradient(var(--scrim), var(--scrim-strong)),
-        url('../assets/sparks-1600.webp') no-repeat center center/cover;
+    background:
+        linear-gradient(var(--scrim), var(--scrim-strong)),
+        url("../assets/sparks-1600.webp") no-repeat center center/cover;
 }
 
 .intro-content h1 {
@@ -254,7 +257,8 @@ footer {
    as a screen of light rather than a bare picture. */
 @media (max-width: 768px) {
     .intro-section {
-        background-image: linear-gradient(var(--scrim), var(--scrim-strong)), url('../assets/sparks-800.webp');
+        background-image:
+            linear-gradient(var(--scrim), var(--scrim-strong)), url("../assets/sparks-800.webp");
     }
 }
 

@@ -75,7 +75,9 @@
    page. It is a button, so it also has to read as one. */
 .stat-low {
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .stat-low .stat-num {
@@ -283,7 +285,10 @@
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
 #filterLow {
@@ -445,13 +450,18 @@
     color: var(--on-dark);
 }
 
-.clear-view[hidden] { display: none; }
+.clear-view[hidden] {
+    display: none;
+}
 
 /* ---- phones ----
    The list is what people came for, so the figures above it are kept tight: the low tile and the
    first pill must both land on the first screen (tests/e2e/insights-ui-B). */
 @media (max-width: 768px) {
-    .insights { gap: 8px; margin-bottom: 10px; }
+    .insights {
+        gap: 8px;
+        margin-bottom: 10px;
+    }
 
     .site-summary {
         grid-template-columns: 1fr 1.35fr 1fr;
@@ -464,31 +474,78 @@
         border-radius: var(--r-md);
     }
 
-    .stat-num { font-size: 34px; }
-    .stat-low .stat-num { font-size: 46px; }
-    .stat-activity .stat-num { font-size: 21px; }
-    .stat-label { font-size: 11px; }
-    .stat-low .stat-label { font-size: 12px; }
+    .stat-num {
+        font-size: 34px;
+    }
+    .stat-low .stat-num {
+        font-size: 46px;
+    }
+    .stat-activity .stat-num {
+        font-size: 21px;
+    }
+    .stat-label {
+        font-size: 11px;
+    }
+    .stat-low .stat-label {
+        font-size: 12px;
+    }
 
     /* The strip wraps (three pills at most, then "+N more") instead of hiding its third item off the edge. */
-    .needs-attention { padding: 6px 10px 8px; }
-    .needs-attention h2 { margin-bottom: 6px; font-size: 12px; }
+    .needs-attention {
+        padding: 6px 10px 8px;
+    }
+    .needs-attention h2 {
+        margin-bottom: 6px;
+        font-size: 12px;
+    }
 
-    .attention-list { gap: 6px; }
+    .attention-list {
+        gap: 6px;
+    }
 
-    .attention-list li { flex: 1 1 100%; }
-    .attention-list li .attention-pill { width: 100%; box-sizing: border-box; }
+    .attention-list li {
+        flex: 1 1 100%;
+    }
+    .attention-list li .attention-pill {
+        width: 100%;
+        box-sizing: border-box;
+    }
 
-    .attention-pill { min-height: 46px; padding: 4px 12px; }
+    .attention-pill {
+        min-height: 46px;
+        padding: 4px 12px;
+    }
 
     /* Row one: search. Row two: the two chips and the sort menu, each at least 44px tall. */
-    .control-search { flex: 1 1 100%; max-width: none; }
-    .control-chips { flex: none; }
-    .filter-chip { padding: 0 14px; }
-    .control-sort { flex: 1 1 0; min-width: 0; margin-left: 0; }
+    .control-search {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+    .control-chips {
+        flex: none;
+    }
+    .filter-chip {
+        padding: 0 14px;
+    }
+    .control-sort {
+        flex: 1 1 0;
+        min-width: 0;
+        margin-left: 0;
+    }
     /* The word "Sort" stays visible on a phone: an arrow alone does not say what the menu does. */
-    .control-sort label { flex: none; font-size: 14px; font-weight: 700; }
-    .control-sort select { flex: 1; width: 100%; min-width: 0; padding: 0 6px; font-size: 15px; text-overflow: ellipsis; }
+    .control-sort label {
+        flex: none;
+        font-size: 14px;
+        font-weight: 700;
+    }
+    .control-sort select {
+        flex: 1;
+        width: 100%;
+        min-width: 0;
+        padding: 0 6px;
+        font-size: 15px;
+        text-overflow: ellipsis;
+    }
 
     /* Cards: the tint and the accent go on the card, the cells stay clear. */
     #materialsTable tr.is-low {
@@ -496,7 +553,9 @@
         background: var(--low-soft);
     }
 
-    #materialsTable tr.is-out { border-left-color: var(--low-deep); }
+    #materialsTable tr.is-out {
+        border-left-color: var(--low-deep);
+    }
 
     #materialsTable tr.is-low td,
     #materialsTable tr.is-low td:first-child {
@@ -504,13 +563,23 @@
         box-shadow: none;
     }
 
-    #materialsTable tr.is-low td:nth-child(2) { color: var(--low); }
+    #materialsTable tr.is-low td:nth-child(2) {
+        color: var(--low);
+    }
 
     /* The status cell is the last in the DOM but sits right under the name and the stock figure. */
-    #materialsTable td:nth-child(-n+3) { grid-row: 1; }
-    #materialsTable td:nth-child(4) { grid-row: 3; }
-    #materialsTable .cell-stock { grid-row: 4; }
-    #materialsTable .cell-manage { grid-row: 5; }
+    #materialsTable td:nth-child(-n + 3) {
+        grid-row: 1;
+    }
+    #materialsTable td:nth-child(4) {
+        grid-row: 3;
+    }
+    #materialsTable .cell-stock {
+        grid-row: 4;
+    }
+    #materialsTable .cell-manage {
+        grid-row: 5;
+    }
     #materialsTable .cell-status {
         grid-row: 2;
         grid-column: 1 / -1;
@@ -522,14 +591,34 @@
         white-space: normal;
     }
 
-    #materialsTable .cell-status:empty { display: none; }
-    .low-detail { margin-left: 0; font-size: 15px; }
+    #materialsTable .cell-status:empty {
+        display: none;
+    }
+    .low-detail {
+        margin-left: 0;
+        font-size: 15px;
+    }
 
-    #materialsTable tr { transition: background-color 0.15s ease; }
-    #materialsTable tr.row-flash { background: var(--flash); }
+    #materialsTable tr {
+        transition: background-color 0.15s ease;
+    }
+    #materialsTable tr.row-flash {
+        background: var(--flash);
+    }
 
     /* Reports, Members and Add Material share one row instead of one standing alone on its own. */
-    .content-header { gap: 8px; }
-    .content-header h1 { flex: 1 1 auto; }
-    #reportsButton, #membersButton, #addMaterialButton { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
+    .content-header {
+        gap: 8px;
+    }
+    .content-header h1 {
+        flex: 1 1 auto;
+    }
+    #reportsButton,
+    #membersButton,
+    #addMaterialButton {
+        flex: 1 1 0;
+        min-width: 0;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
 }

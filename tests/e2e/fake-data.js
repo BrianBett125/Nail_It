@@ -28,7 +28,8 @@ import {
 } from "/src/movements.js";
 
 const seed = window.__seed || {};
-const me = () => (window.__auth && window.__auth.user) || { uid: "u1", email: "foreman@example.com" };
+const me = () =>
+    (window.__auth && window.__auth.user) || { uid: "u1", email: "foreman@example.com" };
 
 function fileBySite(flat) {
     const bySite = {};
@@ -83,27 +84,33 @@ const byKey = ([a], [b]) => (a < b ? -1 : a > b ? 1 : 0);
 
 function snapshotFor(listener) {
     if (listener.kind === "sites") {
-        return Object.fromEntries(Object.entries(db.sites)
-            .filter(([id]) => !db.hidden.includes(id))
-            .map(([id, site]) => [id, { ...site, role: roleOf(id) }]));
+        return Object.fromEntries(
+            Object.entries(db.sites)
+                .filter(([id]) => !db.hidden.includes(id))
+                .map(([id, site]) => [id, { ...site, role: roleOf(id) }]),
+        );
     }
     if (listener.kind === "materials") {
         // Like a push-id keyed node: ties come back in key order.
         return Object.fromEntries(Object.entries(db.materials[listener.siteId] || {}).sort(byKey));
     }
     if (listener.kind === "movements") {
-        let list = Object.entries(db.movements[listener.siteId] || {}).map(([id, movement]) => ({ id, ...movement }));
+        let list = Object.entries(db.movements[listener.siteId] || {}).map(([id, movement]) => ({
+            id,
+            ...movement,
+        }));
         if (listener.materialId) {
             list = list.filter((movement) => movement.materialId === listener.materialId);
         }
         return sortMovements(list).slice(-listener.limit);
     }
     if (listener.kind === "members") {
-        const members = db.members[listener.siteId]
-            || [{ uid: me().uid, role: roleOf(listener.siteId), email: me().email }];
+        const members = db.members[listener.siteId] || [
+            { uid: me().uid, role: roleOf(listener.siteId), email: me().email },
+        ];
         return {
             members,
-            invites: listener.withInvites ? (db.siteInvites[listener.siteId] || []) : [],
+            invites: listener.withInvites ? db.siteInvites[listener.siteId] || [] : [],
         };
     }
     return db.invites; // kind "invites"
@@ -148,7 +155,9 @@ function subscribe(listener) {
 // With holdAcks on, writes stay unacknowledged until releaseAcks() resolves them all.
 function ack() {
     if (window.__nailit.holdAcks) {
-        return new Promise((resolve) => { pendingAcks.push(resolve); });
+        return new Promise((resolve) => {
+            pendingAcks.push(resolve);
+        });
     }
     return Promise.resolve();
 }
@@ -173,11 +182,22 @@ window.__nailit = {
         notify();
     },
     // Somebody else records a movement (their phone, not this page): quantity and history move together.
-    externalMovement(siteId, materialId, { type, delta, note, byUid = "u2", byEmail = "other@example.com" }) {
+    externalMovement(
+        siteId,
+        materialId,
+        { type, delta, note, byUid = "u2", byEmail = "other@example.com" },
+    ) {
         const material = db.materials[siteId][materialId];
         const id = nextId();
         const record = {
-            materialId, materialName: material.name, units: material.units, delta, type, byUid, byEmail, at: clock(),
+            materialId,
+            materialName: material.name,
+            units: material.units,
+            delta,
+            type,
+            byUid,
+            byEmail,
+            at: clock(),
         };
         if (note) {
             record.note = note;
@@ -264,7 +284,13 @@ export function subscribeConnection(onData, onError) {
 export function addSite(site, user) {
     const id = nextId();
     const value = { ...site, ownerUid: user.uid };
-    writes.push({ op: "push", path: "sites", id, value, owner: { uid: user.uid, email: user.email } });
+    writes.push({
+        op: "push",
+        path: "sites",
+        id,
+        value,
+        owner: { uid: user.uid, email: user.email },
+    });
     db.sites[id] = value;
     db.roles[id] = "owner";
     notify();
@@ -301,13 +327,11 @@ function fill(value, current) {
         return (typeof current === "number" ? current : 0) + value[".sv"].increment;
     }
     if (value && typeof value === "object") {
-        return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, fill(v, current && current[key])]));
+        return Object.fromEntries(
+            Object.entries(value).map(([key, v]) => [key, fill(v, current && current[key])]),
+        );
     }
     return value;
-}
-
-function walk(root, parts) {
-    return parts.reduce((node, part) => (node == null ? undefined : node[part]), root);
 }
 
 function applyPaths(tree, updates) {
@@ -328,7 +352,10 @@ function applyPaths(tree, updates) {
 
 // Applies the update the way the server would, or refuses the whole thing.
 function applyStock(updates) {
-    const tree = { materials: structuredClone(db.materials), movements: structuredClone(db.movements) };
+    const tree = {
+        materials: structuredClone(db.materials),
+        movements: structuredClone(db.movements),
+    };
     applyPaths(tree, updates);
     for (const materials of Object.values(tree.materials)) {
         for (const material of Object.values(materials || {})) {
@@ -377,18 +404,21 @@ const outbox = createOutbox({
         if (window.__nailit.throwOnWrite) {
             throw new Error("boom");
         }
-        return writeStock(buildMovementUpdates({
-            siteId: entry.siteId,
-            materialId: entry.materialId,
-            movementId: entry.movementId,
-            material: entry.material,
-            movement: entry.movement,
-            user: entry.user,
-            sv,
-        }));
+        return writeStock(
+            buildMovementUpdates({
+                siteId: entry.siteId,
+                materialId: entry.materialId,
+                movementId: entry.movementId,
+                material: entry.material,
+                movement: entry.movement,
+                user: entry.user,
+                sv,
+            }),
+        );
     },
     // Already in the fake database? Then it landed during a write whose answer went missing.
-    landed: (entry) => Boolean(db.movements[entry.siteId] && db.movements[entry.siteId][entry.movementId]),
+    landed: (entry) =>
+        Boolean(db.movements[entry.siteId] && db.movements[entry.siteId][entry.movementId]),
 });
 
 const outboxListeners = new Set();
@@ -411,9 +441,16 @@ export function replayOutbox() {
 
 export function addMaterial(siteId, material, user) {
     const id = nextId();
-    const done = writeStock(buildAddMaterialUpdates({
-        siteId, materialId: id, movementId: nextId(), material, user, sv,
-    }));
+    const done = writeStock(
+        buildAddMaterialUpdates({
+            siteId,
+            materialId: id,
+            movementId: nextId(),
+            material,
+            user,
+            sv,
+        }),
+    );
     return { id, done };
 }
 
@@ -443,24 +480,46 @@ export function removeMaterial(siteId, materialId, material, user) {
     if (window.__nailit.throwOnRemove) {
         throw new Error("remove denied");
     }
-    return writeStock(buildRemoveMaterialUpdates({
-        siteId, materialId, movementId: nextId(), material, user, sv,
-    }));
+    return writeStock(
+        buildRemoveMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: nextId(),
+            material,
+            user,
+            sv,
+        }),
+    );
 }
 
 export function restoreMaterial(siteId, materialId, material, user) {
-    return writeStock(buildRestoreMaterialUpdates({
-        siteId, materialId, movementId: nextId(), material, user, sv,
-    }));
+    return writeStock(
+        buildRestoreMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: nextId(),
+            material,
+            user,
+            sv,
+        }),
+    );
 }
 
 // Every movement of the site inside [from, to], oldest first, as a report reads them.
 export async function fetchMovementsBetween(siteId, from, to) {
-    const all = Object.entries(db.movements[siteId] || {}).map(([id, movement]) => ({ id, ...structuredClone(movement) }));
+    const all = Object.entries(db.movements[siteId] || {}).map(([id, movement]) => ({
+        id,
+        ...structuredClone(movement),
+    }));
     return sortMovements(all.filter((movement) => movement.at >= from && movement.at <= to));
 }
 
-export function subscribeMovements(siteId, { materialId = null, limit = 100 } = {}, onData, onError) {
+export function subscribeMovements(
+    siteId,
+    { materialId = null, limit = 100 } = {},
+    onData,
+    onError,
+) {
     return subscribe({ kind: "movements", siteId, materialId, limit, onData, onError });
 }
 
@@ -470,7 +529,11 @@ export async function deleteSiteCascade(siteId) {
     }
     const members = db.members[siteId] || [{ uid: me().uid }];
     const invites = db.siteInvites[siteId] || [];
-    const paths = buildSiteDeleteUpdates(siteId, members.map((m) => m.uid), invites.map((i) => i.key));
+    const paths = buildSiteDeleteUpdates(
+        siteId,
+        members.map((m) => m.uid),
+        invites.map((i) => i.key),
+    );
     writes.push({ op: "multi", paths });
     delete db.sites[siteId];
     delete db.materials[siteId];
@@ -499,7 +562,11 @@ export function inviteMember(site, inviter, invite) {
         key: invite.key,
         role: invite.role,
     });
-    (db.siteInvites[site.id] ||= []).push({ key: invite.key, email: emailFromKey(invite.key), role: invite.role });
+    (db.siteInvites[site.id] ||= []).push({
+        key: invite.key,
+        email: emailFromKey(invite.key),
+        role: invite.role,
+    });
     notify();
     return ack();
 }

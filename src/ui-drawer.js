@@ -24,7 +24,7 @@ export function createDrawer() {
     const phone = window.matchMedia(PHONE);
 
     let hasSite = false;
-    let ready = false;   // the site list has arrived
+    let ready = false; // the site list has arrived
 
     const isOpen = () => bar.classList.contains("is-open");
 

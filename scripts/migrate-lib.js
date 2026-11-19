@@ -24,7 +24,11 @@ function canonical(value) {
         return value.map(canonical);
     }
     if (value !== null && typeof value === "object") {
-        return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+        return Object.fromEntries(
+            Object.keys(value)
+                .sort()
+                .map((key) => [key, canonical(value[key])]),
+        );
     }
     return value;
 }
@@ -38,7 +42,9 @@ function withoutMovementFields(value) {
     if (value === null || typeof value !== "object") {
         return value;
     }
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !ADDED_BY_MOVEMENTS.includes(key)));
+    return Object.fromEntries(
+        Object.entries(value).filter(([key]) => !ADDED_BY_MOVEMENTS.includes(key)),
+    );
 }
 
 // Since Phase 3 the database refuses stock that no movement explains. A material with a
@@ -53,10 +59,18 @@ function withOpeningMovements(updates, user, sv) {
             out[pathName] = value;
             continue;
         }
-        Object.assign(out, buildAddMaterialUpdates({
-            siteId, materialId, movementId: `mig-${materialId}`, user, sv, material: value,
-            note: "Migrated opening balance",
-        }));
+        Object.assign(
+            out,
+            buildAddMaterialUpdates({
+                siteId,
+                materialId,
+                movementId: `mig-${materialId}`,
+                user,
+                sv,
+                material: value,
+                note: "Migrated opening balance",
+            }),
+        );
     }
     return out;
 }
@@ -83,7 +97,19 @@ const stamp = (now) => new Date(now).toISOString().replaceAll(":", "-").replace(
 // db, ref, get, update: the Firebase Realtime Database functions and instance.
 // user: { uid, email }. apply: false is a dry run and writes nothing to the database.
 // sv: { timestamp, increment }, the SDK's serverTimestamp and increment (needed to apply).
-export async function runMigration({ db, ref, get, update, user, apply = false, outDir, now = Date.now(), log = console.log, readSource = null, sv = null }) {
+export async function runMigration({
+    db,
+    ref,
+    get,
+    update,
+    user,
+    apply = false,
+    outDir,
+    now = Date.now(),
+    log = console.log,
+    readSource = null,
+    sv = null,
+}) {
     fs.mkdirSync(outDir, { recursive: true });
     const progressFile = path.join(outDir, "progress.log");
     const say = (line) => {
@@ -104,9 +130,14 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
             materials: { ...(source.materials || {}), ...existing.materials },
         };
         snapshot = { source, existing };
-        say(`Copy mode: ${Object.keys(source.sites || {}).length} sites and ${Object.keys(source.materials || {}).length} materials in the old database, ${Object.keys(existing.sites).length} sites already in the new one`);
+        say(
+            `Copy mode: ${Object.keys(source.sites || {}).length} sites and ${Object.keys(source.materials || {}).length} materials in the old database, ${Object.keys(existing.sites).length} sites already in the new one`,
+        );
     } else {
-        const [sitesSnap, materialsSnap] = await Promise.all([get(ref(db, "sites")), get(ref(db, "materials"))]);
+        const [sitesSnap, materialsSnap] = await Promise.all([
+            get(ref(db, "sites")),
+            get(ref(db, "materials")),
+        ]);
         legacy = { sites: sitesSnap.val(), materials: materialsSnap.val() };
         snapshot = legacy;
     }
@@ -115,7 +146,11 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
     fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2));
     say(`Snapshot saved: ${snapshotFile}`);
 
-    const { updates, report } = planMigration(legacy, { ownerUid: user.uid, ownerEmail: user.email, now });
+    const { updates, report } = planMigration(legacy, {
+        ownerUid: user.uid,
+        ownerEmail: user.email,
+        now,
+    });
     const csvFile = path.join(outDir, `report-${stamp(now)}.csv`);
     fs.writeFileSync(csvFile, reportCsv(report));
     say(`Plan: ${JSON.stringify(report.counts)}`);
@@ -132,16 +167,21 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
     // so the owner entry has to exist before them. A failure leaves a site without materials, never
     // materials without a site, and a re-run fills in what is missing.
     if (!sv) {
-        throw new Error("runMigration needs sv ({ timestamp, increment }) to write opening movements");
+        throw new Error(
+            "runMigration needs sv ({ timestamp, increment }) to write opening movements",
+        );
     }
     const bySite = new Map();
     for (const [pathName, value] of Object.entries(withOpeningMovements(updates, user, sv))) {
-        const siteId = pathName.startsWith("userSites/") ? pathName.split("/")[2] : pathName.split("/")[1];
+        const siteId = pathName.startsWith("userSites/")
+            ? pathName.split("/")[2]
+            : pathName.split("/")[1];
         if (!bySite.has(siteId)) {
             bySite.set(siteId, { site: {}, materials: {} });
         }
         // A material's opening movement is written in the same step as the material.
-        const inMaterialsStep = pathName.startsWith("materials/") || pathName.startsWith("movements/");
+        const inMaterialsStep =
+            pathName.startsWith("materials/") || pathName.startsWith("movements/");
         bySite.get(siteId)[inMaterialsStep ? "materials" : "site"][pathName] = value;
     }
     let done = 0;
@@ -153,7 +193,9 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
             await update(ref(db), materials);
         }
         done += 1;
-        say(`Nail It migration: ${Math.round((done / bySite.size) * 100)}% (${done}/${bySite.size} sites), site ${siteId}, ${Object.keys(site).length + Object.keys(materials).length} paths`);
+        say(
+            `Nail It migration: ${Math.round((done / bySite.size) * 100)}% (${done}/${bySite.size} sites), site ${siteId}, ${Object.keys(site).length + Object.keys(materials).length} paths`,
+        );
     }
     result.applied = true;
 
@@ -168,8 +210,10 @@ export async function runMigration({ db, ref, get, update, user, apply = false, 
     }
     result.verified = failures.length === 0;
     result.failures = failures;
-    say(result.verified
-        ? `VERIFIED: all ${Object.keys(updates).length} written paths read back exactly as planned.`
-        : `NOT VERIFIED: ${failures.length} paths differ. First: ${JSON.stringify(failures[0])}`);
+    say(
+        result.verified
+            ? `VERIFIED: all ${Object.keys(updates).length} written paths read back exactly as planned.`
+            : `NOT VERIFIED: ${failures.length} paths differ. First: ${JSON.stringify(failures[0])}`,
+    );
     return result;
 }

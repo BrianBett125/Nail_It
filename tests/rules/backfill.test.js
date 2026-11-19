@@ -6,14 +6,32 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-    startEnv, reset, raw, as, ref, get, update, push, assertSucceeds, assertFails, SV, FIXTURE, MATERIAL, receive, newId,
+    startEnv,
+    reset,
+    raw,
+    as,
+    ref,
+    get,
+    update,
+    push,
+    assertSucceeds,
+    assertFails,
+    SV,
+    FIXTURE,
+    MATERIAL,
+    receive,
+    newId,
 } from "./helpers.js";
 import { runBackfill } from "../../scripts/backfill-lib.js";
 import { reconciles, movementsFromObject } from "../../src/movements.js";
 
 let env;
-before(async () => { env = await startEnv(); });
-after(async () => { await env.cleanup(); });
+before(async () => {
+    env = await startEnv();
+});
+after(async () => {
+    await env.cleanup();
+});
 
 const OWNER = { uid: "owner1", email: "owner1@example.com" };
 const outDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "nailit-backfill-emu-"));
@@ -23,7 +41,7 @@ const FILLED = {
     ...FIXTURE,
     materials: {
         s1: {
-            m1: MATERIAL,                                                       // 5 bags, no history
+            m1: MATERIAL, // 5 bags, no history
             m2: { name: "Sand", quantity: 10, units: "tonnes", lastUpdated: "2024-05-04" },
             m3: { name: "Empty", quantity: 0, units: "bags", lastUpdated: "2024-05-04" },
         },
@@ -31,7 +49,9 @@ const FILLED = {
     },
 };
 
-beforeEach(async () => { await reset(env, FILLED); });
+beforeEach(async () => {
+    await reset(env, FILLED);
+});
 
 const backfill = (db, user, apply, dir = outDir()) =>
     runBackfill({ db, ref, get, update, push, user, sv: SV, apply, outDir: dir, log: quiet });
@@ -57,8 +77,20 @@ describe("backfill on the emulator", () => {
             assert.equal(movement.byUid, "owner1");
             assert.match(movement.note, /Opening balance/);
         }
-        assert.equal(reconciles(movements.filter((m) => m.materialId === "m1"), 5), true);
-        assert.equal(reconciles(movements.filter((m) => m.materialId === "m2"), 10), true);
+        assert.equal(
+            reconciles(
+                movements.filter((m) => m.materialId === "m1"),
+                5,
+            ),
+            true,
+        );
+        assert.equal(
+            reconciles(
+                movements.filter((m) => m.materialId === "m2"),
+                10,
+            ),
+            true,
+        );
     });
 
     it("an empty material and another site's material are left alone", async () => {
@@ -76,13 +108,21 @@ describe("backfill on the emulator", () => {
     });
 
     it("a storekeeper can run it for their site", async () => {
-        const result = await backfill(as(env, "keeper1"), { uid: "keeper1", email: "keeper1@example.com" }, true);
+        const result = await backfill(
+            as(env, "keeper1"),
+            { uid: "keeper1", email: "keeper1@example.com" },
+            true,
+        );
         assert.equal(result.verified, true);
     });
 
     it("a viewer's site is skipped, and nothing is written", async () => {
         const before = await raw(env, "/");
-        const result = await backfill(as(env, "viewer1"), { uid: "viewer1", email: "viewer1@example.com" }, true);
+        const result = await backfill(
+            as(env, "viewer1"),
+            { uid: "viewer1", email: "viewer1@example.com" },
+            true,
+        );
         assert.deepEqual(result.plan.counts, { backfill: 0, skipped: 0 });
         assert.deepEqual(await raw(env, "/"), before);
     });
@@ -96,7 +136,11 @@ describe("backfill on the emulator", () => {
         assert.ok(files.some((f) => /^report-.*\.csv$/.test(f)));
         assert.match(fs.readFileSync(path.join(dir, "progress.log"), "utf8"), /VERIFIED/);
         const saved = JSON.parse(fs.readFileSync(path.join(dir, snapshot), "utf8"));
-        assert.equal(saved.s1.movements && Object.keys(saved.s1.movements).length, 0, "the snapshot is the state before");
+        assert.equal(
+            saved.s1.movements && Object.keys(saved.s1.movements).length,
+            0,
+            "the snapshot is the state before",
+        );
         assert.equal(saved.s1.materials.m1.quantity, 5);
     });
 });
@@ -106,8 +150,15 @@ describe("the rules around the backfill", () => {
         const id = newId(db, "s1");
         return update(ref(db), {
             [`movements/s1/${id}`]: {
-                materialId, materialName: material.name, units: material.units, delta: material.quantity, type: "opening",
-                byUid: uid, byEmail: `${uid}@example.com`, at: SV.timestamp(), ...overrides,
+                materialId,
+                materialName: material.name,
+                units: material.units,
+                delta: material.quantity,
+                type: "opening",
+                byUid: uid,
+                byEmail: `${uid}@example.com`,
+                at: SV.timestamp(),
+                ...overrides,
             },
             [`materials/s1/${materialId}/lastMovementId`]: id,
         });
@@ -126,14 +177,22 @@ describe("the rules around the backfill", () => {
     it("an opening that also changes the quantity is refused (no creating stock out of thin air)", async () => {
         const db = as(env, "owner1");
         const id = newId(db, "s1");
-        await assertFails(update(ref(db), {
-            [`movements/s1/${id}`]: {
-                materialId: "m1", materialName: "Cement", units: "bags", delta: 5, type: "opening",
-                byUid: "owner1", byEmail: "owner1@example.com", at: SV.timestamp(),
-            },
-            "materials/s1/m1/quantity": 10,
-            "materials/s1/m1/lastMovementId": id,
-        }));
+        await assertFails(
+            update(ref(db), {
+                [`movements/s1/${id}`]: {
+                    materialId: "m1",
+                    materialName: "Cement",
+                    units: "bags",
+                    delta: 5,
+                    type: "opening",
+                    byUid: "owner1",
+                    byEmail: "owner1@example.com",
+                    at: SV.timestamp(),
+                },
+                "materials/s1/m1/quantity": 10,
+                "materials/s1/m1/lastMovementId": id,
+            }),
+        );
         assert.equal((await raw(env, "materials/s1/m1")).quantity, 5);
     });
 
@@ -143,8 +202,13 @@ describe("the rules around the backfill", () => {
     });
 
     it("an opening is refused after a received/used movement has already happened", async () => {
-        await receive(as(env, "keeper1"), "keeper1", "s1", "m1", MATERIAL, { type: "received", delta: 1 });
-        await assertFails(openingFor(as(env, "owner1"), "owner1", "m1", { ...MATERIAL, quantity: 6 }));
+        await receive(as(env, "keeper1"), "keeper1", "s1", "m1", MATERIAL, {
+            type: "received",
+            delta: 1,
+        });
+        await assertFails(
+            openingFor(as(env, "owner1"), "owner1", "m1", { ...MATERIAL, quantity: 6 }),
+        );
     });
 
     it("a viewer cannot", async () => {
@@ -152,6 +216,12 @@ describe("the rules around the backfill", () => {
     });
 
     it("an opening for a material with no stock is refused (delta must be positive and equal the quantity)", async () => {
-        await assertFails(openingFor(as(env, "owner1"), "owner1", "m3", { name: "Empty", units: "bags", quantity: 0 }));
+        await assertFails(
+            openingFor(as(env, "owner1"), "owner1", "m3", {
+                name: "Empty",
+                units: "bags",
+                quantity: 0,
+            }),
+        );
     });
 });

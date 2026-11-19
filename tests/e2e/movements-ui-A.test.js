@@ -3,7 +3,16 @@
 // the phone viewport (375px wide), and that database text never becomes markup.
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, focusOn, SEED } from "./helpers.js";
+import {
+    startServer,
+    launchBrowser,
+    openDashboard,
+    selectSite,
+    waitForRows,
+    wrote,
+    focusOn,
+    SEED,
+} from "./helpers.js";
 
 let server;
 let baseUrl;
@@ -24,21 +33,49 @@ const DAY = 24 * HOUR;
 const now = Date.now();
 
 const MOVEMENTS = {
-    mv1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 20, type: "opening", byUid: "u9", byEmail: "boss@example.com", at: now - 3 * DAY },
-    mv2: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -15, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 2 * HOUR, note: "Slab pour" },
+    mv1: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: 20,
+        type: "opening",
+        byUid: "u9",
+        byEmail: "boss@example.com",
+        at: now - 3 * DAY,
+    },
+    mv2: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: -15,
+        type: "used",
+        byUid: "u1",
+        byEmail: "foreman@example.com",
+        at: now - 2 * HOUR,
+        note: "Slab pour",
+    },
 };
 const SEEDED = { ...SEED, movements: MOVEMENTS };
 
 const row = (page, name) => page.locator("#materialTableBody tr", { hasText: name });
 const closed = (page, selector) =>
-    page.waitForFunction((s) => getComputedStyle(document.querySelector(s)).display === "none", selector);
+    page.waitForFunction(
+        (s) => getComputedStyle(document.querySelector(s)).display === "none",
+        selector,
+    );
 
 // The same page, in a phone-sized browser context. openDashboard asks its "browser" for a context.
 function phone() {
     return {
-        newContext: () => browser.newContext({
-            viewport: { width: 375, height: 700 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
-        }),
+        newContext: () =>
+            browser.newContext({
+                viewport: { width: 375, height: 700 },
+                deviceScaleFactor: 2,
+                isMobile: true,
+                hasTouch: true,
+            }),
     };
 }
 
@@ -49,10 +86,15 @@ async function open(seed = SEEDED, host = browser) {
     return opened;
 }
 
-const focusedInfo = (page) => page.evaluate(() => {
-    const el = document.activeElement;
-    return { id: el.id, className: String(el.className), row: el.closest("tr") ? el.closest("tr").dataset.materialId : null };
-});
+const focusedInfo = (page) =>
+    page.evaluate(() => {
+        const el = document.activeElement;
+        return {
+            id: el.id,
+            className: String(el.className),
+            row: el.closest("tr") ? el.closest("tr").dataset.materialId : null,
+        };
+    });
 
 describe("variant A: the Received / Used sheet", () => {
     it("the button says what will be written, and follows the amount and the action", async () => {
@@ -64,12 +106,19 @@ describe("variant A: the Received / Used sheet", () => {
         await page.fill("#movementAmount", "2.5");
         assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used: 2.5 bags");
         await page.fill("#movementAmount", "abc");
-        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used", "an amount that is not a number says nothing");
+        assert.equal(
+            (await page.textContent("#movementSubmit")).trim(),
+            "Record Used",
+            "an amount that is not a number says nothing",
+        );
         await page.click("#movementCancel");
 
         await row(page, "Sand").locator(".btn-receive").click();
         await page.fill("#movementAmount", "4");
-        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Received: 4 tonnes");
+        assert.equal(
+            (await page.textContent("#movementSubmit")).trim(),
+            "Record Received: 4 tonnes",
+        );
         await context.close();
     });
 
@@ -81,22 +130,43 @@ describe("variant A: the Received / Used sheet", () => {
         assert.equal(await page.inputValue("#movementAmount"), "6");
         await page.click(".chip[data-add='10']");
         assert.equal(await page.inputValue("#movementAmount"), "16");
-        assert.equal(await page.evaluate(() => document.activeElement.id), "movementAmount", "typing can go on after a chip");
-        assert.equal((await page.textContent("#movementAfter")).trim(), "Tap All 10 to use what is left.", "says what to do");
+        assert.equal(
+            await page.evaluate(() => document.activeElement.id),
+            "movementAmount",
+            "typing can go on after a chip",
+        );
+        assert.equal(
+            (await page.textContent("#movementAfter")).trim(),
+            "Tap All 10 to use what is left.",
+            "says what to do",
+        );
         assert.equal((await page.textContent("#movementSubmit")).trim(), "Only 10 tonnes in stock");
-        assert.equal(await page.locator("#movementSubmit").evaluate((el) => el.classList.contains("sheet-submit-over")), true);
+        assert.equal(
+            await page
+                .locator("#movementSubmit")
+                .evaluate((el) => el.classList.contains("sheet-submit-over")),
+            true,
+        );
 
         await page.click("#movementAll");
         assert.equal(await page.inputValue("#movementAmount"), "10");
         assert.match(await page.textContent("#movementAfter"), /Stock after: 0 tonnes/);
-        assert.equal((await page.textContent("#movementSubmit")).trim(), "Record Used: 10 tonnes", "the button is back to normal");
+        assert.equal(
+            (await page.textContent("#movementSubmit")).trim(),
+            "Record Used: 10 tonnes",
+            "the button is back to normal",
+        );
         await page.click("#movementSubmit");
         await closed(page, "#movementContainer");
         assert.equal((await row(page, "Sand").locator("td").nth(1).textContent()).trim(), "0");
         assert.equal((await wrote(page)).length, 1);
 
         await row(page, "Sand").locator(".btn-receive").click();
-        assert.equal(await page.locator("#movementAll").isVisible(), false, "no 'All' when receiving");
+        assert.equal(
+            await page.locator("#movementAll").isVisible(),
+            false,
+            "no 'All' when receiving",
+        );
         await page.click(".chip[data-add='5']");
         assert.match(await page.textContent("#movementAfter"), /Stock after: 5 tonnes/);
         await context.close();
@@ -116,7 +186,10 @@ describe("variant A: the Received / Used sheet", () => {
         await row(page, "Cement").locator(".btn-use").click();
         await page.fill("#movementAmount", "9");
         assert.equal((await page.textContent("#movementSubmit")).trim(), "Only 5 bags in stock");
-        assert.equal((await page.textContent("#movementAfter")).trim(), "Tap All 5 to use what is left.");
+        assert.equal(
+            (await page.textContent("#movementAfter")).trim(),
+            "Tap All 5 to use what is left.",
+        );
         await page.click("#movementSubmit");
         await page.locator("#movementError").waitFor({ state: "visible" });
         assert.equal((await page.textContent("#movementAfter")).trim(), "");
@@ -147,14 +220,20 @@ describe("variant A: the Received / Used sheet", () => {
         await useButton.click();
         await page.click("#movementCancel");
         let focus = await focusedInfo(page);
-        assert.ok(focus.className.includes("btn-use") && focus.row === "m1", `after Cancel: ${JSON.stringify(focus)}`);
+        assert.ok(
+            focus.className.includes("btn-use") && focus.row === "m1",
+            `after Cancel: ${JSON.stringify(focus)}`,
+        );
 
         await useButton.click();
         await page.keyboard.press("Escape");
         await closed(page, "#movementContainer");
         await focusOn(page, useButton);
         focus = await focusedInfo(page);
-        assert.ok(focus.className.includes("btn-use") && focus.row === "m1", `after Escape: ${JSON.stringify(focus)}`);
+        assert.ok(
+            focus.className.includes("btn-use") && focus.row === "m1",
+            `after Escape: ${JSON.stringify(focus)}`,
+        );
 
         // The table is rebuilt by the new quantity, so the button that was clicked no longer exists.
         await useButton.click();
@@ -162,24 +241,45 @@ describe("variant A: the Received / Used sheet", () => {
         await page.press("#movementAmount", "Enter");
         await closed(page, "#movementContainer");
         focus = await focusedInfo(page);
-        assert.ok(focus.className.includes("btn-use") && focus.row === "m1", `after recording: ${JSON.stringify(focus)}`);
+        assert.ok(
+            focus.className.includes("btn-use") && focus.row === "m1",
+            `after recording: ${JSON.stringify(focus)}`,
+        );
         await context.close();
     });
 
     it("Tab stays inside the sheet, and the page behind does not scroll while it is open", async () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
-        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), true);
+        assert.equal(
+            await page.evaluate(() => document.querySelector("dialog[open]") !== null),
+            true,
+        );
         for (let i = 0; i < 12; i += 1) {
             await page.keyboard.press("Tab");
-            assert.equal(await page.evaluate(() => document.querySelector("#movementForm").contains(document.activeElement)), true, `Tab ${i}`);
+            assert.equal(
+                await page.evaluate(() =>
+                    document.querySelector("#movementForm").contains(document.activeElement),
+                ),
+                true,
+                `Tab ${i}`,
+            );
         }
         for (let i = 0; i < 12; i += 1) {
             await page.keyboard.press("Shift+Tab");
-            assert.equal(await page.evaluate(() => document.querySelector("#movementForm").contains(document.activeElement)), true, `Shift+Tab ${i}`);
+            assert.equal(
+                await page.evaluate(() =>
+                    document.querySelector("#movementForm").contains(document.activeElement),
+                ),
+                true,
+                `Shift+Tab ${i}`,
+            );
         }
         await page.keyboard.press("Escape");
-        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), false);
+        assert.equal(
+            await page.evaluate(() => document.querySelector("dialog[open]") !== null),
+            false,
+        );
         await context.close();
     });
 
@@ -187,7 +287,10 @@ describe("variant A: the Received / Used sheet", () => {
         const { context, page } = await open();
         await row(page, "Cement").locator(".btn-use").click();
         await page.click("#movementTitle");
-        assert.equal(await page.evaluate(() => document.querySelector("#movementContainer").open), true);
+        assert.equal(
+            await page.evaluate(() => document.querySelector("#movementContainer").open),
+            true,
+        );
         await page.mouse.click(1250, 690); // bottom right corner of the default 1280x720 window: backdrop, not the card
         await closed(page, "#movementContainer");
         assert.equal((await wrote(page)).length, 0);
@@ -200,7 +303,10 @@ describe("variant A: the Received / Used sheet", () => {
         // a modal sheet makes the sidebar inert, so a person cannot click it; code (another tab, a link) still can
         await page.locator("#siteList a", { hasText: "Cape Town" }).evaluate((a) => a.click());
         await closed(page, "#movementContainer");
-        assert.equal(await page.evaluate(() => document.querySelector("dialog[open]") !== null), false);
+        assert.equal(
+            await page.evaluate(() => document.querySelector("dialog[open]") !== null),
+            false,
+        );
         await context.close();
     });
 });
@@ -208,12 +314,24 @@ describe("variant A: the Received / Used sheet", () => {
 describe("variant A: accessibility", () => {
     it("every icon-sized button names the material, the sheets are labelled dialogs, the amount has a label", async () => {
         const { context, page } = await open();
-        const labels = await row(page, "Cement").locator("button").evaluateAll((buttons) => buttons.map((b) => b.getAttribute("aria-label")));
-        assert.deepEqual(labels, ["Receive Cement", "Use Cement", "History of Cement", "Edit material", "Delete material"]);
+        const labels = await row(page, "Cement")
+            .locator("button")
+            .evaluateAll((buttons) => buttons.map((b) => b.getAttribute("aria-label")));
+        assert.deepEqual(labels, [
+            "Receive Cement",
+            "Use Cement",
+            "History of Cement",
+            "Edit material",
+            "Delete material",
+        ]);
 
         await row(page, "Cement").locator(".btn-use").click();
         const dialog = page.locator("#movementContainer");
-        assert.equal(await dialog.evaluate((el) => el.tagName + el.matches(":modal")), "DIALOGtrue", "a native modal dialog");
+        assert.equal(
+            await dialog.evaluate((el) => el.tagName + el.matches(":modal")),
+            "DIALOGtrue",
+            "a native modal dialog",
+        );
         assert.equal(await dialog.getAttribute("aria-labelledby"), "movementTitle");
         assert.equal(await page.locator("label[for='movementAmount']").count(), 1);
         assert.equal(await page.locator("label[for='movementNote']").count(), 1);
@@ -222,9 +340,17 @@ describe("variant A: accessibility", () => {
 
         await row(page, "Cement").locator(".btn-history").click();
         const history = page.locator("#historyContainer");
-        assert.equal(await history.evaluate((el) => el.tagName + el.matches(":modal")), "DIALOGtrue", "a native modal dialog");
+        assert.equal(
+            await history.evaluate((el) => el.tagName + el.matches(":modal")),
+            "DIALOGtrue",
+            "a native modal dialog",
+        );
         assert.equal(await history.getAttribute("aria-labelledby"), "historyTitle");
-        assert.equal(await page.evaluate(() => document.activeElement.id), "historyClose", "focus moves into the history sheet");
+        assert.equal(
+            await page.evaluate(() => document.activeElement.id),
+            "historyClose",
+            "focus moves into the history sheet",
+        );
         await context.close();
     });
 
@@ -249,7 +375,10 @@ describe("variant A: accessibility", () => {
         await closed(page, "#historyContainer");
         await focusOn(page, historyButton);
         const focus = await focusedInfo(page);
-        assert.ok(focus.className.includes("btn-history") && focus.row === "m2", JSON.stringify(focus));
+        assert.ok(
+            focus.className.includes("btn-history") && focus.row === "m2",
+            JSON.stringify(focus),
+        );
         await context.close();
     });
 });
@@ -260,7 +389,18 @@ describe("variant A: keeps database text as text", () => {
         ...SEED,
         materials: { ...SEED.materials, m1: { ...SEED.materials.m1, name: evil } },
         movements: {
-            x1: { siteId: "sA", materialId: "m1", materialName: evil, units: "bags", delta: 9, type: "opening", byUid: "u9", byEmail: "<b>x</b>@example.com", at: now - HOUR, note: evil },
+            x1: {
+                siteId: "sA",
+                materialId: "m1",
+                materialName: evil,
+                units: "bags",
+                delta: 9,
+                type: "opening",
+                byUid: "u9",
+                byEmail: "<b>x</b>@example.com",
+                at: now - HOUR,
+                note: evil,
+            },
         },
     };
 
@@ -271,7 +411,10 @@ describe("variant A: keeps database text as text", () => {
 
         await row(page, "<img").locator(".btn-use").click();
         assert.equal(await page.textContent("#movementTitle"), `Use ${evil}`);
-        assert.equal(await page.getAttribute("#movementContainer", "aria-labelledby"), "movementTitle");
+        assert.equal(
+            await page.getAttribute("#movementContainer", "aria-labelledby"),
+            "movementTitle",
+        );
         await page.fill("#movementNote", evil);
         await page.fill("#movementAmount", "1");
         await page.click("#movementSubmit");
@@ -293,7 +436,11 @@ describe("variant A: keeps database text as text", () => {
 describe("variant A: listeners", () => {
     it("the feed stays at one subscription through site changes and history sheets", async () => {
         const { context, page } = await open();
-        const count = () => page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length);
+        const count = () =>
+            page.evaluate(
+                () =>
+                    window.__nailit.activeListeners().filter((l) => l.kind === "movements").length,
+            );
         assert.equal(await count(), 1);
         await selectSite(page, "Cape Town");
         await selectSite(page, "Mombasa");
@@ -313,8 +460,13 @@ describe("variant A: listeners", () => {
         await row(page, "Cement").locator(".btn-history").click();
         await page.locator("#historyList .history-row").first().waitFor();
         await page.evaluate(() => window.__nailit.externalRemoveMaterial("sA", "m1"));
-        await page.waitForFunction(() => /deleted/.test(document.querySelector("#historySummary").textContent));
-        assert.equal(await page.evaluate(() => document.querySelector("#historyContainer").open), true);
+        await page.waitForFunction(() =>
+            /deleted/.test(document.querySelector("#historySummary").textContent),
+        );
+        assert.equal(
+            await page.evaluate(() => document.querySelector("#historyContainer").open),
+            true,
+        );
         await context.close();
     });
 });
@@ -326,12 +478,19 @@ describe("variant A: a 375px phone", () => {
             scrollWidth: document.documentElement.scrollWidth,
             clientWidth: document.documentElement.clientWidth,
             small: [...document.querySelectorAll("#materialTableBody button")]
-                .map((b) => ({ cls: b.className, h: b.getBoundingClientRect().height, w: b.getBoundingClientRect().width }))
+                .map((b) => ({
+                    cls: b.className,
+                    h: b.getBoundingClientRect().height,
+                    w: b.getBoundingClientRect().width,
+                }))
                 .filter((b) => b.h < 44 || b.w < 44),
             rowDisplay: getComputedStyle(document.querySelector("#materialTableBody tr")).display,
         }));
         assert.equal(metrics.rowDisplay, "grid");
-        assert.ok(metrics.scrollWidth <= metrics.clientWidth, `sideways scroll: ${metrics.scrollWidth} > ${metrics.clientWidth}`);
+        assert.ok(
+            metrics.scrollWidth <= metrics.clientWidth,
+            `sideways scroll: ${metrics.scrollWidth} > ${metrics.clientWidth}`,
+        );
         assert.deepEqual(metrics.small, []);
         await context.close();
     });
@@ -340,12 +499,20 @@ describe("variant A: a 375px phone", () => {
         const { context, page } = await open(SEEDED, phone());
         const visibleItems = () => page.locator("#activityList .activity-item:visible").count();
         assert.equal(await visibleItems(), 1, "only the latest line");
-        const materialsTop = await page.locator("#materialTableBody tr").first().evaluate((el) => el.getBoundingClientRect().top);
+        const materialsTop = await page
+            .locator("#materialTableBody tr")
+            .first()
+            .evaluate((el) => el.getBoundingClientRect().top);
         // Phase 4 puts the site summary, the Needs attention strip and the search controls (#insights)
         // above the list on purpose: they answer "are we running out of anything?". The feed teaser
         // itself must still not push the materials further than it did before them.
-        const insightsHeight = await page.locator("#insights").evaluate((el) => el.getBoundingClientRect().height);
-        assert.ok(materialsTop - insightsHeight < 600, `the first material starts at ${materialsTop}px, ${insightsHeight}px of which is the Phase 4 summary and controls`);
+        const insightsHeight = await page
+            .locator("#insights")
+            .evaluate((el) => el.getBoundingClientRect().height);
+        assert.ok(
+            materialsTop - insightsHeight < 600,
+            `the first material starts at ${materialsTop}px, ${insightsHeight}px of which is the Phase 4 summary and controls`,
+        );
         assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "false");
         await page.click("#activityToggle");
         assert.equal(await page.getAttribute("#activityToggle", "aria-expanded"), "true");
@@ -374,12 +541,20 @@ describe("variant A: a 375px phone", () => {
             const rect = (s) => document.querySelector(s).getBoundingClientRect();
             const sheet = rect("#movementForm");
             const small = [...document.querySelectorAll("#movementForm button")]
-                .filter((b) => b.offsetParent !== null && b.getBoundingClientRect().height < 44).map((b) => b.id || b.textContent);
+                .filter((b) => b.offsetParent !== null && b.getBoundingClientRect().height < 44)
+                .map((b) => b.id || b.textContent);
             return {
-                bottom: sheet.bottom, left: sheet.left, right: sheet.right, top: sheet.top,
-                height: innerHeight, width: innerWidth,
-                submit: rect("#movementSubmit").height, cancelBottom: rect("#movementCancel").bottom,
-                amountSize: parseFloat(getComputedStyle(document.querySelector("#movementAmount")).fontSize),
+                bottom: sheet.bottom,
+                left: sheet.left,
+                right: sheet.right,
+                top: sheet.top,
+                height: innerHeight,
+                width: innerWidth,
+                submit: rect("#movementSubmit").height,
+                cancelBottom: rect("#movementCancel").bottom,
+                amountSize: parseFloat(
+                    getComputedStyle(document.querySelector("#movementAmount")).fontSize,
+                ),
                 small,
             };
         });
@@ -388,7 +563,10 @@ describe("variant A: a 375px phone", () => {
         assert.ok(box.top >= 0, "fits the height");
         assert.ok(box.cancelBottom <= box.height, "Cancel is on screen");
         assert.ok(box.submit >= 56, `the primary button is big: ${box.submit}`);
-        assert.ok(box.amountSize >= 32, "the amount is big, and 16px or more keeps iOS from zooming in");
+        assert.ok(
+            box.amountSize >= 32,
+            "the amount is big, and 16px or more keeps iOS from zooming in",
+        );
         assert.deepEqual(box.small, []);
         assert.equal(await page.getAttribute("#movementAmount", "inputmode"), "decimal");
 
@@ -407,7 +585,12 @@ describe("variant A: a 375px phone", () => {
             const sheet = document.querySelector("#movementForm");
             const body = sheet.querySelector(".sheet-body"); // the buttons stay pinned, the body scrolls
             const rect = sheet.getBoundingClientRect();
-            return { top: rect.top, bottom: rect.bottom, height: innerHeight, scrolls: body.scrollHeight > body.clientHeight };
+            return {
+                top: rect.top,
+                bottom: rect.bottom,
+                height: innerHeight,
+                scrolls: body.scrollHeight > body.clientHeight,
+            };
         });
         assert.ok(fit.top >= 0 && fit.bottom <= fit.height + 1, JSON.stringify(fit));
         assert.equal(fit.scrolls, true, "what does not fit scrolls inside the sheet");
@@ -418,8 +601,16 @@ describe("variant A: a 375px phone", () => {
         const many = {};
         for (let i = 0; i < 14; i += 1) {
             many[`h${String(i).padStart(2, "0")}`] = {
-                siteId: "sA", materialId: "m2", materialName: "Sand", units: "tonnes", delta: i % 2 ? -1 : 1,
-                type: i % 2 ? "used" : "received", byUid: "u9", byEmail: "boss@example.com", at: now - (20 - i) * HOUR, note: `Load ${i}`,
+                siteId: "sA",
+                materialId: "m2",
+                materialName: "Sand",
+                units: "tonnes",
+                delta: i % 2 ? -1 : 1,
+                type: i % 2 ? "used" : "received",
+                byUid: "u9",
+                byEmail: "boss@example.com",
+                at: now - (20 - i) * HOUR,
+                note: `Load ${i}`,
             };
         }
         const { context, page } = await open({ ...SEED, movements: many }, phone());
@@ -427,12 +618,18 @@ describe("variant A: a 375px phone", () => {
         await page.locator("#historyList .history-row").nth(13).waitFor();
         await page.waitForTimeout(250);
         const state = await page.evaluate(() => {
-            const sheet = document.querySelector("#historyContainer .sheet").getBoundingClientRect();
+            const sheet = document
+                .querySelector("#historyContainer .sheet")
+                .getBoundingClientRect();
             const body = document.querySelector("#historyBody");
-            const last = document.querySelector("#historyList .history-row:last-child").getBoundingClientRect();
+            const last = document
+                .querySelector("#historyList .history-row:last-child")
+                .getBoundingClientRect();
             const bodyRect = body.getBoundingClientRect();
             return {
-                sheetHeight: sheet.height, viewport: innerHeight, bottom: sheet.bottom,
+                sheetHeight: sheet.height,
+                viewport: innerHeight,
+                bottom: sheet.bottom,
                 scrollable: body.scrollHeight > body.clientHeight,
                 lastVisible: last.bottom <= bodyRect.bottom + 1 && last.top >= bodyRect.top,
             };
@@ -440,13 +637,21 @@ describe("variant A: a 375px phone", () => {
         assert.ok(state.sheetHeight >= state.viewport * 0.85, JSON.stringify(state));
         assert.equal(Math.round(state.bottom), state.viewport);
         assert.equal(state.scrollable, true);
-        assert.equal(state.lastVisible, true, "opens on the newest movement, the one that matches the table");
+        assert.equal(
+            state.lastVisible,
+            true,
+            "opens on the newest movement, the one that matches the table",
+        );
         await context.close();
     });
 
     it("a viewer on a phone gets a History button the full width of the card and no other buttons", async () => {
         const { context, page } = await open({ ...SEEDED, roles: { sA: "viewer" } }, phone());
-        const buttons = await page.locator("#materialTableBody tr").first().locator("button").evaluateAll((list) => list.map((b) => b.className));
+        const buttons = await page
+            .locator("#materialTableBody tr")
+            .first()
+            .locator("button")
+            .evaluateAll((list) => list.map((b) => b.className));
         assert.equal(buttons.length, 1);
         assert.match(buttons[0], /btn-history/);
         await context.close();

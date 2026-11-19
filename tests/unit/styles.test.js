@@ -21,7 +21,8 @@ test("tokens.css is the only place a colour is written down", () => {
     const hex = /#[0-9a-fA-F]{3,8}\b/;
     const fn = /\b(?:rgba?|hsla?)\s*\(/;
     // The trailing guard is load-bearing: white-space, grayscale and blacklist are not colours.
-    const keyword = /(?:^|[\s:,(])(?:white|black|silver|gray|grey|maroon|navy|teal|olive)(?![\w-])/i;
+    const keyword =
+        /(?:^|[\s:,(])(?:white|black|silver|gray|grey|maroon|navy|teal|olive)(?![\w-])/i;
     for (const file of files) {
         if (file === TOKENS) continue;
         const css = read(file).replace(/\/\*[\s\S]*?\*\//g, "");
@@ -35,8 +36,11 @@ test("tokens.css is the first stylesheet every page loads", () => {
     // Load order is what makes the rest work: a page that loads a token file second still gets the
     // right values, but a page that forgets it renders with every variable undefined.
     for (const page of fs.readdirSync(ROOT).filter((f) => f.endsWith(".html"))) {
-        const links = [...fs.readFileSync(path.join(ROOT, page), "utf8")
-            .matchAll(/<link[^>]+href="styles\/([^"]+)"/g)].map((m) => m[1]);
+        const links = [
+            ...fs
+                .readFileSync(path.join(ROOT, page), "utf8")
+                .matchAll(/<link[^>]+href="styles\/([^"]+)"/g),
+        ].map((m) => m[1]);
         assert.equal(links[0], TOKENS, `${page} loads ${links[0]} before ${TOKENS}`);
     }
 });
@@ -107,10 +111,15 @@ test("structural spacing reads the scale instead of a raw pixel", () => {
     // and the motion are all closed, and spacing is the one that was still hand-written in places.
     for (const file of files) {
         const css = read(file).replace(/\/\*[\s\S]*?\*\//g, "");
-        for (const match of css.matchAll(/(?:^|[\s;{])(padding|margin|gap)(-[a-z]+)?\s*:\s*([^;}]+)/g)) {
+        for (const match of css.matchAll(
+            /(?:^|[\s;{])(padding|margin|gap)(-[a-z]+)?\s*:\s*([^;}]+)/g,
+        )) {
             const [, prop, suffix, value] = match;
             for (const px of barePixels(value)) {
-                assert.ok(px < 18, `${file} has ${prop}${suffix ?? ""}: ${value.trim()} (${px}px is a raw size)`);
+                assert.ok(
+                    px < 18,
+                    `${file} has ${prop}${suffix ?? ""}: ${value.trim()} (${px}px is a raw size)`,
+                );
             }
         }
     }

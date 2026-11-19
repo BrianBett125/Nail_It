@@ -30,7 +30,7 @@ export function normalizeEmail(raw) {
 
 // Database keys cannot contain . # $ [ ] /. A comma is not valid in an email address, so
 // swapping "." for "," is reversible, and it is the swap database.rules.json makes too.
-const KEY_FORBIDDEN = /[\s#$\[\]\/,]/;
+const KEY_FORBIDDEN = /[\s#$[\]/,]/;
 
 export function isValidEmail(raw) {
     const email = normalizeEmail(raw);
@@ -43,9 +43,14 @@ export function isValidEmail(raw) {
     }
     const local = email.slice(0, at);
     const domain = email.slice(at + 1);
-    return !local.startsWith(".") && !local.endsWith(".")
-        && domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".")
-        && !email.includes("..");
+    return (
+        !local.startsWith(".") &&
+        !local.endsWith(".") &&
+        domain.includes(".") &&
+        !domain.startsWith(".") &&
+        !domain.endsWith(".") &&
+        !email.includes("..")
+    );
 }
 
 export function emailKey(raw) {

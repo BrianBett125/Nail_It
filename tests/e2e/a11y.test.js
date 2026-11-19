@@ -6,7 +6,14 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import {
-    startServer, launchBrowser, openDashboard, openOverview, openLogin, selectSite, waitForRows, SEED,
+    startServer,
+    launchBrowser,
+    openDashboard,
+    openOverview,
+    openLogin,
+    selectSite,
+    waitForRows,
+    SEED,
 } from "./helpers.js";
 
 const require = createRequire(import.meta.url);
@@ -31,15 +38,57 @@ const DAY = 24 * HOUR;
 const now = Date.now();
 
 const MATERIALS = {
-    m1: { name: "Cement", quantity: 5, units: "bags", minLevel: 10, updatedAt: now - 2 * HOUR, siteId: "sA" },
-    m2: { name: "Sand", quantity: 10, units: "tonnes", minLevel: 10, updatedAt: now - 3 * DAY, siteId: "sA" },
+    m1: {
+        name: "Cement",
+        quantity: 5,
+        units: "bags",
+        minLevel: 10,
+        updatedAt: now - 2 * HOUR,
+        siteId: "sA",
+    },
+    m2: {
+        name: "Sand",
+        quantity: 10,
+        units: "tonnes",
+        minLevel: 10,
+        updatedAt: now - 3 * DAY,
+        siteId: "sA",
+    },
     m3: { name: "Bricks", quantity: 500, units: "pieces", updatedAt: now - HOUR, siteId: "sA" },
-    m4: { name: "Paint", quantity: 0, units: "litres", minLevel: 3, updatedAt: now - 5 * DAY, siteId: "sA" },
+    m4: {
+        name: "Paint",
+        quantity: 0,
+        units: "litres",
+        minLevel: 3,
+        updatedAt: now - 5 * DAY,
+        siteId: "sA",
+    },
     m5: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05", siteId: "sB" },
 };
 const MOVEMENTS = {
-    v1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 20, type: "opening", byUid: "u9", byEmail: "boss@example.com", at: now - 3 * DAY },
-    v2: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -15, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 2 * HOUR, note: "Slab pour" },
+    v1: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: 20,
+        type: "opening",
+        byUid: "u9",
+        byEmail: "boss@example.com",
+        at: now - 3 * DAY,
+    },
+    v2: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: -15,
+        type: "used",
+        byUid: "u1",
+        byEmail: "foreman@example.com",
+        at: now - 2 * HOUR,
+        note: "Slab pour",
+    },
 };
 const SEEDED = { ...SEED, materials: MATERIALS, movements: MOVEMENTS };
 
@@ -51,12 +100,19 @@ const VIEWPORTS = {
 // A browser host whose pages have the viewport (and, on a phone, touch), for the shared harness.
 function host(viewport) {
     return {
-        newContext: () => browser.newContext({
-            viewport,
-            deviceScaleFactor: viewport.width < 600 ? 2 : 1,
-            isMobile: viewport.width < 600,
-            hasTouch: viewport.width < 600,
-        }),
+        // Spread the harness options through (it asks for serviceWorkers: "block"); a context that
+        // drops them would let the worker serve cached modules and defeat the fake data layer.
+        newContext: (options = {}) =>
+            browser.newContext({
+                ...options,
+                viewport,
+                deviceScaleFactor: viewport.width < 600 ? 2 : 1,
+                isMobile: viewport.width < 600,
+                hasTouch: viewport.width < 600,
+                // axe has to read settled colours, not a blend caught mid-transition. Reduced motion
+                // makes tokens.css zero every transition before it starts, so the audit is deterministic.
+                reducedMotion: "reduce",
+            }),
     };
 }
 
@@ -65,14 +121,22 @@ async function audit(page) {
     await page.addScriptTag({ path: AXE });
     const result = await page.evaluate(async () => {
         const run = await window.axe.run(document, {
-            runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"] },
+            runOnly: {
+                type: "tag",
+                values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"],
+            },
             resultTypes: ["violations"],
         });
         return run.violations.map((v) => ({
             id: v.id,
             impact: v.impact,
             help: v.help,
-            nodes: v.nodes.slice(0, 4).map((n) => `${n.target.join(" ")}  ${(n.failureSummary || "").split("\n").slice(1, 3).join(" ").trim()}`),
+            nodes: v.nodes
+                .slice(0, 4)
+                .map(
+                    (n) =>
+                        `${n.target.join(" ")}  ${(n.failureSummary || "").split("\n").slice(1, 3).join(" ").trim()}`,
+                ),
             count: v.nodes.length,
         }));
     });
@@ -82,13 +146,20 @@ async function audit(page) {
 const SERIOUS = new Set(["serious", "critical"]);
 
 function describeViolations(violations) {
-    return violations.map((v) => `[${v.impact}] ${v.id} (${v.count}): ${v.help}\n      ${v.nodes.join("\n      ")}`).join("\n");
+    return violations
+        .map(
+            (v) =>
+                `[${v.impact}] ${v.id} (${v.count}): ${v.help}\n      ${v.nodes.join("\n      ")}`,
+        )
+        .join("\n");
 }
 
 // The gate: no serious or critical violation. AXE_ALL=1 widens it to everything axe reports.
 async function assertClean(page, label) {
     const violations = await audit(page);
-    const gated = process.env.AXE_ALL ? violations : violations.filter((v) => SERIOUS.has(v.impact));
+    const gated = process.env.AXE_ALL
+        ? violations
+        : violations.filter((v) => SERIOUS.has(v.impact));
     const others = violations.filter((v) => !gated.includes(v));
     if (others.length > 0) {
         console.log(`# axe, ${label}, not gated:\n${describeViolations(others)}`);
@@ -98,7 +169,11 @@ async function assertClean(page, label) {
 
 for (const [name, viewport] of Object.entries(VIEWPORTS)) {
     describe(`accessibility on a ${name} (${viewport.width}px)`, () => {
-        async function open(seed = SEEDED, site = "Mombasa", rows = ["Cement", "Sand", "Bricks", "Paint"]) {
+        async function open(
+            seed = SEEDED,
+            site = "Mombasa",
+            rows = ["Cement", "Sand", "Bricks", "Paint"],
+        ) {
             const opened = await openDashboard(host(viewport), baseUrl, seed);
             if (site) {
                 await selectSite(opened.page, site);
@@ -133,7 +208,13 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
             await assertClean(empty.page, `dashboard (no sites) on a ${name}`);
             await empty.context.close();
             const none = await openDashboard(host(viewport), baseUrl, SEEDED, {
-                beforeLoad: () => { try { localStorage.clear(); } catch { /* none */ } },
+                beforeLoad: () => {
+                    try {
+                        localStorage.clear();
+                    } catch {
+                        /* none */
+                    }
+                },
             });
             await assertClean(none.page, `dashboard (no site selected) on a ${name}`);
             await none.context.close();
@@ -158,12 +239,18 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
 
         it("the Received / Used sheet and the history sheet", async () => {
             const { context, page } = await open();
-            await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-use").click();
+            await page
+                .locator("#materialTableBody tr", { hasText: "Cement" })
+                .locator(".btn-use")
+                .click();
             await page.fill("#movementAmount", "40");
             await page.click("#movementSubmit");
             await assertClean(page, `record sheet (refused) on a ${name}`);
             await page.keyboard.press("Escape");
-            await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-history").click();
+            await page
+                .locator("#materialTableBody tr", { hasText: "Cement" })
+                .locator(".btn-history")
+                .click();
             await assertClean(page, `history sheet on a ${name}`);
             await context.close();
         });
@@ -186,12 +273,18 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
             await page.click("#addMaterialButton");
             await assertClean(page, `add material dialog on a ${name}`);
             await page.click("#materialCancelButton");
-            await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-edit").click();
+            await page
+                .locator("#materialTableBody tr", { hasText: "Cement" })
+                .locator(".btn-edit")
+                .click();
             await assertClean(page, `edit dialog on a ${name}`);
             await page.click("#updateCancelButton");
             const picker = page.locator("#sitePickerButton");
             if (await picker.isVisible()) await picker.click();
-            await page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn").click();
+            await page
+                .locator("#siteList li", { hasText: "Mombasa" })
+                .locator(".delete-site-btn")
+                .click();
             await assertClean(page, `delete site dialog on a ${name}`);
             await context.close();
         });
@@ -208,12 +301,17 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
             await busy.page.locator("#overviewList li.overview-site").first().waitFor();
             await assertClean(busy.page, `overview on a ${name}`);
             await busy.context.close();
-            const calm = await openOverview(host(viewport), baseUrl, { ...SEED, materials: { m5: MATERIALS.m5 } });
+            const calm = await openOverview(host(viewport), baseUrl, {
+                ...SEED,
+                materials: { m5: MATERIALS.m5 },
+            });
             await calm.page.locator("#overviewList li.overview-site").first().waitFor();
             await assertClean(calm.page, `overview (calm) on a ${name}`);
             await calm.context.close();
             const none = await openOverview(host(viewport), baseUrl, { sites: {}, materials: {} });
-            await none.page.waitForFunction(() => /No sites yet/i.test(document.querySelector("#overviewStatus").textContent));
+            await none.page.waitForFunction(() =>
+                /No sites yet/i.test(document.querySelector("#overviewStatus").textContent),
+            );
             await assertClean(none.page, `overview (empty) on a ${name}`);
             await none.context.close();
         });

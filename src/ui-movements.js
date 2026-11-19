@@ -21,7 +21,7 @@ import { canWriteMaterials } from "./roles.js";
 import { openDialog, closeDialog, closeOnBackdrop } from "./dialog.js";
 
 const FEED_LIMIT = 30;
-const CLOCK_MS = 60_000;          // "2h ago" is re-worded once a minute
+const CLOCK_MS = 60_000; // "2h ago" is re-worded once a minute
 const ACTION_VERB = { received: "Receive", used: "Use" };
 const SIGN = { positive: "+", negative: "−" }; // a real minus sign, easier to see than a hyphen
 
@@ -29,7 +29,7 @@ const $ = (id) => document.getElementById(id);
 
 // `getContext()` answers "where are we now": { siteId, materials, role, user }. It is read at the
 // moment of each action, so nothing here caches a site, a role or a material that has moved on.
-export function createMovementsUI({ data, getContext, showToast, reportError }) {
+export function createMovementsUI({ data, getContext, showToast }) {
     const recordBox = $("movementContainer");
     const recordForm = $("movementForm");
     const titleEl = $("movementTitle");
@@ -73,15 +73,28 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         const name = material.name ?? "";
         if (canRecord) {
             cell.append(
-                makeRowButton("btn-receive", "row-btn-receive", SIGN.positive, "Receive", `Receive ${name}`,
-                    () => openRecord(materialId, "received", "btn-receive")),
-                makeRowButton("btn-use", "row-btn-use", SIGN.negative, "Use", `Use ${name}`,
-                    () => openRecord(materialId, "used", "btn-use")),
+                makeRowButton(
+                    "btn-receive",
+                    "row-btn-receive",
+                    SIGN.positive,
+                    "Receive",
+                    `Receive ${name}`,
+                    () => openRecord(materialId, "received", "btn-receive"),
+                ),
+                makeRowButton("btn-use", "row-btn-use", SIGN.negative, "Use", `Use ${name}`, () =>
+                    openRecord(materialId, "used", "btn-use"),
+                ),
             );
         }
         cell.append(
-            makeRowButton("btn-history", "row-btn-history", "", "History", `History of ${name}`,
-                () => openHistory(materialId, "btn-history")),
+            makeRowButton(
+                "btn-history",
+                "row-btn-history",
+                "",
+                "History",
+                `History of ${name}`,
+                () => openHistory(materialId, "btn-history"),
+            ),
         );
         return cell;
     }
@@ -125,10 +138,14 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
     // After a sheet closes, focus goes back to the button that opened it. The table is rebuilt on
     // every update, so the old button may be gone: look the same button up again by row and class.
     function findOpener(opener) {
-        const row = document.querySelector(`#materialTableBody tr[data-material-id="${CSS.escape(opener.materialId)}"]`);
-        return (row && row.querySelector(`.${opener.className}`))
-            || (row && row.querySelector("button"))
-            || document.getElementById("addMaterialButton");
+        const row = document.querySelector(
+            `#materialTableBody tr[data-material-id="${CSS.escape(opener.materialId)}"]`,
+        );
+        return (
+            (row && row.querySelector(`.${opener.className}`)) ||
+            (row && row.querySelector("button")) ||
+            document.getElementById("addMaterialButton")
+        );
     }
 
     // ---- Received / Used --------------------------------------------------------------------
@@ -139,7 +156,13 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         if (!siteId || !material || !canWriteMaterials(role)) {
             return;
         }
-        record = { siteId, materialId, action, opener: { materialId, className: openerClass }, sending: false };
+        record = {
+            siteId,
+            materialId,
+            action,
+            opener: { materialId, className: openerClass },
+            sending: false,
+        };
         recordForm.className = `sheet sheet-record sheet-${action}`;
         titleEl.textContent = `${ACTION_VERB[action]} ${material.name}`;
         amountInput.value = "";
@@ -167,13 +190,17 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         if (over) {
             submitBtn.textContent = `Only ${formatQuantity(stock)} ${units} in stock`.trim();
         } else {
-            submitBtn.textContent = value === null ? `Record ${verb}` : `Record ${verb}: ${formatQuantity(value)} ${units}`.trim();
+            submitBtn.textContent =
+                value === null
+                    ? `Record ${verb}`
+                    : `Record ${verb}: ${formatQuantity(value)} ${units}`.trim();
         }
 
         afterEl.classList.remove("sheet-after-bad");
         if (over) {
             // Say what to do, not only that it is refused: the "All" chip is one tap away.
-            afterEl.textContent = stock > 0 ? `Tap All ${formatQuantity(stock)} to use what is left.` : "";
+            afterEl.textContent =
+                stock > 0 ? `Tap All ${formatQuantity(stock)} to use what is left.` : "";
         } else if (value === null) {
             afterEl.textContent = "";
         } else {
@@ -265,10 +292,16 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             // failure to report as one: telling somebody to try again would have them count the same
             // stock twice. Only a write the queue could not hold is a real "try again".
             if (error && error.queued) {
-                showToast(`"${summary}" is saved on this device and will be sent when the connection comes back.`, { kind: "error" });
+                showToast(
+                    `"${summary}" is saved on this device and will be sent when the connection comes back.`,
+                    { kind: "error" },
+                );
                 return;
             }
-            showToast(`Could not record "${summary}". The stock may have changed, check it and try again.`, { kind: "error" });
+            showToast(
+                `Could not record "${summary}". The stock may have changed, check it and try again.`,
+                { kind: "error" },
+            );
         });
     }
 
@@ -309,26 +342,39 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
         stopHistory();
         const token = {};
         history = {
-            token, siteId, materialId, opener: { materialId, className: openerClass },
-            name: material.name ?? "", units: material.units ?? "", movements: null, error: false, stop: null,
+            token,
+            siteId,
+            materialId,
+            opener: { materialId, className: openerClass },
+            name: material.name ?? "",
+            units: material.units ?? "",
+            movements: null,
+            error: false,
+            stop: null,
         };
         historyTitle.textContent = `${history.name} history`;
         historyList.replaceChildren();
         renderHistory(true);
         const { opener } = history;
         openDialog(historyBox, { focus: historyClose, opener: () => findOpener(opener) });
-        history.stop = data.subscribeMovements(siteId, { materialId }, (movements) => {
-            if (history && history.token === token) { // ignore a late callback from a sheet we closed
-                history.movements = movements;
-                history.error = false;
-                renderHistory(false);
-            }
-        }, () => {
-            if (history && history.token === token) {
-                history.error = true;
-                renderHistory(false);
-            }
-        });
+        history.stop = data.subscribeMovements(
+            siteId,
+            { materialId },
+            (movements) => {
+                if (history && history.token === token) {
+                    // ignore a late callback from a sheet we closed
+                    history.movements = movements;
+                    history.error = false;
+                    renderHistory(false);
+                }
+            },
+            () => {
+                if (history && history.token === token) {
+                    history.error = true;
+                    renderHistory(false);
+                }
+            },
+        );
     }
 
     function stopHistory() {
@@ -363,7 +409,11 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             ? `In stock: ${formatQuantity(quantity)} ${history.units}. Oldest first, newest at the bottom.`
             : "This material was deleted";
 
-        historyStatus.textContent = history.error ? "Could not load the history." : history.movements ? "" : "Loading history...";
+        historyStatus.textContent = history.error
+            ? "Could not load the history."
+            : history.movements
+              ? ""
+              : "Loading history...";
         historyStatus.hidden = historyStatus.textContent === "";
         if (!history.movements) {
             historyBefore.hidden = true;
@@ -371,7 +421,9 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             return;
         }
 
-        const stickToEnd = first || historyBody.scrollHeight - historyBody.scrollTop - historyBody.clientHeight < 40;
+        const stickToEnd =
+            first ||
+            historyBody.scrollHeight - historyBody.scrollTop - historyBody.clientHeight < 40;
         const { rows, before } = withRunningBalance(history.movements, quantity);
         historyBefore.replaceChildren();
         historyBefore.hidden = before === 0;
@@ -446,17 +498,22 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             return;
         }
         const mine = feed;
-        mine.stop = data.subscribeMovements(siteId, { limit: FEED_LIMIT }, (movements) => {
-            if (feed === mine) {
-                mine.movements = movements;
-                renderFeed();
-            }
-        }, () => {
-            if (feed === mine) {
-                activityEmpty.textContent = "Could not load activity.";
-                activityEmpty.hidden = false;
-            }
-        });
+        mine.stop = data.subscribeMovements(
+            siteId,
+            { limit: FEED_LIMIT },
+            (movements) => {
+                if (feed === mine) {
+                    mine.movements = movements;
+                    renderFeed();
+                }
+            },
+            () => {
+                if (feed === mine) {
+                    activityEmpty.textContent = "Could not load activity.";
+                    activityEmpty.hidden = false;
+                }
+            },
+        );
     }
 
     // On a phone the feed is one line until it is opened (CSS does the folding, this is the switch).
@@ -472,25 +529,28 @@ export function createMovementsUI({ data, getContext, showToast, reportError }) 
             return;
         }
         const newestFirst = [...feed.movements].reverse();
-        activityEmpty.textContent = "No activity yet. Stock that is received or used shows up here.";
+        activityEmpty.textContent =
+            "No activity yet. Stock that is received or used shows up here.";
         activityEmpty.hidden = newestFirst.length > 0;
-        activityList.replaceChildren(...newestFirst.map((movement) => {
-            const item = document.createElement("li");
-            item.className = `activity-item activity-${movement.delta >= 0 ? "in" : "out"}`;
-            const sign = document.createElement("span");
-            sign.className = "activity-sign";
-            sign.setAttribute("aria-hidden", "true");
-            sign.textContent = movement.delta >= 0 ? SIGN.positive : SIGN.negative;
-            const text = document.createElement("span");
-            text.className = "activity-text";
-            text.textContent = describeMovement(movement);
-            const time = document.createElement("span");
-            time.className = "activity-time";
-            time.textContent = timeAgo(movement.at);
-            time.title = formatDateTime(movement.at);
-            item.append(sign, text, time);
-            return item;
-        }));
+        activityList.replaceChildren(
+            ...newestFirst.map((movement) => {
+                const item = document.createElement("li");
+                item.className = `activity-item activity-${movement.delta >= 0 ? "in" : "out"}`;
+                const sign = document.createElement("span");
+                sign.className = "activity-sign";
+                sign.setAttribute("aria-hidden", "true");
+                sign.textContent = movement.delta >= 0 ? SIGN.positive : SIGN.negative;
+                const text = document.createElement("span");
+                text.className = "activity-text";
+                text.textContent = describeMovement(movement);
+                const time = document.createElement("span");
+                time.className = "activity-time";
+                time.textContent = timeAgo(movement.at);
+                time.title = formatDateTime(movement.at);
+                item.append(sign, text, time);
+                return item;
+            }),
+        );
     }
 
     // "2h ago" goes stale on a screen that stays open on site all day.

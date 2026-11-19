@@ -16,8 +16,12 @@ export const SORTS = [
 export const DEFAULT_SORT = "added";
 export const FILTERS = ["all", "low"];
 
-const hasLevel = (material) => Boolean(material) && typeof material.minLevel === "number" && Number.isFinite(material.minLevel);
-const stockOf = (material) => (material && typeof material.quantity === "number" ? material.quantity : 0);
+const hasLevel = (material) =>
+    Boolean(material) &&
+    typeof material.minLevel === "number" &&
+    Number.isFinite(material.minLevel);
+const stockOf = (material) =>
+    material && typeof material.quantity === "number" ? material.quantity : 0;
 
 // "ok", "low" (at or below the level) or "out" (nothing left, and a level is set).
 export function stockState(material) {
@@ -36,7 +40,15 @@ export function lowLabel(material) {
 }
 
 // The dropdown units are plural; one of them is singular ("1 piece left", not "1 pieces left").
-const SINGULAR = { tonnes: "tonne", bags: "bag", pieces: "piece", metres: "metre", litres: "litre", bundles: "bundle", sheets: "sheet" };
+const SINGULAR = {
+    tonnes: "tonne",
+    bags: "bag",
+    pieces: "piece",
+    metres: "metre",
+    litres: "litre",
+    bundles: "bundle",
+    sheets: "sheet",
+};
 export const unitFor = (units, quantity) => (quantity === 1 && SINGULAR[units]) || units;
 
 // "3 bags left, level 10": what a person wants to read next to the badge.
@@ -53,9 +65,11 @@ export function lowDetail(material) {
 // query: matched against the name, ignoring case and extra spaces. filter: "all" or "low".
 export function filterMaterials(entries, { query = "", filter = "all" } = {}) {
     const needle = nameKey(query);
-    return entries.filter(([, material]) =>
-        (!needle || nameKey(material && material.name).includes(needle))
-        && (filter !== "low" || isLow(material)));
+    return entries.filter(
+        ([, material]) =>
+            (!needle || nameKey(material && material.name).includes(needle)) &&
+            (filter !== "low" || isLow(material)),
+    );
 }
 
 // When the material last changed: the server time, else the date typed before Phase 3 (older records).
@@ -63,7 +77,10 @@ export function updatedAtOf(material) {
     if (material && typeof material.updatedAt === "number") {
         return material.updatedAt;
     }
-    const typed = material && typeof material.lastUpdated === "string" ? Date.parse(material.lastUpdated) : NaN;
+    const typed =
+        material && typeof material.lastUpdated === "string"
+            ? Date.parse(material.lastUpdated)
+            : NaN;
     return Number.isFinite(typed) ? typed : 0;
 }
 
@@ -75,28 +92,36 @@ export function sortMaterials(entries, sort = DEFAULT_SORT) {
         case "name":
             return list.sort(byName);
         case "quantity":
-            return list.sort((a, b) => (stockOf(a[1]) - stockOf(b[1])) || byName(a, b));
+            return list.sort((a, b) => stockOf(a[1]) - stockOf(b[1]) || byName(a, b));
         case "updated":
-            return list.sort((a, b) => (updatedAtOf(b[1]) - updatedAtOf(a[1])) || byName(a, b));
+            return list.sort((a, b) => updatedAtOf(b[1]) - updatedAtOf(a[1]) || byName(a, b));
         default:
             return list;
     }
 }
 
 // Search, filter, then sort: what the table shows.
-export function visibleMaterials(materials, { query = "", filter = "all", sort = DEFAULT_SORT } = {}) {
+export function visibleMaterials(
+    materials,
+    { query = "", filter = "all", sort = DEFAULT_SORT } = {},
+) {
     return sortMaterials(filterMaterials(Object.entries(materials || {}), { query, filter }), sort);
 }
 
 // The newest sign of life on a site: the latest movement, or the latest change to any material
 // (a delete leaves no material behind, but it leaves its movement).
 export function lastActivityAt({ materials = {}, lastMovementAt = 0 } = {}) {
-    const latestChange = Object.values(materials || {}).reduce((latest, material) => Math.max(latest, updatedAtOf(material)), 0);
+    const latestChange = Object.values(materials || {}).reduce(
+        (latest, material) => Math.max(latest, updatedAtOf(material)),
+        0,
+    );
     return Math.max(latestChange, typeof lastMovementAt === "number" ? lastMovementAt : 0);
 }
 
 export function summarizeSite({ materials = {}, lastMovementAt = 0 } = {}) {
-    const entries = Object.entries(materials || {}).filter(([, material]) => material && typeof material === "object");
+    const entries = Object.entries(materials || {}).filter(
+        ([, material]) => material && typeof material === "object",
+    );
     const lowEntries = entries.filter(([, material]) => isLow(material));
     return {
         total: entries.length,
@@ -133,9 +158,14 @@ export const isStale = (at, now = Date.now()) => Number.isFinite(at) && now - at
 // The three phrases of the site summary header, the same wording on the dashboard and the overview.
 export function summaryText(summary, now = Date.now()) {
     return {
-        total: summary.total === 0 ? "No materials yet" : `${summary.total} ${summary.total === 1 ? "material" : "materials"}`,
+        total:
+            summary.total === 0
+                ? "No materials yet"
+                : `${summary.total} ${summary.total === 1 ? "material" : "materials"}`,
         low: summary.low === 0 ? "Nothing low on stock" : `${summary.low} low on stock`,
-        activity: summary.lastActivity ? `Last activity ${ageLabel(summary.lastActivity, now)}` : "No activity yet",
+        activity: summary.lastActivity
+            ? `Last activity ${ageLabel(summary.lastActivity, now)}`
+            : "No activity yet",
     };
 }
 
@@ -148,17 +178,27 @@ export function overviewRow({ siteId, site, materials, lastMovementAt }) {
         location: (site && site.location) || "",
         ...summary,
         lowItems: summary.lowEntries
-            .map(([id, material]) => ({ id, name: material.name, label: lowLabel(material), detail: lowDetail(material), quantity: stockOf(material) }))
-            .sort((a, b) => (a.quantity - b.quantity) || String(a.name).localeCompare(String(b.name))),
+            .map(([id, material]) => ({
+                id,
+                name: material.name,
+                label: lowLabel(material),
+                detail: lowDetail(material),
+                quantity: stockOf(material),
+            }))
+            .sort(
+                (a, b) => a.quantity - b.quantity || String(a.name).localeCompare(String(b.name)),
+            ),
     };
 }
 
 // Sites with the most trouble first, then by most recent activity, then by name.
 export function sortOverview(rows) {
-    return [...rows].sort((a, b) =>
-        (b.low - a.low)
-        || ((b.lastActivity || 0) - (a.lastActivity || 0))
-        || a.name.localeCompare(b.name));
+    return [...rows].sort(
+        (a, b) =>
+            b.low - a.low ||
+            (b.lastActivity || 0) - (a.lastActivity || 0) ||
+            a.name.localeCompare(b.name),
+    );
 }
 
 export function overviewTotals(rows) {

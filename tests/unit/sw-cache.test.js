@@ -48,7 +48,10 @@ test("nothing a page loads is left out of the shell", () => {
             assert.ok(shell.has(`/${ref}`), `${page} loads ${ref}, which the shell does not cache`);
         }
     }
-    assert.ok(checked > 20, `only ${checked} references were checked, the pattern must have stopped matching`);
+    assert.ok(
+        checked > 20,
+        `only ${checked} references were checked, the pattern must have stopped matching`,
+    );
     for (const { src } of JSON.parse(read("favicon/site.webmanifest")).icons) {
         // The manifest lives in /favicon/, so its icon paths are relative to that folder.
         const iconPath = src.startsWith("/") ? src : `/favicon/${src}`;
@@ -69,16 +72,24 @@ test("the page shown when a navigation misses the cache is itself cached", () =>
 // ---- the SDK ------------------------------------------------------------------------
 
 test("the SDK files cached are the version the app really imports", () => {
-    const sources = fs.readdirSync(path.join(ROOT, "src"))
+    const sources = fs
+        .readdirSync(path.join(ROOT, "src"))
         .map((file) => read(`src/${file}`))
         .join("\n");
-    const versions = [...sources.matchAll(/firebasejs\/(\d+\.\d+\.\d+)\//g)].map(([, version]) => version);
+    const versions = [...sources.matchAll(/firebasejs\/(\d+\.\d+\.\d+)\//g)].map(
+        ([, version]) => version,
+    );
     assert.ok(versions.length >= 3, "the SDK import must be there three times over");
-    assert.deepEqual([...new Set(versions)].length, 1,
-        `the app imports more than one SDK version: ${[...new Set(versions)].join(", ")}`);
+    assert.deepEqual(
+        [...new Set(versions)].length,
+        1,
+        `the app imports more than one SDK version: ${[...new Set(versions)].join(", ")}`,
+    );
     for (const url of SDK_ASSETS) {
-        assert.ok(url.includes(`/firebasejs/${versions[0]}/`),
-            `the app imports the SDK ${versions[0]}, the worker caches ${url}`);
+        assert.ok(
+            url.includes(`/firebasejs/${versions[0]}/`),
+            `the app imports the SDK ${versions[0]}, the worker caches ${url}`,
+        );
     }
 });
 
@@ -91,10 +102,26 @@ test("only Google's own Firebase SDK counts as the SDK", () => {
     for (const url of SDK_ASSETS) {
         assert.equal(isSdkRequest(url), true, url);
     }
-    assert.equal(isSdkRequest("https://www.gstatic.com/other/x.js"), false, "another file on the CDN is not ours");
-    assert.equal(isSdkRequest("https://evil.example/firebasejs/10.12.2/firebase-app.js"), false, "not Google's host");
-    assert.equal(isSdkRequest("https://www.gstatic.com.evil.example/firebasejs/x.js"), false, "a host that starts the same is not the host");
-    assert.equal(isSdkRequest("/firebasejs/10.12.2/firebase-app.js"), false, "a path of this site's is not the CDN");
+    assert.equal(
+        isSdkRequest("https://www.gstatic.com/other/x.js"),
+        false,
+        "another file on the CDN is not ours",
+    );
+    assert.equal(
+        isSdkRequest("https://evil.example/firebasejs/10.12.2/firebase-app.js"),
+        false,
+        "not Google's host",
+    );
+    assert.equal(
+        isSdkRequest("https://www.gstatic.com.evil.example/firebasejs/x.js"),
+        false,
+        "a host that starts the same is not the host",
+    );
+    assert.equal(
+        isSdkRequest("/firebasejs/10.12.2/firebase-app.js"),
+        false,
+        "a path of this site's is not the CDN",
+    );
     assert.equal(isSdkRequest("not a url"), false);
 });
 
@@ -107,7 +134,10 @@ test("a write is never answered from a cache", () => {
 });
 
 test("a page is network-first, so a fresh deploy is what people see", () => {
-    assert.equal(ask(`${ORIGIN}/dashboard.html?site=sA`, { mode: "navigate" }), STRATEGY.NETWORK_FIRST);
+    assert.equal(
+        ask(`${ORIGIN}/dashboard.html?site=sA`, { mode: "navigate" }),
+        STRATEGY.NETWORK_FIRST,
+    );
     assert.equal(ask(`${ORIGIN}/`, { mode: "navigate" }), STRATEGY.NETWORK_FIRST);
     assert.equal(ask(`${ORIGIN}/anything-at-all`, { mode: "navigate" }), STRATEGY.NETWORK_FIRST);
 });
@@ -137,24 +167,39 @@ test("the database, sign-in and every other site are never intercepted", () => {
     ]) {
         assert.equal(ask(url), STRATEGY.PASSTHROUGH, url);
     }
-    assert.equal(ask("http://127.0.0.1:5173/dashboard.html", { mode: "navigate" }), STRATEGY.PASSTHROUGH,
-        "another origin serving the same paths is not ours");
+    assert.equal(
+        ask("http://127.0.0.1:5173/dashboard.html", { mode: "navigate" }),
+        STRATEGY.PASSTHROUGH,
+        "another origin serving the same paths is not ours",
+    );
 });
 
 test("an address the worker cannot read is passed through rather than guessed at", () => {
     assert.equal(strategyFor({ url: "not a url", origin: ORIGIN }), STRATEGY.PASSTHROUGH);
-    assert.equal(strategyFor({ url: "not a url", origin: ORIGIN, method: "GET" }), STRATEGY.PASSTHROUGH);
+    assert.equal(
+        strategyFor({ url: "not a url", origin: ORIGIN, method: "GET" }),
+        STRATEGY.PASSTHROUGH,
+    );
 });
 
 // ---- housekeeping --------------------------------------------------------------------
 
 test("a new worker drops its own older caches and nobody else's", () => {
     assert.deepEqual(
-        cachesToDelete([`${CACHE_PREFIX}-v0`, CACHE_NAME, "workbox-precache-v2", `${CACHE_PREFIX}-other-app`]),
+        cachesToDelete([
+            `${CACHE_PREFIX}-v0`,
+            CACHE_NAME,
+            "workbox-precache-v2",
+            `${CACHE_PREFIX}-other-app`,
+        ]),
         [`${CACHE_PREFIX}-v0`, `${CACHE_PREFIX}-other-app`],
         "the current cache and other people's caches are kept",
     );
     assert.deepEqual(cachesToDelete([]), []);
     assert.deepEqual(cachesToDelete([CACHE_NAME]), []);
-    assert.match(CACHE_NAME, new RegExp(`^${CACHE_PREFIX}-`), "the cache name carries the prefix it is found by");
+    assert.match(
+        CACHE_NAME,
+        new RegExp(`^${CACHE_PREFIX}-`),
+        "the cache name carries the prefix it is found by",
+    );
 });

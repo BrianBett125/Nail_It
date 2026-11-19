@@ -28,7 +28,9 @@ export function startServer() {
             res.writeHead(404).end("not found");
             return;
         }
-        res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
+        res.writeHead(200, {
+            "content-type": TYPES[path.extname(file)] || "application/octet-stream",
+        });
         fs.createReadStream(file).pipe(res);
     });
     return new Promise((resolve) => {
@@ -48,12 +50,30 @@ export function launchBrowser() {
 
 export const SEED = {
     sites: {
-        sA: { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1714521600000, ownerUid: "u1" },
-        sB: { name: "Cape Town", location: "Bellville", buildingType: "Commercial", createdAt: 1714608000000, ownerUid: "u1" },
+        sA: {
+            name: "Mombasa",
+            location: "Nyali",
+            buildingType: "Residential",
+            createdAt: 1714521600000,
+            ownerUid: "u1",
+        },
+        sB: {
+            name: "Cape Town",
+            location: "Bellville",
+            buildingType: "Commercial",
+            createdAt: 1714608000000,
+            ownerUid: "u1",
+        },
     },
     materials: {
         m1: { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" },
-        m2: { name: "Sand", quantity: 10, units: "tonnes", lastUpdated: "2024-05-04", siteId: "sA" },
+        m2: {
+            name: "Sand",
+            quantity: 10,
+            units: "tonnes",
+            lastUpdated: "2024-05-04",
+            siteId: "sA",
+        },
         m3: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05", siteId: "sB" },
     },
 };
@@ -73,15 +93,21 @@ async function newPage(browser, seed, options) {
     const state = { dialogs: [], toasts: [], blocked: [], pageErrors: [] };
 
     await page.route("**/src/data.js", (route) =>
-        route.fulfill({ contentType: "text/javascript", body: FAKE_DATA }));
+        route.fulfill({ contentType: "text/javascript", body: FAKE_DATA }),
+    );
     await page.route("**/src/auth.js", (route) =>
-        route.fulfill({ contentType: "text/javascript", body: FAKE_AUTH }));
+        route.fulfill({ contentType: "text/javascript", body: FAKE_AUTH }),
+    );
     await page.route("**/kit.fontawesome.com/**", (route) =>
-        route.fulfill({ contentType: "text/javascript", body: "" }));
-    await page.route(/gstatic\.com|firebaseio\.com|firebasedatabase\.app|googleapis\.com|firebaseapp\.com/, (route) => {
-        state.blocked.push(route.request().url());
-        return route.abort();
-    });
+        route.fulfill({ contentType: "text/javascript", body: "" }),
+    );
+    await page.route(
+        /gstatic\.com|firebaseio\.com|firebasedatabase\.app|googleapis\.com|firebaseapp\.com/,
+        (route) => {
+            state.blocked.push(route.request().url());
+            return route.abort();
+        },
+    );
 
     // Toasts disappear on their own, so record each one the moment it is added to the page.
     await page.exposeFunction("__recordToast", (text) => state.toasts.push(text));
@@ -103,7 +129,9 @@ async function newPage(browser, seed, options) {
     });
     page.on("pageerror", (error) => state.pageErrors.push(error.message));
 
-    await page.addInitScript((s) => { window.__seed = s; }, seed);
+    await page.addInitScript((s) => {
+        window.__seed = s;
+    }, seed);
     if (options.beforeLoad) {
         await page.addInitScript(options.beforeLoad);
     }
@@ -121,8 +149,9 @@ export async function openDashboard(browser, baseUrl, seed = SEED, options = {})
         return opened;
     }
     // Ready once dashboard.js has subscribed to sites; the seed may legitimately be empty.
-    await page.waitForFunction(() =>
-        window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
+    await page.waitForFunction(
+        () => window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"),
+    );
     await page.waitForTimeout(20);
     return opened;
 }
@@ -136,8 +165,9 @@ export async function openOverview(browser, baseUrl, seed = SEED, options = {}) 
         await page.waitForURL(/login\.html/);
         return opened;
     }
-    await page.waitForFunction(() =>
-        window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
+    await page.waitForFunction(
+        () => window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"),
+    );
     await page.waitForTimeout(20);
     return opened;
 }
@@ -179,14 +209,12 @@ export function rowTexts(page) {
 }
 
 export async function waitForRows(page, names) {
-    await page.waitForFunction(
-        (expected) => {
-            const actual = [...document.querySelectorAll("#materialTableBody tr td:first-child")]
-                .map((td) => td.textContent);
-            return JSON.stringify(actual) === JSON.stringify(expected);
-        },
-        names,
-    );
+    await page.waitForFunction((expected) => {
+        const actual = [...document.querySelectorAll("#materialTableBody tr td:first-child")].map(
+            (td) => td.textContent,
+        );
+        return JSON.stringify(actual) === JSON.stringify(expected);
+    }, names);
 }
 
 // Escape closes a <dialog> by the browser, which fires its `close` event a moment later, and that
@@ -228,6 +256,7 @@ export function materialsTouched(write) {
 }
 
 // Writes that delete a material, or put one back (Undo): a multi-path update that sets the node itself.
-export const deletesOf = (writes, node) => writes.filter((w) => w.op === "multi" && w.paths[node] === null);
+export const deletesOf = (writes, node) =>
+    writes.filter((w) => w.op === "multi" && w.paths[node] === null);
 export const restoresOf = (writes, node) =>
     writes.filter((w) => w.op === "multi" && w.paths[node] && typeof w.paths[node] === "object");

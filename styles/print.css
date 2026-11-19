@@ -64,9 +64,16 @@
         border-collapse: collapse;
     }
 
-    #materialsTable thead { display: table-header-group !important; }
-    #materialsTable tbody { display: table-row-group !important; }
-    #materialsTable tr { display: table-row !important; break-inside: avoid; }
+    #materialsTable thead {
+        display: table-header-group !important;
+    }
+    #materialsTable tbody {
+        display: table-row-group !important;
+    }
+    #materialsTable tr {
+        display: table-row !important;
+        break-inside: avoid;
+    }
 
     #materialsTable th,
     #materialsTable td {
@@ -91,8 +98,12 @@
         display: none !important;
     }
 
-    #materialsTable td:nth-child(2) { text-align: right; }
-    #materialsTable td:first-child { border-left: 0.75pt solid var(--paper-ink) !important; }
+    #materialsTable td:nth-child(2) {
+        text-align: right;
+    }
+    #materialsTable td:first-child {
+        border-left: 0.75pt solid var(--paper-ink) !important;
+    }
 
     /* Low stock is a word with the amount, not a colour. */
     #materialsTable .badge-low {

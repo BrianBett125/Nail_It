@@ -22,7 +22,14 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { CACHE_NAME, SHELL_ASSETS } from "../../src/sw-cache.js";
 import { OUTBOX_KEY } from "../../src/outbox.js";
-import { startServer, launchBrowser, openDashboard, selectSite, waitForRows, SEED } from "./helpers.js";
+import {
+    startServer,
+    launchBrowser,
+    openDashboard,
+    selectSite,
+    waitForRows,
+    SEED,
+} from "./helpers.js";
 
 let server;
 let baseUrl;
@@ -58,7 +65,9 @@ async function offlineReady(page, url) {
         const cache = await caches.open(name);
         return (await cache.keys()).length >= 40;
     }, CACHE_NAME);
-    await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 15000 });
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, {
+        timeout: 15000,
+    });
 }
 
 // The server goes away for good: nothing can be fetched from it again, and the sockets the browser is
@@ -79,7 +88,7 @@ describe("the app shell opens with no signal", () => {
         const missing = await page.evaluate(async (assets) => {
             const lost = [];
             for (const asset of assets) {
-                if (!await caches.match(asset)) {
+                if (!(await caches.match(asset))) {
                     lost.push(asset);
                 }
             }
@@ -90,7 +99,11 @@ describe("the app shell opens with no signal", () => {
         await cutTheCable(site);
         const heading = await page.textContent("h1");
         await page.reload();
-        assert.equal(await page.textContent("h1"), heading, "the page came back with nothing to fetch");
+        assert.equal(
+            await page.textContent("h1"),
+            heading,
+            "the page came back with nothing to fetch",
+        );
 
         // Every request from here goes through the worker, and the worker has nothing but its cache.
         const statuses = await page.evaluate(async (assets) => {
@@ -104,7 +117,10 @@ describe("the app shell opens with no signal", () => {
             }
             return seen;
         }, SHELL_ASSETS);
-        assert.deepEqual(Object.entries(statuses).filter(([, status]) => status !== 200), []);
+        assert.deepEqual(
+            Object.entries(statuses).filter(([, status]) => status !== 200),
+            [],
+        );
         assert.deepEqual(errors, []);
         await context.close();
     });
@@ -141,7 +157,11 @@ describe("the app shell opens with no signal", () => {
         await cutTheCable(site);
 
         await page.goto(`${url}/a-page-that-was-renamed.html`);
-        assert.match(await page.textContent("h1"), /\S/, "the worker's fallback is the app's own page");
+        assert.match(
+            await page.textContent("h1"),
+            /\S/,
+            "the worker's fallback is the app's own page",
+        );
         await context.close();
     });
 });
@@ -149,12 +169,20 @@ describe("the app shell opens with no signal", () => {
 describe("the offline indicator", () => {
     it("is out of the way while the database is reachable, and says what is happening when it is not", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, SEED);
-        assert.equal(await page.locator(BANNER).isVisible(), false, "nothing to say while things are working");
+        assert.equal(
+            await page.locator(BANNER).isVisible(),
+            false,
+            "nothing to say while things are working",
+        );
 
         await page.evaluate(() => window.__nailit.setConnected(false));
         await page.locator(BANNER).waitFor({ state: "visible" });
         assert.match(await page.textContent(BANNER), /offline/i);
-        assert.match(await page.textContent(BANNER), /sync/i, "it has to say what happens next, not just that it is broken");
+        assert.match(
+            await page.textContent(BANNER),
+            /sync/i,
+            "it has to say what happens next, not just that it is broken",
+        );
 
         await page.evaluate(() => window.__nailit.setConnected(true));
         await page.locator(BANNER).waitFor({ state: "hidden" });
@@ -168,21 +196,38 @@ describe("the offline indicator", () => {
         await page.evaluate(() => window.__nailit.setConnected(false));
         await page.locator(BANNER).waitFor({ state: "visible" });
 
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-use").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator(".btn-use")
+            .click();
         await page.locator("#movementContainer").waitFor({ state: "visible" });
         await page.fill("#movementAmount", "3");
         await page.click("#movementSubmit");
 
         // With no connection the movement has not reached the database, but it is on the device and the
         // person is told it will send, never that it failed. The banner counts the one waiting.
-        await page.waitForFunction(() => document.querySelector("#offlineMessage").textContent.includes("1 change"));
-        assert.equal(await page.evaluate(() => window.__nailit.db.materials.sA.m1.quantity), 5, "the database has not seen it yet");
-        assert.ok(state.toasts.some((t) => /Used 3 bags of Cement/.test(t)), JSON.stringify(state.toasts));
-        assert.ok(!state.toasts.some((t) => /could not/i.test(t)), `nothing failed: ${JSON.stringify(state.toasts)}`);
+        await page.waitForFunction(() =>
+            document.querySelector("#offlineMessage").textContent.includes("1 change"),
+        );
+        assert.equal(
+            await page.evaluate(() => window.__nailit.db.materials.sA.m1.quantity),
+            5,
+            "the database has not seen it yet",
+        );
+        assert.ok(
+            state.toasts.some((t) => /Used 3 bags of Cement/.test(t)),
+            JSON.stringify(state.toasts),
+        );
+        assert.ok(
+            !state.toasts.some((t) => /could not/i.test(t)),
+            `nothing failed: ${JSON.stringify(state.toasts)}`,
+        );
 
         // The connection comes back: the queued movement goes up on its own, once, and the banner clears.
         await page.evaluate(() => window.__nailit.setConnected(true));
-        await page.waitForFunction(() => Object.values(window.__nailit.db.movements.sA || {}).some((m) => m.delta === -3));
+        await page.waitForFunction(() =>
+            Object.values(window.__nailit.db.movements.sA || {}).some((m) => m.delta === -3),
+        );
         const landed = await page.evaluate(() => ({
             movements: Object.values(window.__nailit.db.movements.sA || {}),
             quantity: window.__nailit.db.materials.sA.m1.quantity,
@@ -200,31 +245,50 @@ describe("the offline indicator", () => {
         // The page starts as a phone that was reloaded with no bars: window.__preset.offline is read by the
         // fake data layer, so it comes up with no connection, exactly as the real SDK's flag would report.
         const { context, page, state } = await openDashboard(browser, baseUrl, SEED, {
-            beforeLoad: () => { window.__preset = { offline: true }; },
+            beforeLoad: () => {
+                window.__preset = { offline: true };
+            },
         });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
 
-        const queued = () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "[]").length, OUTBOX_KEY);
-        const movementCount = () => page.evaluate(() => Object.keys(window.__nailit.db.movements.sA || {}).length);
+        const queued = () =>
+            page.evaluate(
+                (key) => JSON.parse(localStorage.getItem(key) || "[]").length,
+                OUTBOX_KEY,
+            );
+        const movementCount = () =>
+            page.evaluate(() => Object.keys(window.__nailit.db.movements.sA || {}).length);
 
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator(".btn-use").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator(".btn-use")
+            .click();
         await page.locator("#movementContainer").waitFor({ state: "visible" });
         await page.fill("#movementAmount", "4");
         await page.click("#movementSubmit");
-        await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || "[]").length === 1, OUTBOX_KEY);
+        await page.waitForFunction(
+            (key) => JSON.parse(localStorage.getItem(key) || "[]").length === 1,
+            OUTBOX_KEY,
+        );
         assert.equal(await movementCount(), 0, "nothing reached the database with no signal");
 
         // The page is reloaded with the signal still gone. The queue lives on the device, not in the page,
         // so it is still there when the page comes back, and the reload alone does not send it.
         await page.reload();
-        await page.waitForFunction(() => window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
+        await page.waitForFunction(
+            () =>
+                window.__nailit &&
+                window.__nailit.activeListeners().some((l) => l.kind === "sites"),
+        );
         assert.equal(await queued(), 1, "the movement is still on the device after the reload");
         assert.equal(await movementCount(), 0, "a reload alone does not send it");
 
         // The signal comes back. The movement the earlier session could not send goes up on its own.
         await page.evaluate(() => window.__nailit.setConnected(true));
-        await page.waitForFunction(() => Object.values(window.__nailit.db.movements.sA || {}).some((m) => m.delta === -4));
+        await page.waitForFunction(() =>
+            Object.values(window.__nailit.db.movements.sA || {}).some((m) => m.delta === -4),
+        );
         const landed = await page.evaluate(() => ({
             movements: Object.values(window.__nailit.db.movements.sA || {}),
             quantity: window.__nailit.db.materials.sA.m1.quantity,

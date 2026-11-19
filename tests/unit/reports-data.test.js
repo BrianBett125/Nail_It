@@ -27,12 +27,18 @@ test("fetchMovementsBetween reads the site's movements in one query on time, bot
         { constraint: "startAt", value: 100 },
         { constraint: "endAt", value: 300 },
     ]);
-    assert.deepEqual(list, [{ id: "y", at: 100, delta: 2 }, { id: "z", at: 300, delta: 1 }]);
+    assert.deepEqual(list, [
+        { id: "y", at: 100, delta: 2 },
+        { id: "z", at: 300, delta: 1 },
+    ]);
 });
 
 test("fetchMovementsBetween with nothing there is an empty list, and with no signal it gives up", async () => {
     sdk.getValue = null;
     assert.deepEqual(await data.fetchMovementsBetween("A", 1, 2), []);
     sdk.hangGet = true;
-    await assert.rejects(data.fetchMovementsBetween("A", 1, 2, { timeoutMs: 20 }), /Could not reach the database/);
+    await assert.rejects(
+        data.fetchMovementsBetween("A", 1, 2, { timeoutMs: 20 }),
+        /Could not reach the database/,
+    );
 });

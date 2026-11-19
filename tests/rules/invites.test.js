@@ -3,13 +3,29 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startEnv, reset, raw, as, anonymous, ref, get, set, update, assertSucceeds, assertFails,
+    startEnv,
+    reset,
+    raw,
+    as,
+    anonymous,
+    ref,
+    get,
+    set,
+    update,
+    assertSucceeds,
+    assertFails,
 } from "./helpers.js";
 
 let env;
-before(async () => { env = await startEnv(); });
-after(async () => { await env.cleanup(); });
-beforeEach(async () => { await reset(env); });
+before(async () => {
+    env = await startEnv();
+});
+after(async () => {
+    await env.cleanup();
+});
+beforeEach(async () => {
+    await reset(env);
+});
 
 const EMAIL = "sam.w.mwangi@mail.example.com";
 const KEY = "sam,w,mwangi@mail,example,com";
@@ -41,7 +57,12 @@ describe("sending an invite", () => {
     it("the owner can see the pending invites of the site, and take one back", async () => {
         await ownerInvites();
         await assertSucceeds(get(ref(as(env, "owner1"), "siteInvites/s1")));
-        await assertSucceeds(update(ref(as(env, "owner1")), { [`userInvites/${KEY}/s1`]: null, [`siteInvites/s1/${KEY}`]: null }));
+        await assertSucceeds(
+            update(ref(as(env, "owner1")), {
+                [`userInvites/${KEY}/s1`]: null,
+                [`siteInvites/s1/${KEY}`]: null,
+            }),
+        );
         assert.equal(await raw(env, `userInvites/${KEY}/s1`), null);
     });
     it("cannot invite as owner (one owner per site)", async () => {
@@ -52,18 +73,31 @@ describe("sending an invite", () => {
         assert.deepEqual(await raw(env, `userInvites/${KEY}/s1`), inviteRecord("viewer"));
         const base = inviteRecord("viewer");
         for (const bad of [
-            { ...base, siteName: "" }, { ...base, siteName: "x".repeat(101) }, { ...base, invitedBy: "" },
-            { ...base, admin: true }, { role: "viewer" }, { ...base, role: "owner" }, "viewer",
+            { ...base, siteName: "" },
+            { ...base, siteName: "x".repeat(101) },
+            { ...base, invitedBy: "" },
+            { ...base, admin: true },
+            { role: "viewer" },
+            { ...base, role: "owner" },
+            "viewer",
         ]) {
             await assertFails(update(ref(as(env, "owner1")), { [`userInvites/${KEY}/s1`]: bad }));
         }
     });
     it("cannot forge who the invitation is from: invitedBy must be the inviter's own email", async () => {
-        for (const invitedBy of ["ceo@bigcorp.com", "keeper1@example.com", "OWNER1@example.com", "", " owner1@example.com"]) {
-            await assertFails(update(ref(as(env, "owner1")), {
-                [`userInvites/${KEY}/s1`]: { ...inviteRecord("viewer"), invitedBy },
-                [`siteInvites/s1/${KEY}`]: "viewer",
-            }));
+        for (const invitedBy of [
+            "ceo@bigcorp.com",
+            "keeper1@example.com",
+            "OWNER1@example.com",
+            "",
+            " owner1@example.com",
+        ]) {
+            await assertFails(
+                update(ref(as(env, "owner1")), {
+                    [`userInvites/${KEY}/s1`]: { ...inviteRecord("viewer"), invitedBy },
+                    [`siteInvites/s1/${KEY}`]: "viewer",
+                }),
+            );
         }
         assert.equal(await raw(env, `userInvites/${KEY}/s1`), null);
     });
@@ -96,7 +130,14 @@ describe("accepting an invite", () => {
         await ownerInvites("viewer");
         await update(ref(sam()), accept("viewer"));
         await assertSucceeds(get(ref(sam(), "materials/s1")));
-        await assertFails(set(ref(sam(), "materials/s1/m9"), { name: "x", quantity: 1, units: "kg", lastUpdated: "2024-01-01" }));
+        await assertFails(
+            set(ref(sam(), "materials/s1/m9"), {
+                name: "x",
+                quantity: 1,
+                units: "kg",
+                lastUpdated: "2024-01-01",
+            }),
+        );
     });
 
     it("the invitee records their email in memberInfo after joining", async () => {
@@ -114,10 +155,13 @@ describe("accepting an invite", () => {
     it("a different email cannot accept, even knowing the site id", async () => {
         await ownerInvites();
         const mallory = as(env, "mallory", { email: "mallory@evil.example.com" });
-        await assertFails(update(ref(mallory), {
-            "members/s1/mallory": "viewer", "userSites/mallory/s1": "viewer",
-            [`userInvites/${KEY}/s1`]: null,
-        }));
+        await assertFails(
+            update(ref(mallory), {
+                "members/s1/mallory": "viewer",
+                "userSites/mallory/s1": "viewer",
+                [`userInvites/${KEY}/s1`]: null,
+            }),
+        );
         assert.equal(await raw(env, "members/s1/mallory"), null);
     });
 
@@ -139,7 +183,9 @@ describe("accepting an invite", () => {
 
     it("must consume the invite in the same update (no reusable invite)", async () => {
         await ownerInvites("viewer");
-        await assertFails(update(ref(sam()), { "members/s1/sam": "viewer", "userSites/sam/s1": "viewer" }));
+        await assertFails(
+            update(ref(sam()), { "members/s1/sam": "viewer", "userSites/sam/s1": "viewer" }),
+        );
         assert.equal(await raw(env, "members/s1/sam"), null);
     });
 
@@ -153,12 +199,21 @@ describe("accepting an invite", () => {
     it("an email with a plus sign, digits and several dots works as a key", async () => {
         const email = "a.b+c.d9@sub.mail.example.org";
         const key = "a,b+c,d9@sub,mail,example,org";
-        await assertSucceeds(update(ref(as(env, "owner1")), { [`userInvites/${key}/s1`]: inviteRecord("viewer"), [`siteInvites/s1/${key}`]: "viewer" }));
+        await assertSucceeds(
+            update(ref(as(env, "owner1")), {
+                [`userInvites/${key}/s1`]: inviteRecord("viewer"),
+                [`siteInvites/s1/${key}`]: "viewer",
+            }),
+        );
         const dot = as(env, "dot", { email });
-        await assertSucceeds(update(ref(dot), {
-            "members/s1/dot": "viewer", "userSites/dot/s1": "viewer",
-            [`userInvites/${key}/s1`]: null, [`siteInvites/s1/${key}`]: null,
-        }));
+        await assertSucceeds(
+            update(ref(dot), {
+                "members/s1/dot": "viewer",
+                "userSites/dot/s1": "viewer",
+                [`userInvites/${key}/s1`]: null,
+                [`siteInvites/s1/${key}`]: null,
+            }),
+        );
     });
 
     it("the match ignores upper case in the account email", async () => {
@@ -172,7 +227,14 @@ describe("reading invites", () => {
     it("the invitee reads their own pending invites and nobody else's", async () => {
         await ownerInvites();
         await assertSucceeds(get(ref(sam(), `userInvites/${KEY}`)));
-        await assertFails(get(ref(as(env, "mallory", { email: "mallory@evil.example.com" }), `userInvites/${KEY}`)));
+        await assertFails(
+            get(
+                ref(
+                    as(env, "mallory", { email: "mallory@evil.example.com" }),
+                    `userInvites/${KEY}`,
+                ),
+            ),
+        );
         await assertFails(get(ref(as(env, "viewer1"), `userInvites/${KEY}`)));
         await assertFails(get(ref(anonymous(env), `userInvites/${KEY}`)));
         await assertFails(get(ref(sam(), "userInvites")));
@@ -190,18 +252,32 @@ describe("reading invites", () => {
 describe("declining an invite", () => {
     it("the invitee deletes it, and cannot create or change one", async () => {
         await ownerInvites("viewer");
-        await assertSucceeds(update(ref(sam()), { [`userInvites/${KEY}/s1`]: null, [`siteInvites/s1/${KEY}`]: null }));
+        await assertSucceeds(
+            update(ref(sam()), {
+                [`userInvites/${KEY}/s1`]: null,
+                [`siteInvites/s1/${KEY}`]: null,
+            }),
+        );
         await assertFails(update(ref(sam()), invite("storekeeper")));
         await assertFails(update(ref(sam()), invite("viewer")));
     });
     it("an unverified account registered with that address cannot delete (or decline) it", async () => {
         await ownerInvites("viewer");
-        await assertFails(update(ref(sam({ email_verified: false })), { [`userInvites/${KEY}/s1`]: null, [`siteInvites/s1/${KEY}`]: null }));
+        await assertFails(
+            update(ref(sam({ email_verified: false })), {
+                [`userInvites/${KEY}/s1`]: null,
+                [`siteInvites/s1/${KEY}`]: null,
+            }),
+        );
         assert.equal((await raw(env, `userInvites/${KEY}/s1`)).role, "viewer");
     });
     it("somebody else cannot delete it", async () => {
         await ownerInvites("viewer");
-        await assertFails(update(ref(as(env, "mallory", { email: "mallory@evil.example.com" })), { [`userInvites/${KEY}/s1`]: null }));
+        await assertFails(
+            update(ref(as(env, "mallory", { email: "mallory@evil.example.com" })), {
+                [`userInvites/${KEY}/s1`]: null,
+            }),
+        );
         assert.equal((await raw(env, `userInvites/${KEY}/s1`)).role, "viewer");
     });
 });

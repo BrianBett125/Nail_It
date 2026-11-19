@@ -146,5 +146,7 @@ export function strategyFor({ url, method = "GET", mode = "no-cors", origin }) {
 // The caches to drop when a new worker takes over: ours from an older version, and nothing else.
 // Anything not carrying our prefix belongs to somebody else on the origin.
 export function cachesToDelete(existingNames) {
-    return existingNames.filter((name) => name.startsWith(`${CACHE_PREFIX}-`) && name !== CACHE_NAME);
+    return existingNames.filter(
+        (name) => name.startsWith(`${CACHE_PREFIX}-`) && name !== CACHE_NAME,
+    );
 }

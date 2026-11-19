@@ -15,7 +15,7 @@
     width: 100%;
     max-width: 100%;
     max-height: var(--vh, 100dvh);
-    margin: auto 0 0;       /* the bottom of the screen */
+    margin: auto 0 0; /* the bottom of the screen */
     padding: 0;
     border: 0;
     background: transparent;
@@ -49,9 +49,15 @@
 
 /* A form is the app's amber: the same action colour as Add Site and Add Material. Members and the
    delete confirmation keep their own accent so the sheet says what it is before you read it. */
-.sheet-form { --accent: var(--amber); }
-.members-dialog { --accent: var(--link); }
-.sheet-danger { --accent: var(--out); }
+.sheet-form {
+    --accent: var(--amber);
+}
+.members-dialog {
+    --accent: var(--link);
+}
+.sheet-danger {
+    --accent: var(--out);
+}
 
 .sheet-form .sheet-primary {
     background: var(--amber);
@@ -231,7 +237,9 @@
 
 /* ---- phones: the sheet fills the width ---- */
 @media (max-width: 600px) {
-    .sheet-dialog { overscroll-behavior: contain; }
+    .sheet-dialog {
+        overscroll-behavior: contain;
+    }
 }
 
 /* ---- larger screens: a centred card ---- */
@@ -241,7 +249,9 @@
         margin: auto;
     }
 
-    .sheet-dialog-wide { max-width: 560px; }
+    .sheet-dialog-wide {
+        max-width: 560px;
+    }
 
     .sheet {
         max-height: calc(var(--vh, 100dvh) - 48px);
@@ -249,9 +259,15 @@
         border-radius: var(--r-lg);
     }
 
-    .sheet-grip { display: none; }
-    .sheet-body { padding: 6px var(--sp-6) 10px; }
-    .sheet-actions { padding: var(--sp-3) var(--sp-6) var(--sp-5); }
+    .sheet-grip {
+        display: none;
+    }
+    .sheet-body {
+        padding: 6px var(--sp-6) 10px;
+    }
+    .sheet-actions {
+        padding: var(--sp-3) var(--sp-6) var(--sp-5);
+    }
 
     .sheet-dialog .sheet-history {
         height: min(640px, calc(var(--vh, 100dvh) - 48px));

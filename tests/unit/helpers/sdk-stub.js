@@ -1,6 +1,12 @@
 // Recording stand-in for firebase-app.js and firebase-database.js. Every call lands in
 // globalThis.__sdk.calls so tests can assert exactly what src/data.js asked Firebase to do.
-const sdk = (globalThis.__sdk = { calls: [], getValue: null, listeners: [], keyCounter: 0, updateError: null });
+const sdk = (globalThis.__sdk = {
+    calls: [],
+    getValue: null,
+    listeners: [],
+    keyCounter: 0,
+    updateError: null,
+});
 
 const record = (name, ...args) => sdk.calls.push({ name, args });
 
@@ -67,10 +73,14 @@ export function get(target) {
         return new Promise(() => {}); // the server never answers: no signal
     }
     // sdk.getValues maps a path to its value; anything else gets sdk.getValue.
-    const value = sdk.getValues && target.path in sdk.getValues ? sdk.getValues[target.path] : sdk.getValue;
+    const value =
+        sdk.getValues && target.path in sdk.getValues ? sdk.getValues[target.path] : sdk.getValue;
     // exists() as the real snapshot has it: what src/data.js asks the outbox's replay before sending
     // a movement that may already be in the database.
-    return Promise.resolve({ val: () => value, exists: () => value !== null && value !== undefined });
+    return Promise.resolve({
+        val: () => value,
+        exists: () => value !== null && value !== undefined,
+    });
 }
 
 export function update(target, values) {
@@ -103,8 +113,13 @@ const fakeUser = (extra = {}) => ({
     uid: "u1",
     email: "sam@example.com",
     emailVerified: false,
-    reload: async () => { record("user.reload"); },
-    getIdToken: async (force) => { record("user.getIdToken", force); return "token"; },
+    reload: async () => {
+        record("user.reload");
+    },
+    getIdToken: async (force) => {
+        record("user.getIdToken", force);
+        return "token";
+    },
     ...extra,
 });
 

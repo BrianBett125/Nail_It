@@ -9,7 +9,7 @@
 // DOM code only; no data, no Firebase.
 
 const openers = new WeakMap(); // dialog -> the element (or a function finding it) to focus on close
-const KEYBOARD_GAP = 120;      // a viewport this much shorter than the window means a keyboard is up
+const KEYBOARD_GAP = 120; // a viewport this much shorter than the window means a keyboard is up
 
 // Opens `dialog` as a modal. Any other open dialog is closed first.
 //   focus:  the element that gets focus (default: the browser's choice, the first control)
@@ -57,11 +57,15 @@ function giveFocusBack(dialog) {
 }
 
 // Escape and the like close a dialog without going through closeDialog: the event covers them.
-document.addEventListener("close", (event) => {
-    if (event.target instanceof HTMLDialogElement) {
-        giveFocusBack(event.target);
-    }
-}, true);
+document.addEventListener(
+    "close",
+    (event) => {
+        if (event.target instanceof HTMLDialogElement) {
+            giveFocusBack(event.target);
+        }
+    },
+    true,
+);
 
 // A tap on the dimmed area (the ::backdrop, which reports the dialog itself as its target) closes
 // the dialog. The press must also have started there, so dragging out of a text field does not.
@@ -111,8 +115,9 @@ document.addEventListener("keydown", (event) => {
     if (!dialog) {
         return;
     }
-    const items = [...dialog.querySelectorAll(TABBABLE)].filter((el) =>
-        !el.disabled && el.tabIndex >= 0 && el.checkVisibility());
+    const items = [...dialog.querySelectorAll(TABBABLE)].filter(
+        (el) => !el.disabled && el.tabIndex >= 0 && el.checkVisibility(),
+    );
     if (items.length === 0) {
         return;
     }

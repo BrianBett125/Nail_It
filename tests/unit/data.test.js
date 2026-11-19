@@ -50,7 +50,11 @@ test("B4: deleteSiteCascade reads members and invites, then makes exactly one up
     assert.equal(calls("remove").length, 0, "no separate remove() calls");
     const updates = calls("update");
     assert.equal(updates.length, 1, "exactly one update()");
-    assert.deepEqual(updates[0].args[0], { kind: "ref", path: "" }, "update is applied at the database root");
+    assert.deepEqual(
+        updates[0].args[0],
+        { kind: "ref", path: "" },
+        "update is applied at the database root",
+    );
     assert.deepEqual(updates[0].args[1], {
         "sites/A": null,
         "materials/A": null,
@@ -69,16 +73,21 @@ test("B4: deleteSiteCascade of a site nobody else is in still removes everything
     sdk.getValues = { "members/A": { u1: "owner" } };
     await data.deleteSiteCascade("A");
     assert.deepEqual(Object.keys(calls("update")[0].args[1]).sort(), [
-        "materials/A", "memberInfo/A", "members/A/u1", "movements/A", "siteInvites/A", "sites/A", "userSites/u1/A",
+        "materials/A",
+        "memberInfo/A",
+        "members/A/u1",
+        "movements/A",
+        "siteInvites/A",
+        "sites/A",
+        "userSites/u1/A",
     ]);
 });
 
 test("B4: with no signal deleteSiteCascade gives up with a clear message and writes nothing", async () => {
     sdk.hangGet = true;
-    await assert.rejects(
-        data.deleteSiteCascade("A", { timeoutMs: 20 }),
-        { message: data.OFFLINE_MESSAGE },
-    );
+    await assert.rejects(data.deleteSiteCascade("A", { timeoutMs: 20 }), {
+        message: data.OFFLINE_MESSAGE,
+    });
     assert.equal(calls("update").length, 0, "a half-known delete must not be sent");
     assert.equal(calls("remove").length, 0);
 });
@@ -91,12 +100,22 @@ test("addSite creates the site, the owner membership, the site list entry and th
     await done;
 
     assert.match(id, /^-Nstub/);
-    assert.deepEqual(calls("push").map((c) => [c.args[0].path, c.args[1]]), [["sites", undefined]], "push only makes the key");
+    assert.deepEqual(
+        calls("push").map((c) => [c.args[0].path, c.args[1]]),
+        [["sites", undefined]],
+        "push only makes the key",
+    );
     const updates = calls("update");
     assert.equal(updates.length, 1);
     assert.deepEqual(updates[0].args[0], { kind: "ref", path: "" });
     assert.deepEqual(updates[0].args[1], {
-        [`sites/${id}`]: { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 5, ownerUid: "u1" },
+        [`sites/${id}`]: {
+            name: "Mombasa",
+            location: "Nyali",
+            buildingType: "Residential",
+            createdAt: 5,
+            ownerUid: "u1",
+        },
         [`members/${id}/u1`]: "owner",
         [`userSites/u1/${id}`]: "owner",
         [`memberInfo/${id}/u1`]: { email: "sam@example.com" },
@@ -104,13 +123,20 @@ test("addSite creates the site, the owner membership, the site list entry and th
 });
 
 test("addSite takes the owner from the signed-in user, never from the site data", () => {
-    const { id } = data.addSite({ name: "x", ownerUid: "attacker" }, { uid: "u1", email: "a@b.co" });
+    const { id } = data.addSite(
+        { name: "x", ownerUid: "attacker" },
+        { uid: "u1", email: "a@b.co" },
+    );
     assert.equal(calls("update")[0].args[1][`sites/${id}`].ownerUid, "u1");
 });
 
 test("subscribeSites lists /userSites/<uid>, reads each site, and merges the role in", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
 
     assert.deepEqual(paths("onValue"), ["userSites/u1"]);
     listener("userSites/u1").onData(snapshot({ A: "owner", B: "viewer" }));
@@ -120,15 +146,21 @@ test("subscribeSites lists /userSites/<uid>, reads each site, and merges the rol
     listener("sites/A").onData(snapshot({ name: "Mombasa" }));
     assert.deepEqual(seen, []);
     listener("sites/B").onData(snapshot({ name: "Cape Town" }));
-    assert.deepEqual(seen, [{
-        A: { name: "Mombasa", role: "owner" },
-        B: { name: "Cape Town", role: "viewer" },
-    }]);
+    assert.deepEqual(seen, [
+        {
+            A: { name: "Mombasa", role: "owner" },
+            B: { name: "Cape Town", role: "viewer" },
+        },
+    ]);
 });
 
 test("subscribeSites with no sites reports {} at once, and a null snapshot is the same", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot(null));
     assert.deepEqual(seen, [{}]);
     assert.deepEqual(paths("onValue"), ["userSites/u1"], "no site listeners");
@@ -136,7 +168,11 @@ test("subscribeSites with no sites reports {} at once, and a null snapshot is th
 
 test("subscribeSites drops a site that leaves the list and stops listening to it", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot({ A: "owner", B: "viewer" }));
     listener("sites/A").onData(snapshot({ name: "Mombasa" }));
     listener("sites/B").onData(snapshot({ name: "Cape Town" }));
@@ -150,7 +186,11 @@ test("subscribeSites drops a site that leaves the list and stops listening to it
 
 test("subscribeSites shows a role change without re-reading the site", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot({ A: "viewer" }));
     listener("sites/A").onData(snapshot({ name: "Mombasa" }));
     seen.length = 0;
@@ -163,7 +203,11 @@ test("subscribeSites shows a role change without re-reading the site", () => {
 
 test("subscribeSites leaves out a listed site that cannot be read, and shows the rest", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot({ A: "owner", B: "viewer" }));
     listener("sites/A").onData(snapshot({ name: "Mombasa" }));
     listener("sites/B").onError(new Error("permission_denied"));
@@ -172,14 +216,22 @@ test("subscribeSites leaves out a listed site that cannot be read, and shows the
 
 test("subscribeSites leaves out a listed site that has no data (deleted)", () => {
     const seen = [];
-    data.subscribeSites("u1", (sites) => seen.push(sites), () => {});
+    data.subscribeSites(
+        "u1",
+        (sites) => seen.push(sites),
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot({ A: "owner" }));
     listener("sites/A").onData(snapshot(null));
     assert.deepEqual(seen, [{}]);
 });
 
 test("subscribeSites unsubscribe stops the list and every site", () => {
-    const stop = data.subscribeSites("u1", () => {}, () => {});
+    const stop = data.subscribeSites(
+        "u1",
+        () => {},
+        () => {},
+    );
     listener("userSites/u1").onData(snapshot({ A: "owner", B: "viewer" }));
     const before = calls("unsubscribe").length;
     stop();
@@ -199,7 +251,11 @@ test("subscribeConnection listens on Firebase's own connection flag, not on a si
     const onError = () => {};
     const unsubscribe = data.subscribeConnection((online) => seen.push(online), onError);
 
-    assert.deepEqual(paths("onValue"), [".info/connected"], "the flag is the special .info location");
+    assert.deepEqual(
+        paths("onValue"),
+        [".info/connected"],
+        "the flag is the special .info location",
+    );
     assert.equal(sdk.listeners[0].onError, onError);
     unsubscribe();
     assert.equal(calls("unsubscribe").length, 1);
@@ -210,7 +266,10 @@ test("subscribeConnection listens on Firebase's own connection flag, not on a si
 
 test("only a plain true counts as online: anything else, above all null, means the app is working offline", () => {
     const seen = [];
-    data.subscribeConnection((online) => seen.push(online), () => {});
+    data.subscribeConnection(
+        (online) => seen.push(online),
+        () => {},
+    );
 
     for (const value of [false, null, undefined, "true", 1, {}]) {
         listener(".info/connected").onData(snapshot(value));
@@ -244,7 +303,11 @@ const only = (name) => {
 };
 
 test("addMaterial with stock is ONE update at the root: the material and its opening movement", async () => {
-    const { id, done } = data.addMaterial("A", { name: "Cement", units: "bags", quantity: 5 }, USER);
+    const { id, done } = data.addMaterial(
+        "A",
+        { name: "Cement", units: "bags", quantity: 5 },
+        USER,
+    );
     await done;
 
     assert.match(id, /^-Nstub/);
@@ -254,25 +317,43 @@ test("addMaterial with stock is ONE update at the root: the material and its ope
     const movementPath = Object.keys(writes).find((p) => p.startsWith("movements/A/"));
     const movementId = movementPath.split("/")[2];
     assert.deepEqual(writes[`materials/A/${id}`], {
-        name: "Cement", units: "bags", quantity: 5, updatedAt: TIMESTAMP, lastMovementId: movementId,
+        name: "Cement",
+        units: "bags",
+        quantity: 5,
+        updatedAt: TIMESTAMP,
+        lastMovementId: movementId,
     });
     assert.deepEqual(writes[movementPath], {
-        materialId: id, materialName: "Cement", units: "bags", delta: 5, type: "opening",
-        byUid: "u1", byEmail: "foreman@example.com", at: TIMESTAMP,
+        materialId: id,
+        materialName: "Cement",
+        units: "bags",
+        delta: 5,
+        type: "opening",
+        byUid: "u1",
+        byEmail: "foreman@example.com",
+        at: TIMESTAMP,
     });
     assert.equal(Object.keys(writes).length, 2);
     assert.equal(calls("set").length, 0, "no separate set()");
 });
 
 test("addMaterial with no stock writes the material alone", async () => {
-    const { id, done } = data.addMaterial("A", { name: "Sand", units: "tonnes", quantity: 0 }, USER);
+    const { id, done } = data.addMaterial(
+        "A",
+        { name: "Sand", units: "tonnes", quantity: 0 },
+        USER,
+    );
     await done;
     assert.deepEqual(Object.keys(only("update").args[1]), [`materials/A/${id}`]);
 });
 
 test("recordMovement increments the quantity and writes the movement in the same update", async () => {
     const { id, done } = data.recordMovement(
-        "A", "m1", { name: "Cement", units: "bags" }, { type: "used", delta: -20, note: "Slab pour" }, USER,
+        "A",
+        "m1",
+        { name: "Cement", units: "bags" },
+        { type: "used", delta: -20, note: "Slab pour" },
+        USER,
     );
     await done;
 
@@ -280,8 +361,15 @@ test("recordMovement increments the quantity and writes the movement in the same
     const writes = only("update").args[1];
     assert.deepEqual(writes, {
         [`movements/A/${id}`]: {
-            materialId: "m1", materialName: "Cement", units: "bags", delta: -20, type: "used",
-            byUid: "u1", byEmail: "foreman@example.com", at: TIMESTAMP, note: "Slab pour",
+            materialId: "m1",
+            materialName: "Cement",
+            units: "bags",
+            delta: -20,
+            type: "used",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: TIMESTAMP,
+            note: "Slab pour",
         },
         "materials/A/m1/quantity": { ".sv": { increment: -20 } },
         "materials/A/m1/lastMovementId": id,
@@ -290,7 +378,13 @@ test("recordMovement increments the quantity and writes the movement in the same
 });
 
 test("recordMovement never sends a quantity the phone computed", async () => {
-    await data.recordMovement("A", "m1", { name: "Cement", units: "bags", quantity: 5 }, { type: "received", delta: 3 }, USER).done;
+    await data.recordMovement(
+        "A",
+        "m1",
+        { name: "Cement", units: "bags", quantity: 5 },
+        { type: "received", delta: 3 },
+        USER,
+    ).done;
     assert.equal(typeof only("update").args[1]["materials/A/m1/quantity"], "object");
 });
 
@@ -310,7 +404,11 @@ test("a movement recorded with no signal is replayed with the server's time, nev
     let failed;
     try {
         ({ id, done: failed } = data.recordMovement(
-            "A", "m1", { name: "Cement", units: "bags" }, { type: "used", delta: -2 }, USER,
+            "A",
+            "m1",
+            { name: "Cement", units: "bags" },
+            { type: "used", delta: -2 },
+            USER,
         ));
         await assert.rejects(failed, { message: "Network unavailable" });
     } finally {
@@ -349,21 +447,30 @@ test("removeMaterial deletes the material and takes its stock out in a 'removed'
     assert.equal(calls("remove").length, 0, "no separate remove()");
     const writes = only("update").args[1];
     assert.equal(writes["materials/A/m1"], null);
-    const [movement] = Object.entries(writes).filter(([p]) => p.startsWith("movements/A/")).map(([, v]) => v);
+    const [movement] = Object.entries(writes)
+        .filter(([p]) => p.startsWith("movements/A/"))
+        .map(([, v]) => v);
     assert.equal(movement.type, "removed");
     assert.equal(movement.delta, -5);
     assert.equal(movement.materialId, "m1");
 });
 
 test("restoreMaterial brings it back at its original key with an opening movement (Undo)", async () => {
-    await data.restoreMaterial("A", "m1", { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" }, USER);
+    await data.restoreMaterial(
+        "A",
+        "m1",
+        { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" },
+        USER,
+    );
     assert.equal(calls("set").length, 0);
     const writes = only("update").args[1];
     assert.deepEqual(
         { ...writes["materials/A/m1"], lastMovementId: "-" },
         { name: "Cement", units: "bags", quantity: 5, updatedAt: TIMESTAMP, lastMovementId: "-" },
     );
-    const [movement] = Object.entries(writes).filter(([p]) => p.startsWith("movements/A/")).map(([, v]) => v);
+    const [movement] = Object.entries(writes)
+        .filter(([p]) => p.startsWith("movements/A/"))
+        .map(([, v]) => v);
     assert.equal(movement.type, "opening");
     assert.equal(movement.delta, 5);
     assert.equal(movement.note, "Restored after delete");
@@ -371,7 +478,12 @@ test("restoreMaterial brings it back at its original key with an opening movemen
 
 test("subscribeMovements for a material asks for that material's movements only, newest 100", () => {
     const seen = [];
-    data.subscribeMovements("A", { materialId: "m1" }, (list) => seen.push(list), () => {});
+    data.subscribeMovements(
+        "A",
+        { materialId: "m1" },
+        (list) => seen.push(list),
+        () => {},
+    );
     const { target } = sdk.listeners[0];
     assert.equal(target.kind, "query");
     assert.equal(target.base.path, "movements/A");
@@ -383,7 +495,12 @@ test("subscribeMovements for a material asks for that material's movements only,
 });
 
 test("subscribeMovements for the site is ordered by time and limited", () => {
-    data.subscribeMovements("A", { limit: 30 }, () => {}, () => {});
+    data.subscribeMovements(
+        "A",
+        { limit: 30 },
+        () => {},
+        () => {},
+    );
     assert.deepEqual(sdk.listeners[0].target.constraints, [
         { constraint: "orderByChild", field: "at" },
         { constraint: "limitToLast", count: 30 },
@@ -394,11 +511,23 @@ test("subscribeMovements hands back a list with each id, oldest first, and passe
     const seen = [];
     const onError = () => {};
     const stop = data.subscribeMovements("A", {}, (list) => seen.push(list), onError);
-    const children = [["b", { at: 200, delta: 1 }], ["a", { at: 100, delta: 2 }]];
+    const children = [
+        ["b", { at: 200, delta: 1 }],
+        ["a", { at: 100, delta: 2 }],
+    ];
     sdk.listeners[0].onData({
-        forEach: (callback) => { for (const [key, value] of children) { callback({ key, val: () => value }); } },
+        forEach: (callback) => {
+            for (const [key, value] of children) {
+                callback({ key, val: () => value });
+            }
+        },
     });
-    assert.deepEqual(seen, [[{ id: "a", at: 100, delta: 2 }, { id: "b", at: 200, delta: 1 }]]);
+    assert.deepEqual(seen, [
+        [
+            { id: "a", at: 100, delta: 2 },
+            { id: "b", at: 200, delta: 1 },
+        ],
+    ]);
     assert.equal(sdk.listeners[0].onError, onError);
     stop();
     assert.equal(calls("unsubscribe").length, 1);
@@ -406,12 +535,20 @@ test("subscribeMovements hands back a list with each id, oldest first, and passe
 
 test("subscribeMovements reads every child even though the SDK stops forEach on a truthy return", () => {
     const seen = [];
-    data.subscribeMovements("A", {}, (list) => seen.push(list), () => {});
+    data.subscribeMovements(
+        "A",
+        {},
+        (list) => seen.push(list),
+        () => {},
+    );
     let stoppedEarly = false;
     sdk.listeners[0].onData({
         forEach: (callback) => {
             for (const key of ["a", "b", "c"]) {
-                if (callback({ key, val: () => ({ at: 1 }) })) { stoppedEarly = true; break; }
+                if (callback({ key, val: () => ({ at: 1 }) })) {
+                    stoppedEarly = true;
+                    break;
+                }
             }
         },
     });
@@ -423,38 +560,64 @@ test("subscribeMovements reads every child even though the SDK stops forEach on 
 
 test("subscribeMembers merges roles with emails, and shows a member without info as email null", () => {
     const seen = [];
-    data.subscribeMembers("A", { withInvites: false }, (m) => seen.push(m), () => {});
-    assert.deepEqual(paths("onValue"), ["members/A", "memberInfo/A"], "a non-owner never asks for invites");
+    data.subscribeMembers(
+        "A",
+        { withInvites: false },
+        (m) => seen.push(m),
+        () => {},
+    );
+    assert.deepEqual(
+        paths("onValue"),
+        ["members/A", "memberInfo/A"],
+        "a non-owner never asks for invites",
+    );
 
     listener("members/A").onData(snapshot({ u1: "owner", u2: "viewer" }));
     assert.deepEqual(seen, [], "waits for both");
     listener("memberInfo/A").onData(snapshot({ u1: { email: "sam@example.com" } }));
-    assert.deepEqual(seen, [{
-        members: [
-            { uid: "u1", role: "owner", email: "sam@example.com" },
-            { uid: "u2", role: "viewer", email: null },
-        ],
-        invites: [],
-    }]);
+    assert.deepEqual(seen, [
+        {
+            members: [
+                { uid: "u1", role: "owner", email: "sam@example.com" },
+                { uid: "u2", role: "viewer", email: null },
+            ],
+            invites: [],
+        },
+    ]);
 });
 
 test("subscribeMembers for an owner also lists pending invites with decoded emails", () => {
     const seen = [];
-    const stop = data.subscribeMembers("A", { withInvites: true }, (m) => seen.push(m), () => {});
+    const stop = data.subscribeMembers(
+        "A",
+        { withInvites: true },
+        (m) => seen.push(m),
+        () => {},
+    );
     assert.deepEqual(paths("onValue"), ["members/A", "memberInfo/A", "siteInvites/A"]);
     listener("members/A").onData(snapshot({ u1: "owner" }));
     listener("memberInfo/A").onData(snapshot(null));
     listener("siteInvites/A").onData(snapshot({ "sam,w@mail,example,com": "storekeeper" }));
-    assert.deepEqual(seen.at(-1).invites, [{ key: "sam,w@mail,example,com", email: "sam.w@mail.example.com", role: "storekeeper" }]);
+    assert.deepEqual(seen.at(-1).invites, [
+        { key: "sam,w@mail,example,com", email: "sam.w@mail.example.com", role: "storekeeper" },
+    ]);
     stop();
     assert.equal(calls("unsubscribe").length, 3);
 });
 
 test("inviteMember writes the invitee's copy and the owner's copy in one update", async () => {
-    await data.inviteMember({ id: "A", name: "Mombasa" }, { email: "owner@example.com" }, { key: "sam@x,com", role: "viewer" });
+    await data.inviteMember(
+        { id: "A", name: "Mombasa" },
+        { email: "owner@example.com" },
+        { key: "sam@x,com", role: "viewer" },
+    );
     assert.equal(calls("update").length, 1);
     assert.deepEqual(calls("update")[0].args[1], {
-        "userInvites/sam@x,com/A": { role: "viewer", siteName: "Mombasa", invitedBy: "owner@example.com" },
+        "userInvites/sam@x,com/A": {
+            role: "viewer",
+            siteName: "Mombasa",
+            invitedBy: "owner@example.com",
+        },
         "siteInvites/A/sam@x,com": "viewer",
     });
 });
@@ -470,41 +633,66 @@ test("revokeInvite and declineInvite delete both copies", async () => {
 
 test("changeRole updates the membership and the user's site list together", async () => {
     await data.changeRole("A", "u2", "storekeeper");
-    assert.deepEqual(calls("update").map((c) => c.args[1]), [
-        { "members/A/u2": "storekeeper", "userSites/u2/A": "storekeeper" },
-    ]);
+    assert.deepEqual(
+        calls("update").map((c) => c.args[1]),
+        [{ "members/A/u2": "storekeeper", "userSites/u2/A": "storekeeper" }],
+    );
 });
 
 test("removeMember (and leaving) deletes membership, site list entry and member info together", async () => {
     await data.removeMember("A", "u2");
-    assert.deepEqual(calls("update").map((c) => c.args[1]), [
-        { "members/A/u2": null, "userSites/u2/A": null, "memberInfo/A/u2": null },
-    ]);
+    assert.deepEqual(
+        calls("update").map((c) => c.args[1]),
+        [{ "members/A/u2": null, "userSites/u2/A": null, "memberInfo/A/u2": null }],
+    );
 });
 
 test("subscribeInvites listens on the invitee's key and turns null into {}", () => {
     const seen = [];
-    data.subscribeInvites("sam@x,com", (i) => seen.push(i), () => {});
+    data.subscribeInvites(
+        "sam@x,com",
+        (i) => seen.push(i),
+        () => {},
+    );
     assert.deepEqual(paths("onValue"), ["userInvites/sam@x,com"]);
-    listener("userInvites/sam@x,com").onData(snapshot({ A: { role: "viewer", siteName: "Mombasa", invitedBy: "o@x.co" } }));
+    listener("userInvites/sam@x,com").onData(
+        snapshot({ A: { role: "viewer", siteName: "Mombasa", invitedBy: "o@x.co" } }),
+    );
     listener("userInvites/sam@x,com").onData(snapshot(null));
-    assert.deepEqual(seen, [{ A: { role: "viewer", siteName: "Mombasa", invitedBy: "o@x.co" } }, {}]);
+    assert.deepEqual(seen, [
+        { A: { role: "viewer", siteName: "Mombasa", invitedBy: "o@x.co" } },
+        {},
+    ]);
 });
 
 test("acceptInvite joins and uses up the invite in one update, then records the email", async () => {
     await data.acceptInvite({ uid: "u9", email: "sam@x.com" }, "A", "sam@x,com", "storekeeper");
-    assert.deepEqual(calls("update").map((c) => c.args[1]), [{
-        "members/A/u9": "storekeeper",
-        "userSites/u9/A": "storekeeper",
-        "userInvites/sam@x,com/A": null,
-        "siteInvites/A/sam@x,com": null,
-    }]);
-    assert.deepEqual(calls("set").map((c) => [c.args[0].path, c.args[1]]), [["memberInfo/A/u9", { email: "sam@x.com" }]]);
+    assert.deepEqual(
+        calls("update").map((c) => c.args[1]),
+        [
+            {
+                "members/A/u9": "storekeeper",
+                "userSites/u9/A": "storekeeper",
+                "userInvites/sam@x,com/A": null,
+                "siteInvites/A/sam@x,com": null,
+            },
+        ],
+    );
+    assert.deepEqual(
+        calls("set").map((c) => [c.args[0].path, c.args[1]]),
+        [["memberInfo/A/u9", { email: "sam@x.com" }]],
+    );
     const order = sdk.calls.map((c) => c.name).filter((n) => n === "update" || n === "set");
-    assert.deepEqual(order, ["update", "set"], "membership first: the rules need it before the info");
+    assert.deepEqual(
+        order,
+        ["update", "set"],
+        "membership first: the rules need it before the info",
+    );
 });
 
 test("acceptInvite still succeeds when only the member info could not be written", async () => {
     sdk.setError = new Error("denied");
-    await assert.doesNotReject(data.acceptInvite({ uid: "u9", email: "sam@x.com" }, "A", "k", "viewer"));
+    await assert.doesNotReject(
+        data.acceptInvite({ uid: "u9", email: "sam@x.com" }, "A", "k", "viewer"),
+    );
 });
