@@ -169,8 +169,14 @@ test("the manifest carries what a browser needs to install the app on a home scr
     );
     assert.equal(manifest.scope, "/", "an installed app cannot navigate outside its scope");
     assert.equal(manifest.display, "standalone", "in a browser tab it would not look installed");
-    assert.match(manifest.background_color, /^#[0-9a-f]{6}$/i);
-    assert.match(manifest.theme_color, /^#[0-9a-f]{6}$/i);
+    // The chrome is one colour: the manifest hands the operating system the same value tokens.css paints
+    // the app header with, so an installed app's status bar and splash are not a different black from it.
+    const chrome = /--chrome:\s*(#[0-9a-f]{6})/i.exec(
+        fs.readFileSync(path.resolve(import.meta.dirname, "../../styles/tokens.css"), "utf8"),
+    );
+    assert.ok(chrome, "styles/tokens.css declares --chrome");
+    assert.equal(manifest.theme_color, chrome[1]);
+    assert.equal(manifest.background_color, chrome[1]);
     const sizes = manifest.icons.map((icon) => icon.sizes);
     for (const needed of ["192x192", "512x512"]) {
         assert.ok(sizes.includes(needed), `no ${needed} icon`);
