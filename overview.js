@@ -12,8 +12,8 @@ import { isStale, overviewRow, sortOverview, overviewTotals, summaryText } from 
 import { roleLabel } from "./src/roles.js";
 import { showToast } from "./src/toast.js";
 
-const MAX_LOW_ITEMS = 3;          // "Paint, Cement, Sand and 2 more"
-const CLOCK_MS = 60_000;          // "1h ago" is re-worded once a minute
+const MAX_LOW_ITEMS = 3; // "Paint, Cement, Sand and 2 more"
+const CLOCK_MS = 60_000; // "1h ago" is re-worded once a minute
 
 const userEmailEl = document.getElementById("userEmail");
 const signOutButton = document.getElementById("signOutButton");
@@ -24,7 +24,7 @@ const listEl = document.getElementById("overviewList");
 let currentUser = null;
 let sessionStarted = false;
 let stopSites = null;
-let sites = {};                       // latest sites snapshot, each with the person's role
+let sites = {}; // latest sites snapshot, each with the person's role
 let sitesLoaded = false;
 let sitesError = null;
 // siteId -> { stopMaterials, stopMovements, materials, lastMovementAt, materialsState, movementsState }
@@ -59,7 +59,9 @@ auth.onUser((user) => {
 });
 
 signOutButton.addEventListener("click", () => {
-    Promise.resolve().then(() => auth.signOut()).catch(reportError);
+    Promise.resolve()
+        .then(() => auth.signOut())
+        .catch(reportError);
 });
 
 // ---- Listeners: a materials and a movements listener per site -------------------------------
@@ -93,31 +95,40 @@ function startWatching(siteId) {
     watches.set(siteId, watch);
     // A callback from a listener that was stopped, or from a site that was replaced, is ignored.
     const current = () => watches.get(siteId) === watch;
-    watch.stopMaterials = data.subscribeMaterials(siteId, (materials) => {
-        if (current()) {
-            watch.materials = materials || {};
-            watch.materialsState = "ready";
-            queueRender();
-        }
-    }, () => {
-        if (current()) {
-            watch.materialsState = "error";
-            queueRender();
-        }
-    });
-    watch.stopMovements = data.subscribeMovements(siteId, { limit: 1 }, (movements) => {
-        if (current()) {
-            const newest = movements[movements.length - 1];
-            watch.lastMovementAt = newest ? newest.at : 0;
-            watch.movementsState = "ready";
-            queueRender();
-        }
-    }, () => {
-        if (current()) {
-            watch.movementsState = "error"; // the card still shows the stock; only the movement time is missing
-            queueRender();
-        }
-    });
+    watch.stopMaterials = data.subscribeMaterials(
+        siteId,
+        (materials) => {
+            if (current()) {
+                watch.materials = materials || {};
+                watch.materialsState = "ready";
+                queueRender();
+            }
+        },
+        () => {
+            if (current()) {
+                watch.materialsState = "error";
+                queueRender();
+            }
+        },
+    );
+    watch.stopMovements = data.subscribeMovements(
+        siteId,
+        { limit: 1 },
+        (movements) => {
+            if (current()) {
+                const newest = movements[movements.length - 1];
+                watch.lastMovementAt = newest ? newest.at : 0;
+                watch.movementsState = "ready";
+                queueRender();
+            }
+        },
+        () => {
+            if (current()) {
+                watch.movementsState = "error"; // the card still shows the stock; only the movement time is missing
+                queueRender();
+            }
+        },
+    );
 }
 
 function stopWatching(siteId) {
@@ -171,7 +182,9 @@ function render() {
         return clearList();
     }
     if (ids.length === 0) {
-        setStatus("No sites yet. Add your first site on the dashboard, and it shows up here.", { action: true });
+        setStatus("No sites yet. Add your first site on the dashboard, and it shows up here.", {
+            action: true,
+        });
         return clearList();
     }
     // Every site is drawn together once all have answered, so the order never jumps while the
@@ -184,7 +197,12 @@ function render() {
 
     const rows = ids.map((siteId) => {
         const watch = watches.get(siteId);
-        const row = overviewRow({ siteId, site: sites[siteId], materials: watch.materials, lastMovementAt: watch.lastMovementAt });
+        const row = overviewRow({
+            siteId,
+            site: sites[siteId],
+            materials: watch.materials,
+            lastMovementAt: watch.lastMovementAt,
+        });
         row.role = sites[siteId].role;
         row.failed = watch.materialsState === "error";
         return row;
@@ -196,11 +214,16 @@ function render() {
     totalsEl.classList.toggle("has-low", totals.low > 0);
 
     // The table is rebuilt on every update, so a focused link would be lost: look it up again.
-    const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest("li.overview-site");
+    const focused =
+        document.activeElement &&
+        document.activeElement.closest &&
+        document.activeElement.closest("li.overview-site");
     const focusedId = focused && listEl.contains(focused) ? focused.dataset.siteId : null;
     listEl.replaceChildren(...sorted.map(buildCard));
     if (focusedId) {
-        const link = listEl.querySelector(`li[data-site-id="${CSS.escape(focusedId)}"] a.overview-open`);
+        const link = listEl.querySelector(
+            `li[data-site-id="${CSS.escape(focusedId)}"] a.overview-open`,
+        );
         if (link) {
             link.focus({ preventScroll: true });
         }
@@ -228,7 +251,13 @@ function el(tag, className, text) {
 // figure is for the eye (aria-hidden); .overview-low carries the same fact as a sentence.
 function buildCard(row) {
     const words = summaryText(row);
-    const tone = row.failed ? "is-error" : row.total === 0 ? "is-empty" : row.low > 0 ? "is-trouble" : "is-calm";
+    const tone = row.failed
+        ? "is-error"
+        : row.total === 0
+          ? "is-empty"
+          : row.low > 0
+            ? "is-trouble"
+            : "is-calm";
     const card = el("li", `overview-site ${tone}`);
     card.dataset.siteId = row.siteId;
 
@@ -244,18 +273,33 @@ function buildCard(row) {
     const figure = el("div", "overview-figure");
     figure.setAttribute("aria-hidden", "true");
     if (row.failed) {
-        figure.append(el("span", "overview-bignum", "?"), el("span", "overview-bigword", "no data"));
+        figure.append(
+            el("span", "overview-bignum", "?"),
+            el("span", "overview-bigword", "no data"),
+        );
     } else if (row.total === 0) {
-        figure.append(el("span", "overview-bignum", "-"), el("span", "overview-bigword", "no materials"));
+        figure.append(
+            el("span", "overview-bignum", "-"),
+            el("span", "overview-bigword", "no materials"),
+        );
     } else if (row.low > 0) {
-        figure.append(el("span", "overview-bignum", String(row.low)), el("span", "overview-bigword", "low on stock"));
+        figure.append(
+            el("span", "overview-bignum", String(row.low)),
+            el("span", "overview-bigword", "low on stock"),
+        );
     } else {
-        figure.append(el("span", "overview-bignum", "✓"), el("span", "overview-bigword", "all stocked"));
+        figure.append(
+            el("span", "overview-bignum", "✓"),
+            el("span", "overview-bigword", "all stocked"),
+        );
     }
 
     const top = el("div", "overview-top");
     top.append(title, figure);
-    card.append(top, el("p", "overview-low sr-only", row.failed ? "Could not load the stock" : words.low));
+    card.append(
+        top,
+        el("p", "overview-low sr-only", row.failed ? "Could not load the stock" : words.low),
+    );
 
     if (row.total > 0 && !row.failed) {
         const bar = el("div", "overview-bar");
@@ -264,11 +308,22 @@ function buildCard(row) {
         const fill = el("span", "overview-bar-fill");
         fill.style.setProperty("--share", `${Math.round((row.low / row.total) * 100)}%`);
         bar.append(fill);
-        card.append(bar, el("p", "overview-bar-caption", `${row.low} of ${row.total} ${row.total === 1 ? "material" : "materials"} low`));
+        card.append(
+            bar,
+            el(
+                "p",
+                "overview-bar-caption",
+                `${row.low} of ${row.total} ${row.total === 1 ? "material" : "materials"} low`,
+            ),
+        );
     }
 
     const meta = el("p", "overview-meta");
-    const activity = el("span", `overview-activity${isStale(row.lastActivity) ? " is-stale" : ""}`, words.activity);
+    const activity = el(
+        "span",
+        `overview-activity${isStale(row.lastActivity) ? " is-stale" : ""}`,
+        words.activity,
+    );
     meta.append(el("span", "overview-total", words.total), activity);
     if (isStale(row.lastActivity)) {
         // In words, not only in tone: "all stocked" on a site nobody has touched in months can mislead.
@@ -291,7 +346,9 @@ function buildCard(row) {
         }
         card.append(items);
         if (row.lowItems.length > MAX_LOW_ITEMS) {
-            card.append(el("p", "overview-more", `and ${row.lowItems.length - MAX_LOW_ITEMS} more`));
+            card.append(
+                el("p", "overview-more", `and ${row.lowItems.length - MAX_LOW_ITEMS} more`),
+            );
         }
     }
 

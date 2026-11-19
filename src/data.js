@@ -20,7 +20,6 @@ import {
     push,
     set,
     update,
-    remove,
     get,
     query,
     orderByChild,
@@ -87,22 +86,29 @@ const REPLAY_READ_TIMEOUT_MS = 8000;
 
 const outbox = createOutbox({
     storage: browserStorage(),
-    write: (entry) => update(ref(db), buildMovementUpdates({
-        siteId: entry.siteId,
-        materialId: entry.materialId,
-        movementId: entry.movementId,
-        material: entry.material,
-        movement: entry.movement,
-        user: entry.user,
-        sv,
-    })),
+    write: (entry) =>
+        update(
+            ref(db),
+            buildMovementUpdates({
+                siteId: entry.siteId,
+                materialId: entry.materialId,
+                movementId: entry.movementId,
+                material: entry.material,
+                movement: entry.movement,
+                user: entry.user,
+                sv,
+            }),
+        ),
     // Already in the database? Then the movement landed during a write whose acknowledgement went
     // missing, and the increment landed in the same atomic update. Replaying it is refused whole by
     // database.rules.json, so this only saves a pointless rejected write.
-    landed: (entry) => withTimeout(
-        get(ref(db, `movements/${entry.siteId}/${entry.movementId}`)).then((snapshot) => snapshot.exists()),
-        REPLAY_READ_TIMEOUT_MS,
-    ),
+    landed: (entry) =>
+        withTimeout(
+            get(ref(db, `movements/${entry.siteId}/${entry.movementId}`)).then((snapshot) =>
+                snapshot.exists(),
+            ),
+            REPLAY_READ_TIMEOUT_MS,
+        ),
 });
 
 const outboxListeners = new Set();
@@ -134,10 +140,10 @@ export function replayOutbox() {
 // /userSites/<uid>, then each site is read on its own, because the rules do not allow listing
 // /sites. onData fires once everything listed has been read, and again on every change.
 export function subscribeSites(uid, onData, onError) {
-    const siteStops = new Map();   // siteId -> unsubscribe
-    const sites = {};              // siteId -> site, once read
-    const pending = new Set();     // siteIds listed but not read yet
-    let roles = null;              // /userSites/<uid>, null until the first snapshot
+    const siteStops = new Map(); // siteId -> unsubscribe
+    const sites = {}; // siteId -> site, once read
+    const pending = new Set(); // siteIds listed but not read yet
+    let roles = null; // /userSites/<uid>, null until the first snapshot
 
     function emit() {
         if (roles === null || pending.size > 0) {
@@ -164,35 +170,43 @@ export function subscribeSites(uid, onData, onError) {
 
     function watchSite(siteId) {
         pending.add(siteId);
-        const stop = onValue(ref(db, `sites/${siteId}`), (snapshot) => {
-            pending.delete(siteId);
-            sites[siteId] = snapshot.val();
-            emit();
-        }, () => {
-            // A listed site that cannot be read (removed from under us): leave it out, keep going.
-            // Firebase cancels a listener that was denied, so forget it and let a later list re-add it.
-            siteStops.delete(siteId);
-            pending.delete(siteId);
-            delete sites[siteId];
-            emit();
-        });
+        const stop = onValue(
+            ref(db, `sites/${siteId}`),
+            (snapshot) => {
+                pending.delete(siteId);
+                sites[siteId] = snapshot.val();
+                emit();
+            },
+            () => {
+                // A listed site that cannot be read (removed from under us): leave it out, keep going.
+                // Firebase cancels a listener that was denied, so forget it and let a later list re-add it.
+                siteStops.delete(siteId);
+                pending.delete(siteId);
+                delete sites[siteId];
+                emit();
+            },
+        );
         siteStops.set(siteId, stop);
     }
 
-    const stopList = onValue(ref(db, `userSites/${uid}`), (snapshot) => {
-        roles = snapshot.val() || {};
-        for (const siteId of [...siteStops.keys()]) {
-            if (!(siteId in roles)) {
-                stopSite(siteId);
+    const stopList = onValue(
+        ref(db, `userSites/${uid}`),
+        (snapshot) => {
+            roles = snapshot.val() || {};
+            for (const siteId of [...siteStops.keys()]) {
+                if (!(siteId in roles)) {
+                    stopSite(siteId);
+                }
             }
-        }
-        for (const siteId of Object.keys(roles)) {
-            if (!siteStops.has(siteId)) {
-                watchSite(siteId);
+            for (const siteId of Object.keys(roles)) {
+                if (!siteStops.has(siteId)) {
+                    watchSite(siteId);
+                }
             }
-        }
-        emit();
-    }, onError);
+            emit();
+        },
+        onError,
+    );
 
     return () => {
         stopList();
@@ -201,7 +215,11 @@ export function subscribeSites(uid, onData, onError) {
 }
 
 export function subscribeMaterials(siteId, onData, onError) {
-    return onValue(ref(db, `materials/${siteId}`), (snapshot) => onData(snapshot.val() || {}), onError);
+    return onValue(
+        ref(db, `materials/${siteId}`),
+        (snapshot) => onData(snapshot.val() || {}),
+        onError,
+    );
 }
 
 // True while the database is reachable, false while the app is working from its own copy. The Firebase
@@ -210,7 +228,11 @@ export function subscribeMaterials(siteId, onData, onError) {
 // listener exists so the page can say what is happening instead of leaving somebody to wonder whether
 // their reading was recorded.
 export function subscribeConnection(onData, onError) {
-    return onValue(ref(db, ".info/connected"), (snapshot) => onData(snapshot.val() === true), onError);
+    return onValue(
+        ref(db, ".info/connected"),
+        (snapshot) => onData(snapshot.val() === true),
+        onError,
+    );
 }
 
 // Creates the site and makes `user` its owner in one update. push() makes the key on the
@@ -234,9 +256,17 @@ export function addSite(site, user) {
 // A new material. With a starting quantity it also gets an "opening" movement.
 export function addMaterial(siteId, material, user) {
     const id = push(ref(db, `materials/${siteId}`)).key;
-    const done = update(ref(db), buildAddMaterialUpdates({
-        siteId, materialId: id, movementId: newMovementId(siteId), material, user, sv,
-    }));
+    const done = update(
+        ref(db),
+        buildAddMaterialUpdates({
+            siteId,
+            materialId: id,
+            movementId: newMovementId(siteId),
+            material,
+            user,
+            sv,
+        }),
+    );
     return { id, done };
 }
 
@@ -266,33 +296,58 @@ export function updateMaterial(siteId, materialId, fields) {
 
 // Deleting takes the remaining stock out in a "removed" movement, so history still adds up.
 export function removeMaterial(siteId, materialId, material, user) {
-    return update(ref(db), buildRemoveMaterialUpdates({
-        siteId, materialId, movementId: newMovementId(siteId), material, user, sv,
-    }));
+    return update(
+        ref(db),
+        buildRemoveMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: newMovementId(siteId),
+            material,
+            user,
+            sv,
+        }),
+    );
 }
 
 // Undo for a delete: the material comes back at its original key with its old quantity, and an
 // "opening" movement says so, so nothing that pointed at the id loses its target.
 export function restoreMaterial(siteId, materialId, material, user) {
-    return update(ref(db), buildRestoreMaterialUpdates({
-        siteId, materialId, movementId: newMovementId(siteId), material, user, sv,
-    }));
+    return update(
+        ref(db),
+        buildRestoreMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: newMovementId(siteId),
+            material,
+            user,
+            sv,
+        }),
+    );
 }
 
 // The latest `limit` movements, oldest first, each with its id. With materialId: that material's
 // history. Without: the whole site, for the activity feed. Both lists are indexed in the rules.
-export function subscribeMovements(siteId, { materialId = null, limit = 100 } = {}, onData, onError) {
+export function subscribeMovements(
+    siteId,
+    { materialId = null, limit = 100 } = {},
+    onData,
+    onError,
+) {
     const base = ref(db, `movements/${siteId}`);
     const source = materialId
         ? query(base, orderByChild("materialId"), equalTo(materialId), limitToLast(limit))
         : query(base, orderByChild("at"), limitToLast(limit));
-    return onValue(source, (snapshot) => {
-        const list = [];
-        snapshot.forEach((child) => {
-            list.push({ id: child.key, ...child.val() }); // no return: a truthy return would stop forEach
-        });
-        onData(sortMovements(list));
-    }, onError);
+    return onValue(
+        source,
+        (snapshot) => {
+            const list = [];
+            snapshot.forEach((child) => {
+                list.push({ id: child.key, ...child.val() }); // no return: a truthy return would stop forEach
+            });
+            onData(sortMovements(list));
+        },
+        onError,
+    );
 }
 
 // Every movement of a site between two times (milliseconds, both included), oldest first: what a
@@ -321,15 +376,18 @@ function withTimeout(promise, timeoutMs) {
 // everything. If somebody joins between the read and the update, the rules refuse the whole
 // update (a membership would be left behind), nothing is deleted, and the owner can try again.
 export async function deleteSiteCascade(siteId, { timeoutMs = 10000 } = {}) {
-    const [members, invites] = await withTimeout(Promise.all([
-        get(ref(db, `members/${siteId}`)),
-        get(ref(db, `siteInvites/${siteId}`)),
-    ]), timeoutMs);
-    return update(ref(db), buildSiteDeleteUpdates(
-        siteId,
-        Object.keys(members.val() || {}),
-        Object.keys(invites.val() || {}),
-    ));
+    const [members, invites] = await withTimeout(
+        Promise.all([get(ref(db, `members/${siteId}`)), get(ref(db, `siteInvites/${siteId}`))]),
+        timeoutMs,
+    );
+    return update(
+        ref(db),
+        buildSiteDeleteUpdates(
+            siteId,
+            Object.keys(members.val() || {}),
+            Object.keys(invites.val() || {}),
+        ),
+    );
 }
 
 // ---- Members and invites -------------------------------------------------------------
@@ -345,23 +403,29 @@ export function subscribeMembers(siteId, { withInvites }, onData, onError) {
         sources.push(["invites", `siteInvites/${siteId}`]);
     }
     const values = {};
-    const stops = sources.map(([name, path]) => onValue(ref(db, path), (snapshot) => {
-        values[name] = snapshot.val() || {};
-        if (sources.every(([n]) => n in values)) {
-            onData({
-                members: Object.entries(values.members).map(([uid, role]) => ({
-                    uid,
-                    role,
-                    email: (values.info[uid] && values.info[uid].email) || null,
-                })),
-                invites: Object.entries(values.invites || {}).map(([key, role]) => ({
-                    key,
-                    email: emailFromKey(key),
-                    role,
-                })),
-            });
-        }
-    }, onError));
+    const stops = sources.map(([name, path]) =>
+        onValue(
+            ref(db, path),
+            (snapshot) => {
+                values[name] = snapshot.val() || {};
+                if (sources.every(([n]) => n in values)) {
+                    onData({
+                        members: Object.entries(values.members).map(([uid, role]) => ({
+                            uid,
+                            role,
+                            email: (values.info[uid] && values.info[uid].email) || null,
+                        })),
+                        invites: Object.entries(values.invites || {}).map(([key, role]) => ({
+                            key,
+                            email: emailFromKey(key),
+                            role,
+                        })),
+                    });
+                }
+            },
+            onError,
+        ),
+    );
     return () => stops.forEach((stop) => stop());
 }
 
@@ -369,7 +433,11 @@ export function subscribeMembers(siteId, { withInvites }, onData, onError) {
 // (/userInvites), the owner lists theirs (/siteInvites).
 export function inviteMember(site, inviter, invite) {
     return update(ref(db), {
-        [`userInvites/${invite.key}/${site.id}`]: { role: invite.role, siteName: site.name, invitedBy: inviter.email },
+        [`userInvites/${invite.key}/${site.id}`]: {
+            role: invite.role,
+            siteName: site.name,
+            invitedBy: inviter.email,
+        },
         [`siteInvites/${site.id}/${invite.key}`]: invite.role,
     });
 }
@@ -399,7 +467,11 @@ export function removeMember(siteId, uid) {
 
 // The invitations waiting for this email: { siteId: { role, siteName, invitedBy } }.
 export function subscribeInvites(key, onData, onError) {
-    return onValue(ref(db, `userInvites/${key}`), (snapshot) => onData(snapshot.val() || {}), onError);
+    return onValue(
+        ref(db, `userInvites/${key}`),
+        (snapshot) => onData(snapshot.val() || {}),
+        onError,
+    );
 }
 
 // Join: membership, site list and the used-up invite in one update. The member info is a second,

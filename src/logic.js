@@ -158,7 +158,10 @@ export function validateMaterialEdit(input, options = {}) {
     if (!minLevel.ok) {
         return { ok: false, error: LOW_STOCK_MESSAGE };
     }
-    return { ok: true, value: { name: checked.name, units: checked.units, minLevel: minLevel.value } };
+    return {
+        ok: true,
+        value: { name: checked.name, units: checked.units, minLevel: minLevel.value },
+    };
 }
 
 // One multi-path update that removes a site and everything that hangs off it: its materials, its movements,

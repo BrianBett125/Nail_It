@@ -74,7 +74,12 @@ describe("site form and layout", () => {
         assert.equal(await page.locator("#metadataDate").count(), 0);
         assert.equal(await page.locator("#buildingType").evaluate((el) => el.tagName), "SELECT");
         assert.deepEqual(await optionValues(page, "#buildingType"), [
-            "", "Residential", "Commercial", "Industrial", "Road/Civil", "Other",
+            "",
+            "Residential",
+            "Commercial",
+            "Industrial",
+            "Road/Civil",
+            "Other",
         ]);
         await context.close();
     });
@@ -85,7 +90,13 @@ describe("site form and layout", () => {
         await addSite(page, "Eldoret", { type: "Road/Civil" });
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
         const [write] = await wrote(page);
-        assert.deepEqual(Object.keys(write.value).sort(), ["buildingType", "createdAt", "location", "name", "ownerUid"]);
+        assert.deepEqual(Object.keys(write.value).sort(), [
+            "buildingType",
+            "createdAt",
+            "location",
+            "name",
+            "ownerUid",
+        ]);
         assert.equal(write.value.ownerUid, "u1", "the signed-in user owns the site they create");
         assert.equal(write.value.buildingType, "Road/Civil");
         assert.equal(typeof write.value.createdAt, "number");
@@ -98,7 +109,9 @@ describe("site form and layout", () => {
         await page.click("#addSiteButton");
         await page.fill("#siteName", "Eldoret");
         await page.fill("#siteLocation", "Nairobi");
-        await page.evaluate(() => { document.getElementById("siteForm").noValidate = true; });
+        await page.evaluate(() => {
+            document.getElementById("siteForm").noValidate = true;
+        });
         await page.click("#add-site-btn");
         await toastLocator(page, "Please fill in all required fields").waitFor();
         assert.deepEqual(await wrote(page), []);
@@ -112,7 +125,9 @@ describe("auto-select and remember the last site", () => {
         await addSite(page, "Eldoret");
         await siteLink(page, "Eldoret").waitFor();
         assert.equal(await siteLink(page, "Eldoret").getAttribute("class"), "active");
-        await page.waitForFunction(() => document.getElementById("materialsStatus").textContent.startsWith("No materials yet"));
+        await page.waitForFunction(() =>
+            document.getElementById("materialsStatus").textContent.startsWith("No materials yet"),
+        );
         const listeners = await page.evaluate(() => window.__nailit.activeListeners());
         assert.equal(listeners.filter((l) => l.kind === "materials").length, 1);
         await context.close();
@@ -149,7 +164,10 @@ describe("auto-select and remember the last site", () => {
         await page.reload();
         await siteLink(page, "Mombasa").waitFor();
         assert.equal(await page.locator("#siteList a.active").count(), 0);
-        assert.equal(await page.locator("#materialsStatus").textContent(), "Select a site to see its materials.");
+        assert.equal(
+            await page.locator("#materialsStatus").textContent(),
+            "Select a site to see its materials.",
+        );
         assert.deepEqual(state.pageErrors, []);
         await context.close();
     });
@@ -167,10 +185,14 @@ describe("auto-select and remember the last site", () => {
     it("the dashboard works when localStorage throws (private window, blocked site data)", async () => {
         const beforeLoad = () => {
             Object.defineProperty(window, "localStorage", {
-                get() { throw new Error("SecurityError"); },
+                get() {
+                    throw new Error("SecurityError");
+                },
             });
         };
-        const { context, page, state } = await openDashboard(browser, baseUrl, SEED, { beforeLoad });
+        const { context, page, state } = await openDashboard(browser, baseUrl, SEED, {
+            beforeLoad,
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await openMaterialForm(page);
@@ -182,7 +204,9 @@ describe("auto-select and remember the last site", () => {
     });
 
     it("a site the server refuses is dropped from the selection and the error is shown", async () => {
-        const beforeLoad = () => { window.__preset = { failAdds: true }; };
+        const beforeLoad = () => {
+            window.__preset = { failAdds: true };
+        };
         const { context, page } = await openDashboard(browser, baseUrl, EMPTY, { beforeLoad });
         await addSite(page, "Eldoret");
         await toastLocator(page, "PERMISSION_DENIED").waitFor();
@@ -197,7 +221,17 @@ describe("auto-select and remember the last site", () => {
 describe("dropdown units, autocomplete, Add & another", () => {
     it("units are a dropdown of the eight units, in the add and the edit form", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
-        const expected = ["", "kg", "tonnes", "bags", "pieces", "metres", "litres", "bundles", "sheets"];
+        const expected = [
+            "",
+            "kg",
+            "tonnes",
+            "bags",
+            "pieces",
+            "metres",
+            "litres",
+            "bundles",
+            "sheets",
+        ];
         assert.deepEqual(await optionValues(page, "#mUnits"), expected);
         assert.equal(await page.locator("#uUnits").evaluate((el) => el.tagName), "SELECT");
         assert.deepEqual((await optionValues(page, "#uUnits")).slice(0, 9), expected);
@@ -237,7 +271,10 @@ describe("dropdown units, autocomplete, Add & another", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Cape Town");
         await waitForRows(page, ["Nails"]);
-        await page.locator("#materialTableBody tr").locator("button[aria-label='Edit material']").click();
+        await page
+            .locator("#materialTableBody tr")
+            .locator("button[aria-label='Edit material']")
+            .click();
         assert.equal(await page.inputValue("#uUnits"), "kgs");
         await page.fill("#uMinLevel", "41");
         await page.click("#update-material-btn");
@@ -245,7 +282,11 @@ describe("dropdown units, autocomplete, Add & another", () => {
         const [write] = await wrote(page);
         assert.equal(write.paths["materials/sB/m3/units"], "kgs");
         assert.equal(write.paths["materials/sB/m3/minLevel"], 41);
-        assert.equal((await dbState(page)).materials.sB.m3.quantity, 40, "an edit leaves the stock alone");
+        assert.equal(
+            (await dbState(page)).materials.sB.m3.quantity,
+            40,
+            "an edit leaves the stock alone",
+        );
         await context.close();
     });
 
@@ -253,11 +294,17 @@ describe("dropdown units, autocomplete, Add & another", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Cape Town");
         await waitForRows(page, ["Nails"]);
-        await page.locator("#materialTableBody tr").locator("button[aria-label='Edit material']").click();
+        await page
+            .locator("#materialTableBody tr")
+            .locator("button[aria-label='Edit material']")
+            .click();
         await page.click("#updateCancelButton");
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator("button[aria-label='Edit material']").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator("button[aria-label='Edit material']")
+            .click();
         assert.equal(await page.inputValue("#uUnits"), "bags");
         assert.equal(await page.locator("#uUnits option[data-legacy]").count(), 0);
         await context.close();
@@ -290,7 +337,9 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await page.click("#material-btn");
         await waitForRows(page, ["Cement", "Sand", "Cement"]);
         const [write] = await wrote(page);
-        const created = Object.entries(write.paths).find(([path]) => /^materials\/sA\/[^/]+$/.test(path))[1];
+        const created = Object.entries(write.paths).find(([path]) =>
+            /^materials\/sA\/[^/]+$/.test(path),
+        )[1];
         assert.equal(created.name, "Cement");
         await context.close();
     });
@@ -299,7 +348,10 @@ describe("dropdown units, autocomplete, Add & another", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        await page.locator("#materialTableBody tr", { hasText: "Sand" }).locator("button[aria-label='Edit material']").click();
+        await page
+            .locator("#materialTableBody tr", { hasText: "Sand" })
+            .locator("button[aria-label='Edit material']")
+            .click();
         await page.fill("#uMaterialName", "CEMENT");
         await page.click("#update-material-btn");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
@@ -346,7 +398,9 @@ describe("dropdown units, autocomplete, Add & another", () => {
             await page.fill("#mQuantity", String(i));
             await page.click("#material-another-btn");
         }
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr").length === 15);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr").length === 15,
+        );
         const db = await dbState(page);
         const [siteMaterials] = Object.values(db.materials);
         assert.equal(Object.keys(db.materials).length, 1, "all under the one site");
@@ -360,7 +414,9 @@ describe("dropdown units, autocomplete, Add & another", () => {
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await openMaterialForm(page);
-        await page.evaluate(() => { document.getElementById("materialForm").noValidate = true; });
+        await page.evaluate(() => {
+            document.getElementById("materialForm").noValidate = true;
+        });
         await fillMaterial(page, { name: "Gravel", quantity: "-1", units: "tonnes" });
         await page.click("#material-another-btn");
         await toastLocator(page, "Quantity must be a number").waitFor();
@@ -388,7 +444,9 @@ describe("delete: Undo toast for materials, typed name for sites", () => {
         const name = "<img src=x onerror=window.__pwned=1>";
         const seed = {
             sites: { sA: SEED.sites.sA },
-            materials: { m1: { name, quantity: 1, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" } },
+            materials: {
+                m1: { name, quantity: 1, units: "bags", lastUpdated: "2024-05-03", siteId: "sA" },
+            },
         };
         const { context, page } = await openDashboard(browser, baseUrl, seed);
         await selectSite(page, "Mombasa");
@@ -459,7 +517,10 @@ describe("delete: Undo toast for materials, typed name for sites", () => {
 
     it("a site name with HTML is shown as text in the delete dialog", async () => {
         const name = "<img src=x onerror=window.__pwned=1>";
-        const seed = { sites: { sX: { name, location: "l", buildingType: "Other" } }, materials: {} };
+        const seed = {
+            sites: { sX: { name, location: "l", buildingType: "Other" } },
+            materials: {},
+        };
         const { context, page } = await openDashboard(browser, baseUrl, seed);
         await page.locator("#siteList .delete-site-btn").click();
         assert.equal(await page.locator("#siteDeletePhrase").textContent(), name);
@@ -495,8 +556,13 @@ describe("toasts, empty states and loading states", () => {
         await ok.waitFor();
         assert.equal(await ok.getAttribute("role"), "status");
 
-        await page.evaluate(() => { window.__nailit.throwOnWrite = true; });
-        await page.locator("#materialTableBody tr", { hasText: "Cement" }).locator("button[aria-label='Edit material']").click();
+        await page.evaluate(() => {
+            window.__nailit.throwOnWrite = true;
+        });
+        await page
+            .locator("#materialTableBody tr", { hasText: "Cement" })
+            .locator("button[aria-label='Edit material']")
+            .click();
         await page.click("#update-material-btn");
         const bad = toastLocator(page, "boom");
         await bad.waitFor();
@@ -516,15 +582,26 @@ describe("toasts, empty states and loading states", () => {
         await page.click("#material-btn");
         await toastLocator(page, "Added").waitFor();
         await page.waitForTimeout(4200);
-        assert.equal(await page.locator(".toast", { hasText: "Added" }).count(), 0, "success toast gone after about 3.5s");
+        assert.equal(
+            await page.locator(".toast", { hasText: "Added" }).count(),
+            0,
+            "success toast gone after about 3.5s",
+        );
         assert.equal(await page.locator(".toast-error").count(), 1, "error toast still showing");
         await context.close();
     });
 
     it("no sites: the sidebar and the main area both say what to do", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, EMPTY);
-        await page.waitForFunction(() => document.getElementById("sitesStatus").textContent === "No sites yet. Add your first site.");
-        assert.match(await page.locator("#materialsStatus").textContent(), /^No sites yet\. Add your first site/);
+        await page.waitForFunction(
+            () =>
+                document.getElementById("sitesStatus").textContent ===
+                "No sites yet. Add your first site.",
+        );
+        assert.match(
+            await page.locator("#materialsStatus").textContent(),
+            /^No sites yet\. Add your first site/,
+        );
         assert.equal(await page.locator("#materialsTable").isHidden(), true);
         await context.close();
     });
@@ -533,14 +610,21 @@ describe("toasts, empty states and loading states", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await siteLink(page, "Mombasa").waitFor();
         assert.equal(await page.locator("#sitesStatus").isHidden(), true);
-        assert.equal(await page.locator("#materialsStatus").textContent(), "Select a site to see its materials.");
+        assert.equal(
+            await page.locator("#materialsStatus").textContent(),
+            "Select a site to see its materials.",
+        );
         await context.close();
     });
 
     it("a site with no materials shows an empty state, and the table appears with the first row", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, EMPTY);
         await addSite(page, "Eldoret");
-        await page.waitForFunction(() => document.getElementById("materialsStatus").textContent === "No materials yet. Add your first material.");
+        await page.waitForFunction(
+            () =>
+                document.getElementById("materialsStatus").textContent ===
+                "No materials yet. Add your first material.",
+        );
         assert.equal(await page.locator("#materialsTable").isHidden(), true);
         await openMaterialForm(page);
         await fillMaterial(page, { name: "Cement", quantity: "20", units: "bags" });
@@ -556,7 +640,9 @@ describe("toasts, empty states and loading states", () => {
         await selectSite(page, "Cape Town");
         await waitForRows(page, ["Nails"]);
         await page.locator("#materialTableBody tr button[aria-label='Delete material']").click();
-        await page.waitForFunction(() => document.getElementById("materialsStatus").textContent.startsWith("No materials yet"));
+        await page.waitForFunction(() =>
+            document.getElementById("materialsStatus").textContent.startsWith("No materials yet"),
+        );
         await page.locator(".toast-action").click();
         await waitForRows(page, ["Nails"]);
         assert.equal(await page.locator("#materialsStatus").isHidden(), true);
@@ -564,14 +650,18 @@ describe("toasts, empty states and loading states", () => {
     });
 
     it("loading states show until the first data arrives", async () => {
-        const beforeLoad = () => { window.__preset = { holdSnapshots: true }; };
+        const beforeLoad = () => {
+            window.__preset = { holdSnapshots: true };
+        };
         const { context, page } = await openDashboard(browser, baseUrl, SEED, { beforeLoad });
         assert.equal(await page.locator("#sitesStatus").textContent(), "Loading sites...");
         assert.equal(await page.locator("#materialsStatus").textContent(), "Loading...");
 
         await page.evaluate(() => window.__nailit.releaseSnapshots());
         await siteLink(page, "Mombasa").waitFor();
-        await page.evaluate(() => { window.__nailit.holdSnapshots = true; });
+        await page.evaluate(() => {
+            window.__nailit.holdSnapshots = true;
+        });
         await selectSite(page, "Mombasa");
         assert.equal(await page.locator("#materialsStatus").textContent(), "Loading materials...");
         assert.equal(await page.locator("#materialsTable").isHidden(), true);
@@ -586,7 +676,9 @@ describe("toasts, empty states and loading states", () => {
         const { context, page } = await openDashboard(browser, baseUrl);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
-        await page.evaluate(() => { window.__nailit.holdSnapshots = true; });
+        await page.evaluate(() => {
+            window.__nailit.holdSnapshots = true;
+        });
         await selectSite(page, "Cape Town");
         assert.equal(await page.locator("#materialTableBody tr").count(), 0);
         assert.equal(await page.locator("#materialsStatus").textContent(), "Loading materials...");
@@ -599,7 +691,10 @@ describe("eval: the measurable outcome", () => {
         const { context, page, state } = await openDashboard(browser, baseUrl, EMPTY);
         const started = Date.now();
         let actions = 0;
-        const act = async (fn) => { actions += 1; await fn(); };
+        const act = async (fn) => {
+            actions += 1;
+            await fn();
+        };
 
         await act(() => page.click("#addSiteButton"));
         await act(() => page.fill("#siteName", "Eldoret Estate"));
@@ -609,7 +704,11 @@ describe("eval: the measurable outcome", () => {
 
         await act(() => page.click("#addMaterialButton"));
         await act(() => page.selectOption("#mUnits", "bags"));
-        for (const [name, quantity] of [["Cement", "50"], ["Sand", "8"], ["Nails", "20"]]) {
+        for (const [name, quantity] of [
+            ["Cement", "50"],
+            ["Sand", "8"],
+            ["Nails", "20"],
+        ]) {
             await act(() => page.fill("#materialsName", name));
             await act(() => page.fill("#mQuantity", quantity));
             await act(() => page.click("#material-another-btn"));
@@ -618,7 +717,9 @@ describe("eval: the measurable outcome", () => {
         await waitForRows(page, ["Cement", "Sand", "Nails"]);
 
         const elapsed = Date.now() - started;
-        console.log(`# phase1 flow: ${actions} actions, ${elapsed} ms, toasts: ${state.toasts.length}`);
+        console.log(
+            `# phase1 flow: ${actions} actions, ${elapsed} ms, toasts: ${state.toasts.length}`,
+        );
         assert.ok(elapsed < 30000, `took ${elapsed} ms`);
         assert.ok(actions <= 20, `took ${actions} actions`);
         assert.deepEqual(state.dialogs, []);

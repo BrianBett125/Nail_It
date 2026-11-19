@@ -12,7 +12,15 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startServer, launchBrowser, openDashboard, selectSite, toastLocator, waitForRows, wrote, dbState, SEED,
+    startServer,
+    launchBrowser,
+    openDashboard,
+    selectSite,
+    toastLocator,
+    waitForRows,
+    wrote,
+    dbState,
+    SEED,
 } from "./helpers.js";
 
 let server;
@@ -38,8 +46,29 @@ const button = (page, name, selector) => row(page, name).locator(selector);
 
 // m1 Cement is 5 bags, explained by two movements. m2 Sand is 10 tonnes with no history (a legacy record).
 const MOVEMENTS = {
-    mv1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 20, type: "opening", byUid: "u9", byEmail: "boss@example.com", at: now - 3 * DAY },
-    mv2: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -15, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 2 * HOUR, note: "Slab pour" },
+    mv1: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: 20,
+        type: "opening",
+        byUid: "u9",
+        byEmail: "boss@example.com",
+        at: now - 3 * DAY,
+    },
+    mv2: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: -15,
+        type: "used",
+        byUid: "u1",
+        byEmail: "foreman@example.com",
+        at: now - 2 * HOUR,
+        note: "Slab pour",
+    },
 };
 const SEEDED = { ...SEED, movements: MOVEMENTS };
 
@@ -65,14 +94,19 @@ async function record(page, material, action, amount, note) {
 }
 
 const closed = (page, selector) =>
-    page.waitForFunction((s) => getComputedStyle(document.querySelector(s)).display === "none", selector);
+    page.waitForFunction(
+        (s) => getComputedStyle(document.querySelector(s)).display === "none",
+        selector,
+    );
 
 // Closing a native <dialog> fires its `close` event asynchronously, and src/ui-movements.js ends the
 // history subscription there. Escape is closed by the browser, so the listener is dropped a moment
 // after the sheet leaves the screen: wait for the drop rather than reading the count the instant the
 // sheet disappears, which fails under load.
 const movementListenerCount = (page) =>
-    page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length);
+    page.evaluate(
+        () => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length,
+    );
 const movementListenersDropTo = (page, wanted) =>
     page.waitForFunction(
         (w) => window.__nailit.activeListeners().filter((l) => l.kind === "movements").length === w,
@@ -81,20 +115,28 @@ const movementListenersDropTo = (page, wanted) =>
     );
 
 const movementWrites = async (page) =>
-    (await wrote(page)).filter((w) => w.op === "multi" && Object.keys(w.paths).some((p) => p.startsWith("movements/")));
+    (await wrote(page)).filter(
+        (w) => w.op === "multi" && Object.keys(w.paths).some((p) => p.startsWith("movements/")),
+    );
 
-const quantityOf = async (page, name) => (await row(page, name).locator("td").nth(1).textContent()).trim();
+const quantityOf = async (page, name) =>
+    (await row(page, name).locator("td").nth(1).textContent()).trim();
 
 describe("recording stock: Received and Used", () => {
     it("Used: three interactions, one write, the quantity and the history change together", async () => {
         const { context, page, state } = await open();
         let interactions = 0;
 
-        await openRecord(page, "Cement", "used"); interactions += 1;
-        await page.fill("#movementAmount", "3"); interactions += 1;
-        await page.click("#movementSubmit"); interactions += 1;
+        await openRecord(page, "Cement", "used");
+        interactions += 1;
+        await page.fill("#movementAmount", "3");
+        interactions += 1;
+        await page.click("#movementSubmit");
+        interactions += 1;
         await closed(page, "#movementContainer");
-        await page.waitForFunction(() => document.querySelector("#materialTableBody").textContent.includes("Cement"));
+        await page.waitForFunction(() =>
+            document.querySelector("#materialTableBody").textContent.includes("Cement"),
+        );
 
         assert.equal(interactions, 3, "20 bags used in 3 taps: Used, amount, confirm");
         const writes = await movementWrites(page);
@@ -104,14 +146,23 @@ describe("recording stock: Received and Used", () => {
         assert.deepEqual(
             { ...paths[movementPath], at: undefined },
             {
-                materialId: "m1", materialName: "Cement", units: "bags", delta: -3, type: "used",
-                byUid: "u1", byEmail: "foreman@example.com", at: undefined,
+                materialId: "m1",
+                materialName: "Cement",
+                units: "bags",
+                delta: -3,
+                type: "used",
+                byUid: "u1",
+                byEmail: "foreman@example.com",
+                at: undefined,
             },
         );
         assert.deepEqual(paths["materials/sA/m1/quantity"], { ".sv": { increment: -3 } });
         assert.equal(paths["materials/sA/m1/lastMovementId"], movementPath.split("/")[2]);
         assert.equal(await quantityOf(page, "Cement"), "2");
-        assert.ok(state.toasts.some((t) => /Used 3 bags of Cement/.test(t)), JSON.stringify(state.toasts));
+        assert.ok(
+            state.toasts.some((t) => /Used 3 bags of Cement/.test(t)),
+            JSON.stringify(state.toasts),
+        );
         assert.deepEqual(state.pageErrors, []);
         await context.close();
     });
@@ -122,7 +173,8 @@ describe("recording stock: Received and Used", () => {
         await closed(page, "#movementContainer");
 
         const [write] = await movementWrites(page);
-        const movement = write.paths[Object.keys(write.paths).find((p) => p.startsWith("movements/"))];
+        const movement =
+            write.paths[Object.keys(write.paths).find((p) => p.startsWith("movements/"))];
         assert.equal(movement.type, "received");
         assert.equal(movement.delta, 2.5);
         assert.equal(movement.note, "Delivery note 114");
@@ -173,7 +225,11 @@ describe("recording stock: Received and Used", () => {
         assert.match(await error.textContent(), /Only 5 bags in stock/);
         assert.equal(await error.getAttribute("role"), "alert");
         assert.equal((await wrote(page)).length, 0);
-        assert.equal(await page.evaluate(() => document.querySelector("#movementContainer").open), true, "dialog stays open");
+        assert.equal(
+            await page.evaluate(() => document.querySelector("#movementContainer").open),
+            true,
+            "dialog stays open",
+        );
         assert.equal(await page.inputValue("#movementAmount"), "6", "what was typed is kept");
 
         await page.fill("#movementAmount", "5");
@@ -200,7 +256,9 @@ describe("recording stock: Received and Used", () => {
             const { context, page } = await open();
             await openRecord(page, "Cement", "received");
             if (bad) {
-                await page.evaluate((v) => { document.querySelector("#movementAmount").value = v; }, bad);
+                await page.evaluate((v) => {
+                    document.querySelector("#movementAmount").value = v;
+                }, bad);
             }
             await page.click("#movementSubmit");
             const message = await page.locator("#movementError").textContent();
@@ -224,7 +282,11 @@ describe("recording stock: Received and Used", () => {
     });
 
     it("a double tap on confirm while the server has not answered writes once", async () => {
-        const { context, page } = await open(SEEDED, { beforeLoad: () => { window.__preset = { holdAcks: true }; } });
+        const { context, page } = await open(SEEDED, {
+            beforeLoad: () => {
+                window.__preset = { holdAcks: true };
+            },
+        });
         await openRecord(page, "Cement", "received");
         await page.fill("#movementAmount", "4");
         await page.click("#movementSubmit");
@@ -235,15 +297,25 @@ describe("recording stock: Received and Used", () => {
     });
 
     it("the page keeps working with no signal: the stock shows at once, before the server answers", async () => {
-        const { context, page } = await open(SEEDED, { beforeLoad: () => { window.__preset = { holdAcks: true }; } });
+        const { context, page } = await open(SEEDED, {
+            beforeLoad: () => {
+                window.__preset = { holdAcks: true };
+            },
+        });
         await record(page, "Cement", "received", "4");
-        await page.waitForFunction(() => document.querySelector("#materialTableBody").textContent.includes("9"));
+        await page.waitForFunction(() =>
+            document.querySelector("#materialTableBody").textContent.includes("9"),
+        );
         assert.equal(await quantityOf(page, "Cement"), "9");
         await context.close();
     });
 
     it("if the database refuses (somebody used the stock first), an error toast says so and the stock is unchanged", async () => {
-        const { context, page } = await open(SEEDED, { beforeLoad: () => { window.__preset = { holdSnapshots: false }; } });
+        const { context, page } = await open(SEEDED, {
+            beforeLoad: () => {
+                window.__preset = { holdSnapshots: false };
+            },
+        });
         await openRecord(page, "Cement", "used");
         await page.fill("#movementAmount", "5");
         // Somebody else uses 3 and this page does not hear about it yet.
@@ -254,15 +326,23 @@ describe("recording stock: Received and Used", () => {
         await page.click("#movementSubmit");
         await page.waitForFunction(() => window.__nailit.writes.some((w) => w.rejected));
         await toastLocator(page, "Could not record").first().waitFor();
-        assert.equal((await dbState(page)).materials.sA.m1.quantity, 2, "nothing was subtracted twice");
+        assert.equal(
+            (await dbState(page)).materials.sA.m1.quantity,
+            2,
+            "nothing was subtracted twice",
+        );
         await context.close();
     });
 
     it("a stock figure that changes while the dialog is open is shown, and the limit follows it", async () => {
         const { context, page } = await open();
         await openRecord(page, "Cement", "used");
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "used", delta: -3 }));
-        await page.waitForFunction(() => /2\s*bags/.test(document.querySelector("#movementStock").textContent));
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "used", delta: -3 }),
+        );
+        await page.waitForFunction(() =>
+            /2\s*bags/.test(document.querySelector("#movementStock").textContent),
+        );
         await page.fill("#movementAmount", "3");
         await page.click("#movementSubmit");
         await page.locator("#movementError").waitFor({ state: "visible" });
@@ -287,7 +367,10 @@ describe("recording stock: Received and Used", () => {
 
 describe("who sees what", () => {
     it("a viewer sees stock and history but no way to change anything", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, roles: { sA: "viewer" } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEEDED,
+            roles: { sA: "viewer" },
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         for (const selector of [".btn-receive", ".btn-use", ".btn-edit", ".btn-delete"]) {
@@ -296,12 +379,19 @@ describe("who sees what", () => {
         assert.equal(await page.locator("#materialTableBody .btn-history").count(), 2);
         await button(page, "Cement", ".btn-history").click();
         await page.locator("#historyContainer").waitFor({ state: "visible" });
-        assert.equal(await page.locator("#activityPanel").isVisible(), true, "the activity feed is for every member");
+        assert.equal(
+            await page.locator("#activityPanel").isVisible(),
+            true,
+            "the activity feed is for every member",
+        );
         await context.close();
     });
 
     it("a storekeeper records stock", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, roles: { sA: "storekeeper" } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEEDED,
+            roles: { sA: "storekeeper" },
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand"]);
         await record(page, "Cement", "received", "1");
@@ -340,15 +430,26 @@ describe("material history", () => {
         assert.match(await second.locator(".history-delta").textContent(), /-15/);
         assert.match(await second.locator(".history-balance").textContent(), /5/);
         assert.match(await second.locator(".history-note").textContent(), /Slab pour/);
-        assert.match(await second.locator(".history-when").textContent(), /2h ago|\d{4}-\d{2}-\d{2}/);
-        assert.equal(await page.locator("#historyBefore").isVisible(), false, "the history explains the stock completely");
+        assert.match(
+            await second.locator(".history-when").textContent(),
+            /2h ago|\d{4}-\d{2}-\d{2}/,
+        );
+        assert.equal(
+            await page.locator("#historyBefore").isVisible(),
+            false,
+            "the history explains the stock completely",
+        );
         await context.close();
     });
 
     it("the last running balance is the quantity in the table", async () => {
         const { context, page } = await open();
         await button(page, "Cement", ".btn-history").click();
-        const balance = await page.locator("#historyList .history-row").last().locator(".history-balance").textContent();
+        const balance = await page
+            .locator("#historyList .history-row")
+            .last()
+            .locator(".history-balance")
+            .textContent();
         assert.equal(balance.replace(/\D/g, ""), await quantityOf(page, "Cement"));
         await context.close();
     });
@@ -368,7 +469,14 @@ describe("material history", () => {
         await button(page, "Sand", ".btn-history").click();
         await page.locator("#historyList .history-row").first().waitFor();
         assert.match(await page.textContent("#historyBefore"), /10/);
-        assert.match(await page.locator("#historyList .history-row").last().locator(".history-balance").textContent(), /12/);
+        assert.match(
+            await page
+                .locator("#historyList .history-row")
+                .last()
+                .locator(".history-balance")
+                .textContent(),
+            /12/,
+        );
         await context.close();
     });
 
@@ -376,9 +484,24 @@ describe("material history", () => {
         const { context, page } = await open();
         await button(page, "Cement", ".btn-history").click();
         await page.locator("#historyList .history-row").first().waitFor();
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 10, note: "Truck 2" }));
-        await page.waitForFunction(() => document.querySelectorAll("#historyList .history-row").length === 3);
-        assert.match(await page.locator("#historyList .history-row").last().locator(".history-balance").textContent(), /15/);
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", {
+                type: "received",
+                delta: 10,
+                note: "Truck 2",
+            }),
+        );
+        await page.waitForFunction(
+            () => document.querySelectorAll("#historyList .history-row").length === 3,
+        );
+        assert.match(
+            await page
+                .locator("#historyList .history-row")
+                .last()
+                .locator(".history-balance")
+                .textContent(),
+            /15/,
+        );
         await context.close();
     });
 
@@ -387,7 +510,17 @@ describe("material history", () => {
             ...SEEDED,
             movements: {
                 ...MOVEMENTS,
-                mv3: { siteId: "sA", materialId: "m2", materialName: "Sand", units: "tonnes", delta: 10, type: "opening", byUid: "u9", byEmail: "boss@example.com", at: now - DAY },
+                mv3: {
+                    siteId: "sA",
+                    materialId: "m2",
+                    materialName: "Sand",
+                    units: "tonnes",
+                    delta: 10,
+                    type: "opening",
+                    byUid: "u9",
+                    byEmail: "boss@example.com",
+                    at: now - DAY,
+                },
             },
         };
         const { context, page } = await open(seed);
@@ -397,7 +530,9 @@ describe("material history", () => {
         await page.click("#historyClose");
         await closed(page, "#historyContainer");
         await button(page, "Sand", ".btn-history").click();
-        await page.waitForFunction(() => document.querySelectorAll("#historyList .history-row").length === 1);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#historyList .history-row").length === 1,
+        );
         assert.match(await page.textContent("#historyTitle"), /Sand/);
         await context.close();
     });
@@ -410,7 +545,11 @@ describe("material history", () => {
         await page.keyboard.press("Escape");
         await closed(page, "#historyContainer");
         await movementListenersDropTo(page, 1);
-        assert.equal(await movementListenerCount(page), 1, "feed only: the history subscription is gone");
+        assert.equal(
+            await movementListenerCount(page),
+            1,
+            "feed only: the history subscription is gone",
+        );
         await context.close();
     });
 
@@ -421,11 +560,17 @@ describe("material history", () => {
         const writes = await movementWrites(page);
         const removed = Object.values(writes[0].paths).find((v) => v && v.type === "removed");
         assert.equal(removed.delta, -5);
-        await page.locator(".toast", { hasText: "Deleted Cement" }).locator(".toast-action").click();
+        await page
+            .locator(".toast", { hasText: "Deleted Cement" })
+            .locator(".toast-action")
+            .click();
         await waitForRows(page, ["Cement", "Sand"]);
         assert.equal(await quantityOf(page, "Cement"), "5");
         const state = await dbState(page);
-        const types = Object.values(state.movements.sA).filter((m) => m.materialId === "m1").map((m) => m.type).sort();
+        const types = Object.values(state.movements.sA)
+            .filter((m) => m.materialId === "m1")
+            .map((m) => m.type)
+            .sort();
         assert.deepEqual(types, ["opening", "opening", "removed", "used"]);
         await context.close();
     });
@@ -437,9 +582,15 @@ describe("site activity feed", () => {
         const items = page.locator("#activityList .activity-item");
         await items.first().waitFor();
         assert.equal(await items.count(), 2);
-        assert.equal((await items.nth(0).locator(".activity-text").textContent()).trim(), "foreman used 15 bags of Cement");
+        assert.equal(
+            (await items.nth(0).locator(".activity-text").textContent()).trim(),
+            "foreman used 15 bags of Cement",
+        );
         assert.match(await items.nth(0).locator(".activity-time").textContent(), /2h ago/);
-        assert.equal((await items.nth(1).locator(".activity-text").textContent()).trim(), "boss added 20 bags of Cement");
+        assert.equal(
+            (await items.nth(1).locator(".activity-text").textContent()).trim(),
+            "boss added 20 bags of Cement",
+        );
         assert.match(await items.nth(1).locator(".activity-time").textContent(), /3 days ago/);
         await context.close();
     });
@@ -449,15 +600,33 @@ describe("site activity feed", () => {
         assert.match(await page.textContent("#activityEmpty"), /No activity yet/i);
         await record(page, "Cement", "used", "2");
         await page.locator("#activityList .activity-item").first().waitFor();
-        assert.equal((await page.locator("#activityList .activity-item .activity-text").first().textContent()).trim(), "foreman used 2 bags of Cement");
+        assert.equal(
+            (
+                await page
+                    .locator("#activityList .activity-item .activity-text")
+                    .first()
+                    .textContent()
+            ).trim(),
+            "foreman used 2 bags of Cement",
+        );
         assert.equal(await page.locator("#activityEmpty").isVisible(), false);
         await context.close();
     });
 
     it("shows another person's movement as soon as it arrives", async () => {
         const { context, page } = await open();
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m2", { type: "received", delta: 6, byEmail: "kip@example.com" }));
-        await page.waitForFunction(() => document.querySelector("#activityList .activity-text")?.textContent.includes("kip received 6 tonnes of Sand"));
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m2", {
+                type: "received",
+                delta: 6,
+                byEmail: "kip@example.com",
+            }),
+        );
+        await page.waitForFunction(() =>
+            document
+                .querySelector("#activityList .activity-text")
+                ?.textContent.includes("kip received 6 tonnes of Sand"),
+        );
         await context.close();
     });
 
@@ -466,28 +635,56 @@ describe("site activity feed", () => {
             ...SEEDED,
             movements: {
                 ...MOVEMENTS,
-                mv9: { siteId: "sB", materialId: "m3", materialName: "Nails", units: "kgs", delta: 40, type: "opening", byUid: "u9", byEmail: "boss@example.com", at: now - HOUR },
+                mv9: {
+                    siteId: "sB",
+                    materialId: "m3",
+                    materialName: "Nails",
+                    units: "kgs",
+                    delta: 40,
+                    type: "opening",
+                    byUid: "u9",
+                    byEmail: "boss@example.com",
+                    at: now - HOUR,
+                },
             },
         };
         const { context, page } = await open(seed);
         assert.equal(await page.locator("#activityList .activity-item").count(), 2);
         await selectSite(page, "Cape Town");
-        await page.waitForFunction(() => document.querySelectorAll("#activityList .activity-item").length === 1);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#activityList .activity-item").length === 1,
+        );
         assert.match(await page.textContent("#activityList"), /Nails/);
         await context.close();
     });
 
     it("is not shown with no site selected", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, hiddenSites: [] }, {
-            beforeLoad: () => { try { localStorage.clear(); } catch { /* none */ } },
-        });
+        const { context, page } = await openDashboard(
+            browser,
+            baseUrl,
+            { ...SEEDED, hiddenSites: [] },
+            {
+                beforeLoad: () => {
+                    try {
+                        localStorage.clear();
+                    } catch {
+                        /* none */
+                    }
+                },
+            },
+        );
         assert.equal(await page.locator("#activityPanel").isVisible(), false);
         await context.close();
     });
 
     it("keeps the feed short: only the latest 30 are asked for", async () => {
         const { context, page } = await open();
-        const limits = await page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.kind === "movements").map((l) => l.limit));
+        const limits = await page.evaluate(() =>
+            window.__nailit
+                .activeListeners()
+                .filter((l) => l.kind === "movements")
+                .map((l) => l.limit),
+        );
         assert.ok(limits.length >= 1);
         await context.close();
     });
@@ -498,7 +695,18 @@ describe("site activity feed", () => {
             ...SEED,
             materials: { ...SEED.materials, m1: { ...SEED.materials.m1, name: evil } },
             movements: {
-                x1: { siteId: "sA", materialId: "m1", materialName: evil, units: "bags", delta: -1, type: "used", byUid: "u9", byEmail: "<b>x</b>@example.com", at: now - HOUR, note: evil },
+                x1: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: evil,
+                    units: "bags",
+                    delta: -1,
+                    type: "used",
+                    byUid: "u9",
+                    byEmail: "<b>x</b>@example.com",
+                    at: now - HOUR,
+                    note: evil,
+                },
             },
         };
         const { context, page } = await openDashboard(browser, baseUrl, seed);
@@ -506,7 +714,10 @@ describe("site activity feed", () => {
         await page.locator("#activityList .activity-item").first().waitFor();
         await button(page, "<img", ".btn-history").click();
         await page.locator("#historyList .history-row").first().waitFor();
-        assert.equal(await page.locator("#activityList img, #historyList img, #historyTitle img").count(), 0);
+        assert.equal(
+            await page.locator("#activityList img, #historyList img, #historyTitle img").count(),
+            0,
+        );
         assert.equal(await page.evaluate(() => window.__pwned), undefined);
         assert.ok((await page.textContent("#activityList")).includes(evil));
         await context.close();
@@ -528,7 +739,11 @@ describe("adding, editing and deleting materials with movements underneath", () 
         const movement = Object.values(write.paths).find((v) => v && v.type === "opening");
         assert.equal(movement.delta, 12);
         assert.equal(movement.materialName, "Gravel");
-        await page.waitForFunction(() => document.querySelector("#activityList .activity-text")?.textContent.includes("foreman added 12 tonnes of Gravel"));
+        await page.waitForFunction(() =>
+            document
+                .querySelector("#activityList .activity-text")
+                ?.textContent.includes("foreman added 12 tonnes of Gravel"),
+        );
         await context.close();
     });
 
@@ -554,7 +769,12 @@ describe("adding, editing and deleting materials with movements underneath", () 
         await page.selectOption("#mUnits", "tonnes");
         await page.click("#material-btn");
         await waitForRows(page, ["Cement", "Sand", "Gravel"]);
-        assert.equal((await dbState(page)).materials.sA[Object.keys((await dbState(page)).materials.sA).find((id) => id.startsWith("nfake"))].minLevel, 10);
+        assert.equal(
+            (await dbState(page)).materials.sA[
+                Object.keys((await dbState(page)).materials.sA).find((id) => id.startsWith("nfake"))
+            ].minLevel,
+            10,
+        );
         await context.close();
     });
 
@@ -570,7 +790,10 @@ describe("adding, editing and deleting materials with movements underneath", () 
         await closed(page, "#updateFormContainer");
 
         const [write] = (await wrote(page)).slice(-1);
-        assert.ok(!Object.keys(write.paths).some((p) => p.endsWith("/quantity")), "no quantity in the edit");
+        assert.ok(
+            !Object.keys(write.paths).some((p) => p.endsWith("/quantity")),
+            "no quantity in the edit",
+        );
         assert.equal(write.paths["materials/sA/m1/name"], "Cement 42.5");
         assert.equal(write.paths["materials/sA/m1/minLevel"], 3);
         assert.equal(await quantityOf(page, "Cement 42.5"), "5");
@@ -587,7 +810,10 @@ describe("adding, editing and deleting materials with movements underneath", () 
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         });
         assert.equal((await row(page, "Cement").locator("td").nth(3).textContent()).trim(), today);
-        assert.equal((await row(page, "Sand").locator("td").nth(3).textContent()).trim(), "2024-05-04");
+        assert.equal(
+            (await row(page, "Sand").locator("td").nth(3).textContent()).trim(),
+            "2024-05-04",
+        );
         await context.close();
     });
 });

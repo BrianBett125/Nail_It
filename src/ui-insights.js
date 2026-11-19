@@ -18,10 +18,10 @@ import {
     DEFAULT_SORT,
 } from "./insights.js";
 
-const CLOCK_MS = 60_000;      // "1h ago" is re-worded once a minute
-const MAX_PILLS = 6;          // more than this and the strip says "+N more" and opens the Low filter
-const MAX_PILLS_PHONE = 3;    // on a phone the strip wraps instead of scrolling sideways, so it stays short
-const FLASH_MS = 2200;        // how long a row stays highlighted after its pill was tapped
+const CLOCK_MS = 60_000; // "1h ago" is re-worded once a minute
+const MAX_PILLS = 6; // more than this and the strip says "+N more" and opens the Low filter
+const MAX_PILLS_PHONE = 3; // on a phone the strip wraps instead of scrolling sideways, so it stays short
+const FLASH_MS = 2200; // how long a row stays highlighted after its pill was tapped
 
 const $ = (id) => document.getElementById(id);
 
@@ -48,7 +48,7 @@ export function createInsightsUI({ onViewChange }) {
 
     // The per-site view. Reset whenever another site opens.
     let siteId = null;
-    let materials = null;           // null until the site's first snapshot
+    let materials = null; // null until the site's first snapshot
     let lastMovementAt = 0;
     let query = "";
     let filter = "all";
@@ -77,15 +77,27 @@ export function createInsightsUI({ onViewChange }) {
         lowTile.classList.toggle("is-alert", !calm);
         lowTile.classList.toggle("is-calm", calm && summary.total > 0);
         set(lowTile, ".stat-num", summary.total === 0 ? "-" : calm ? "✓" : String(summary.low));
-        set(lowTile, ".stat-label", summary.total === 0 ? "nothing tracked" : calm ? "All stocked" : "low on stock");
+        set(
+            lowTile,
+            ".stat-label",
+            summary.total === 0 ? "nothing tracked" : calm ? "All stocked" : "low on stock",
+        );
         set(lowTile, ".summary-low", words.low);
         // The tile is a shortcut to the Low filter, so it only works when something is low.
         lowTile.disabled = calm;
         lowTile.setAttribute("aria-pressed", String(filter === "low"));
-        lowTile.title = calm ? "" : filter === "low" ? "Show all materials" : "Show only the low materials";
+        lowTile.title = calm
+            ? ""
+            : filter === "low"
+              ? "Show all materials"
+              : "Show only the low materials";
 
         set(activityTile, ".stat-num", summary.lastActivity ? ageLabel(summary.lastActivity) : "-");
-        set(activityTile, ".stat-label", summary.lastActivity ? "last activity" : "No activity yet");
+        set(
+            activityTile,
+            ".stat-label",
+            summary.lastActivity ? "last activity" : "No activity yet",
+        );
         set(activityTile, ".summary-activity", words.activity);
     }
 
@@ -93,7 +105,10 @@ export function createInsightsUI({ onViewChange }) {
 
     function renderAttention() {
         const row = overviewRow({ siteId, site: null, materials: materials || {}, lastMovementAt });
-        const limit = window.matchMedia && window.matchMedia("(max-width: 768px)").matches ? MAX_PILLS_PHONE : MAX_PILLS;
+        const limit =
+            window.matchMedia && window.matchMedia("(max-width: 768px)").matches
+                ? MAX_PILLS_PHONE
+                : MAX_PILLS;
         // With the Low filter on, the list below already is the low list: do not show it twice.
         attention.hidden = row.low === 0 || filter === "low";
         attentionList.replaceChildren();
@@ -140,11 +155,14 @@ export function createInsightsUI({ onViewChange }) {
             syncControls();
             onViewChange();
         }
-        const row = document.querySelector(`#materialTableBody tr[data-material-id="${CSS.escape(materialId)}"]`);
+        const row = document.querySelector(
+            `#materialTableBody tr[data-material-id="${CSS.escape(materialId)}"]`,
+        );
         if (!row) {
             return;
         }
-        const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const reduce =
+            window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         row.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
         row.classList.remove("row-flash");
         void row.offsetWidth; // restart the animation if the same pill is tapped twice
@@ -204,7 +222,9 @@ export function createInsightsUI({ onViewChange }) {
     });
     allChip.addEventListener("click", () => setFilter("all"));
     lowChip.addEventListener("click", () => setFilter("low"));
-    lowTile.addEventListener("click", () => setFilter(filter === "low" ? "all" : "low", { scroll: filter !== "low" }));
+    lowTile.addEventListener("click", () =>
+        setFilter(filter === "low" ? "all" : "low", { scroll: filter !== "low" }),
+    );
 
     // "1h ago" goes stale on a screen that stays open on site all day.
     setInterval(() => {
@@ -262,7 +282,9 @@ export function createInsightsUI({ onViewChange }) {
         emptyMessage() {
             const typed = query.trim();
             if (typed) {
-                return filter === "low" ? `No low-stock materials match "${typed}".` : `No materials match "${typed}".`;
+                return filter === "low"
+                    ? `No low-stock materials match "${typed}".`
+                    : `No materials match "${typed}".`;
             }
             return filter === "low" ? "Nothing is low on stock." : "";
         },

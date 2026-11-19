@@ -22,7 +22,12 @@ function container() {
 // options.duration: ms before it goes away on its own.
 // Returns { dismiss } so the caller can take the toast back.
 export function showToast(message, options = {}) {
-    const { kind = "info", actionLabel, onAction, duration = DEFAULT_MS[kind] ?? DEFAULT_MS.info } = options;
+    const {
+        kind = "info",
+        actionLabel,
+        onAction,
+        duration = DEFAULT_MS[kind] ?? DEFAULT_MS.info,
+    } = options;
 
     const toast = document.createElement("div");
     toast.className = `toast toast-${kind}`;

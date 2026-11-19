@@ -27,7 +27,9 @@ function fakeStorage(initial) {
     const map = new Map(initial === undefined ? [] : [[OUTBOX_KEY, initial]]);
     return {
         getItem: (key) => (map.has(key) ? map.get(key) : null),
-        setItem: (key, value) => { map.set(key, String(value)); },
+        setItem: (key, value) => {
+            map.set(key, String(value));
+        },
         entries: () => JSON.parse(map.get(OUTBOX_KEY) || "[]"),
     };
 }
@@ -35,7 +37,13 @@ function fakeStorage(initial) {
 const refusal = () => Object.assign(new Error("PERMISSION_DENIED"), { code: "PERMISSION_DENIED" });
 
 // Wraps the two things data.js hands in, and records the order of everything that happened.
-function harness({ landedValue = false, landedError = null, writeError = null, throwOnWrite = false, storage = fakeStorage() } = {}) {
+function harness({
+    landedValue = false,
+    landedError = null,
+    writeError = null,
+    throwOnWrite = false,
+    storage = fakeStorage(),
+} = {}) {
     const seen = [];
     const box = createOutbox({
         storage,
@@ -73,7 +81,11 @@ test("a movement is on the device before the database is asked, and gone once th
     assert.equal(box.count(), 1);
     await done;
 
-    assert.deepEqual(writes(seen).map((w) => w.replay), [false], "the first send is not a replay");
+    assert.deepEqual(
+        writes(seen).map((w) => w.replay),
+        [false],
+        "the first send is not a replay",
+    );
     assert.deepEqual(storage.entries(), [], "the confirmation cleared it");
     assert.equal(box.count(), 0);
 });
@@ -119,12 +131,20 @@ test("a write that throws straight away is a failed write like any other", async
 
 test("with site data blocked the queue still works for this page, and says the movement is not safe", async () => {
     const blocked = {
-        getItem: () => { throw new Error("blocked"); },
-        setItem: () => { throw new Error("blocked"); },
+        getItem: () => {
+            throw new Error("blocked");
+        },
+        setItem: () => {
+            throw new Error("blocked");
+        },
     };
     const landed = harness({ storage: blocked });
     await landed.box.record(entry()).done;
-    assert.equal(landed.box.count(), 0, "a confirmed movement is gone even with nowhere to keep it");
+    assert.equal(
+        landed.box.count(),
+        0,
+        "a confirmed movement is gone even with nowhere to keep it",
+    );
 
     const failed = harness({ storage: blocked, writeError: new Error("no signal") });
     await assert.rejects(failed.box.record(entry()).done, (error) => {
@@ -148,28 +168,44 @@ test("a queue that cannot be read starts empty rather than refusing to work", as
 });
 
 test("junk in the queue is dropped rather than sent to the database", async () => {
-    const storage = fakeStorage(JSON.stringify([
-        entry(),
-        null,
-        "a string",
-        { movementId: "mf2" },                                     // half an entry
-        entry({ movementId: "mf3", movement: { type: "used" } }),  // no delta
-        entry({ movementId: "mf4", at: "yesterday" }),
-    ]));
+    const storage = fakeStorage(
+        JSON.stringify([
+            entry(),
+            null,
+            "a string",
+            { movementId: "mf2" }, // half an entry
+            entry({ movementId: "mf3", movement: { type: "used" } }), // no delta
+            entry({ movementId: "mf4", at: "yesterday" }),
+        ]),
+    );
     const { box } = harness({ storage });
-    assert.deepEqual(box.pending().map((item) => item.movementId), ["mf1"]);
+    assert.deepEqual(
+        box.pending().map((item) => item.movementId),
+        ["mf1"],
+    );
 });
 
 // ---- replaying ------------------------------------------------------------------------
 
 test("replay sends what is queued, oldest first, and empties the queue", async () => {
-    const storage = fakeStorage(JSON.stringify([entry(), entry({ movementId: "mf2", movement: { type: "received", delta: 4 } })]));
+    const storage = fakeStorage(
+        JSON.stringify([
+            entry(),
+            entry({ movementId: "mf2", movement: { type: "received", delta: 4 } }),
+        ]),
+    );
     const { box, seen } = harness({ storage });
 
     const result = await box.replay();
     assert.deepEqual(result, { sent: 2, landed: 0, refused: 0, stopped: false });
-    assert.deepEqual(writes(seen).map((w) => w.movementId), ["mf1", "mf2"]);
-    assert.ok(writes(seen).every((w) => w.replay === true), "a replay says so, so it can be stamped with when it happened");
+    assert.deepEqual(
+        writes(seen).map((w) => w.movementId),
+        ["mf1", "mf2"],
+    );
+    assert.ok(
+        writes(seen).every((w) => w.replay === true),
+        "a replay says so, so it can be stamped with when it happened",
+    );
     assert.deepEqual(storage.entries(), []);
 });
 
@@ -190,7 +226,10 @@ test("with no signal the replay stops at the first movement and keeps everything
     const result = await box.replay();
     assert.deepEqual(result, { sent: 0, landed: 0, refused: 0, stopped: true });
     assert.deepEqual(writes(seen), []);
-    assert.deepEqual(box.pending().map((item) => item.movementId), ["mf1", "mf2"]);
+    assert.deepEqual(
+        box.pending().map((item) => item.movementId),
+        ["mf1", "mf2"],
+    );
     assert.equal(storage.entries().length, 2, "still durable");
 });
 
@@ -200,7 +239,11 @@ test("a write with no signal stops the replay instead of pushing on through the 
 
     const result = await box.replay();
     assert.equal(result.stopped, true);
-    assert.deepEqual(writes(seen).map((w) => w.movementId), ["mf1"], "the second is not attempted");
+    assert.deepEqual(
+        writes(seen).map((w) => w.movementId),
+        ["mf1"],
+        "the second is not attempted",
+    );
     assert.equal(box.count(), 2);
 });
 
@@ -214,8 +257,13 @@ test("a movement the database refuses during a replay is dropped, and reported o
     assert.deepEqual(result, { sent: 0, landed: 0, refused: 2, stopped: false });
     assert.equal(box.count(), 0, "a refusal must not leave a queue that never drains");
     // Nobody else will ever hear about these: the movement is gone, so this report is the only notice.
-    assert.deepEqual(reports.filter((r) => r.refused.length).map((r) => r.refused),
-        [[{ movementId: "mf1", message: "PERMISSION_DENIED" }], [{ movementId: "mf2", message: "PERMISSION_DENIED" }]]);
+    assert.deepEqual(
+        reports.filter((r) => r.refused.length).map((r) => r.refused),
+        [
+            [{ movementId: "mf1", message: "PERMISSION_DENIED" }],
+            [{ movementId: "mf2", message: "PERMISSION_DENIED" }],
+        ],
+    );
 });
 
 // ---- more than one context on the same device ------------------------------------------
@@ -234,7 +282,10 @@ test("a movement queued in one context is not lost when another context records 
 
     // Without folding what is already on the device in before writing, the second context's copy of the
     // list would replace the first's and mf1 would vanish, while its tab still showed it waiting.
-    assert.deepEqual(storage.entries().map((item) => item.movementId), ["mf1", "mf2"]);
+    assert.deepEqual(
+        storage.entries().map((item) => item.movementId),
+        ["mf1", "mf2"],
+    );
     assert.equal(app.box.count(), 2, "the second context sees both once it has written");
 });
 
@@ -260,8 +311,11 @@ test("a replay refused because the movement just landed elsewhere is treated as 
     assert.deepEqual(result, { sent: 0, landed: 1, refused: 0, stopped: false });
     assert.deepEqual(attempts, ["write"], "the write was still attempted");
     assert.deepEqual(storage.entries(), [], "the queue is clean");
-    assert.deepEqual(reports.flatMap((report) => report.refused), [],
-        "nobody is told to record it again: that would count the stock twice");
+    assert.deepEqual(
+        reports.flatMap((report) => report.refused),
+        [],
+        "nobody is told to record it again: that would count the stock twice",
+    );
 });
 
 test("two callers replaying at once send each movement once", async () => {
@@ -270,7 +324,11 @@ test("two callers replaying at once send each movement once", async () => {
 
     const first = box.replay();
     const second = box.replay();
-    assert.equal(first, second, "the second caller waits on the first send rather than starting its own");
+    assert.equal(
+        first,
+        second,
+        "the second caller waits on the first send rather than starting its own",
+    );
     await Promise.all([first, second]);
     assert.equal(writes(seen).length, 1);
 });

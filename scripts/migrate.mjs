@@ -35,7 +35,9 @@ async function readOldDatabase() {
     const read = async (node) => {
         const response = await fetch(`${sourceUrl}/${node}.json`);
         if (!response.ok) {
-            throw new Error(`could not read ${sourceUrl}/${node}.json (HTTP ${response.status}). The old database may already be locked.`);
+            throw new Error(
+                `could not read ${sourceUrl}/${node}.json (HTTP ${response.status}). The old database may already be locked.`,
+            );
         }
         return response.json();
     };

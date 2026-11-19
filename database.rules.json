@@ -129,10 +129,7 @@
     "movements": {
       "$siteId": {
         ".read": "auth != null && root.child('members').child($siteId).child(auth.uid).exists()",
-        ".indexOn": [
-          "materialId",
-          "at"
-        ],
+        ".indexOn": ["materialId", "at"],
         ".write": "auth != null && !newData.exists() && root.child('members').child($siteId).child(auth.uid).val() === 'owner' && !newData.parent().parent().child('sites').child($siteId).exists()",
         "$movementId": {
           ".write": "auth != null && (root.child('members').child($siteId).child(auth.uid).val() === 'owner' || root.child('members').child($siteId).child(auth.uid).val() === 'storekeeper') && !data.exists() && newData.exists()",

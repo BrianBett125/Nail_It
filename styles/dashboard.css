@@ -11,7 +11,15 @@
    ============================================================================= */
 
 /* Reset */
-body, h1, h2, h3, ul, li, table, th, td {
+body,
+h1,
+h2,
+h3,
+ul,
+li,
+table,
+th,
+td {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -77,7 +85,9 @@ header {
     font-size: 15px;
     font-weight: 600;
     text-decoration: none;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition:
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .nav-links a:hover,
@@ -155,7 +165,9 @@ header {
     color: var(--on-slate);
     font-size: 15px;
     text-decoration: none;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .sidebar ul li a:hover {
@@ -236,7 +248,8 @@ table {
     background: var(--surface);
 }
 
-th, td {
+th,
+td {
     padding: 14px 15px;
     text-align: left;
     border-bottom: 1px solid var(--line-soft);
@@ -299,7 +312,9 @@ td button {
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease;
 }
 
 #reportsButton:hover,
@@ -411,7 +426,9 @@ td button {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
 }
 
 .user-area button:hover {
@@ -584,7 +601,10 @@ td .btn-delete {
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
 td .btn-edit,
@@ -654,16 +674,26 @@ td .btn-delete:hover {
     text-decoration: none;
 }
 
-.sheet-received { --accent: var(--in); }
-.sheet-used { --accent: var(--out); }
+.sheet-received {
+    --accent: var(--in);
+}
+.sheet-used {
+    --accent: var(--out);
+}
 
 @keyframes sheet-up {
-    from { transform: translateY(24px); }
-    to { transform: none; }
+    from {
+        transform: translateY(24px);
+    }
+    to {
+        transform: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .sheet { animation: none; }
+    .sheet {
+        animation: none;
+    }
 }
 
 .sheet-grip {
@@ -991,8 +1021,12 @@ td .btn-delete:hover {
     font-variant-numeric: tabular-nums;
 }
 
-.history-in .history-delta { color: var(--in); }
-.history-out .history-delta { color: var(--out); }
+.history-in .history-delta {
+    color: var(--in);
+}
+.history-out .history-delta {
+    color: var(--out);
+}
 
 .history-who {
     overflow-wrap: anywhere;
@@ -1048,7 +1082,9 @@ td .btn-delete:hover {
     gap: var(--sp-3);
 }
 
-.activity-toggle { display: none; }
+.activity-toggle {
+    display: none;
+}
 
 .activity-empty {
     margin: 4px 0;
@@ -1078,8 +1114,14 @@ td .btn-delete:hover {
     line-height: 22px;
 }
 
-.activity-in .activity-sign { background: var(--in-soft); color: var(--in-strong); }
-.activity-out .activity-sign { background: var(--out-soft); color: var(--out-strong); }
+.activity-in .activity-sign {
+    background: var(--in-soft);
+    color: var(--in-strong);
+}
+.activity-out .activity-sign {
+    background: var(--out-soft);
+    color: var(--out-strong);
+}
 
 .activity-text {
     flex: 1;
@@ -1096,7 +1138,9 @@ td .btn-delete:hover {
 
 /* The activity feed waits for the materials: it would otherwise be on screen while they load and get
    pushed down when they arrive. */
-.main-content:not(.is-ready) .activity-panel { display: none; }
+.main-content:not(.is-ready) .activity-panel {
+    display: none;
+}
 
 /* ==== Phase 5: the phone shell =============================================
    Variant "Drawer". At 768px and below the page is: the top bar (logo, the other page, Sign out),
@@ -1106,25 +1150,39 @@ td .btn-delete:hover {
    src/ui-drawer.js opens and closes it. */
 
 /* Desktop: the site bar has no box of its own, and its phone-only parts are not there. */
-.site-bar { display: contents; }
+.site-bar {
+    display: contents;
+}
 .site-picker,
 .bar-role,
 .site-scrim,
 .drawer-close,
 .drawer-account,
-.add-plus { display: none; }
+.add-plus {
+    display: none;
+}
 
 /* A page does not scroll behind a dialog or the open drawer. */
 body:has(dialog[open]),
-body:has(.site-bar.is-open) { overflow: hidden; }
+body:has(.site-bar.is-open) {
+    overflow: hidden;
+}
 
 @keyframes drawer-down {
-    from { transform: translateY(-12px); opacity: 0; }
-    to { transform: none; opacity: 1; }
+    from {
+        transform: translateY(-12px);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
 }
 
 @media (max-width: 768px) {
-    body { height: auto; }
+    body {
+        height: auto;
+    }
 
     /* ---- the top bar ---- */
     header {
@@ -1138,8 +1196,13 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         width: 100%;
     }
 
-    .logo { font-size: 16px; }
-    .nav-links { margin-left: auto; gap: 0; }
+    .logo {
+        font-size: 16px;
+    }
+    .nav-links {
+        margin-left: auto;
+        gap: 0;
+    }
 
     .nav-links a {
         display: inline-flex;
@@ -1152,10 +1215,16 @@ body:has(.site-bar.is-open) { overflow: hidden; }
 
     /* Home and About Us are on the public pages; the page you are on is not a link you need. */
     .nav-links .nav-extra,
-    .nav-links [aria-current="page"] { display: none; }
+    .nav-links [aria-current="page"] {
+        display: none;
+    }
 
-    .user-area { margin-left: 0; }
-    .user-area #userEmail { display: none; }
+    .user-area {
+        margin-left: 0;
+    }
+    .user-area #userEmail {
+        display: none;
+    }
 
     .user-area button {
         min-height: 44px;
@@ -1224,7 +1293,10 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         outline-offset: 2px;
     }
 
-    .picker-text { display: block; min-width: 0; }
+    .picker-text {
+        display: block;
+        min-width: 0;
+    }
 
     .picker-name {
         display: -webkit-box;
@@ -1242,7 +1314,9 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         transition: transform 0.15s ease;
     }
 
-    .site-bar.is-open .picker-chevron { transform: rotate(180deg); }
+    .site-bar.is-open .picker-chevron {
+        transform: rotate(180deg);
+    }
 
     .bar-role {
         position: relative;
@@ -1277,7 +1351,9 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         cursor: pointer;
     }
 
-    .site-bar .add-plus { display: inline; }
+    .site-bar .add-plus {
+        display: inline;
+    }
 
     .site-bar .add-text {
         position: absolute;
@@ -1337,7 +1413,10 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         margin-bottom: 6px;
     }
 
-    .sidebar h2 { margin: 0; font-size: 16px; }
+    .sidebar h2 {
+        margin: 0;
+        font-size: 16px;
+    }
 
     .sidebar .drawer-close {
         display: inline-flex;
@@ -1376,7 +1455,10 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         overflow-wrap: anywhere;
     }
 
-    .sidebar .role-tag { flex: none; margin: 0; }
+    .sidebar .role-tag {
+        flex: none;
+        margin: 0;
+    }
 
     .sidebar .delete-site-btn {
         display: inline-flex;
@@ -1392,9 +1474,16 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         color: var(--on-slate);
     }
 
-    .sidebar .delete-site-btn:hover { background: var(--out-strong); }
-    .sidebar .status { margin: 8px 4px; font-size: 16px; }
-    .invites-panel li { gap: 8px; }
+    .sidebar .delete-site-btn:hover {
+        background: var(--out-strong);
+    }
+    .sidebar .status {
+        margin: 8px 4px;
+        font-size: 16px;
+    }
+    .invites-panel li {
+        gap: 8px;
+    }
 
     .invites-panel button {
         min-height: 44px;
@@ -1431,19 +1520,29 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         white-space: nowrap;
     }
 
-    .content-header { margin-bottom: 12px; }
+    .content-header {
+        margin-bottom: 12px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .site-bar.is-open .sidebar { animation: none; }
+    .site-bar.is-open .sidebar {
+        animation: none;
+    }
 }
 
 /* ---- phones ----
    The shell (top bar, site bar, drawer) is above. At 768px and below each material also becomes a
    card, with big Receive / Use / History buttons. */
 @media (max-width: 768px) {
-    .content-header { flex-wrap: wrap; }
-    #addMaterialButton, #reportsButton, #membersButton { min-height: 44px; }
+    .content-header {
+        flex-wrap: wrap;
+    }
+    #addMaterialButton,
+    #reportsButton,
+    #membersButton {
+        min-height: 44px;
+    }
 
     #materialsTable,
     #materialsTable tbody {
@@ -1476,11 +1575,33 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         border-bottom: 0;
     }
 
-    #materialsTable td:nth-child(1) { grid-column: 1; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
-    #materialsTable td:nth-child(2) { grid-column: 2; font-size: 30px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-    #materialsTable td:nth-child(3) { grid-column: 3; color: var(--muted); font-size: 16px; }
-    #materialsTable td:nth-child(4) { grid-column: 1 / -1; margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
-    #materialsTable td:nth-child(4)::before { content: "Updated "; }
+    #materialsTable td:nth-child(1) {
+        grid-column: 1;
+        font-size: 19px;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+    #materialsTable td:nth-child(2) {
+        grid-column: 2;
+        font-size: 30px;
+        font-weight: 700;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    #materialsTable td:nth-child(3) {
+        grid-column: 3;
+        color: var(--muted);
+        font-size: 16px;
+    }
+    #materialsTable td:nth-child(4) {
+        grid-column: 1 / -1;
+        margin: 2px 0 8px;
+        color: var(--muted);
+        font-size: 13px;
+    }
+    #materialsTable td:nth-child(4)::before {
+        content: "Updated ";
+    }
 
     #materialsTable .cell-stock {
         grid-column: 1 / -1;
@@ -1506,24 +1627,47 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         padding: 0;
     }
 
-    #materialsTable .cell-manage:empty { display: none; }
+    #materialsTable .cell-manage:empty {
+        display: none;
+    }
 
     #materialsTable .cell-manage button {
         margin: 6px 0 0;
     }
 
     /* What happened lately comes before the long list of materials, not after it. */
-    .main-content { display: flex; flex-direction: column; }
+    .main-content {
+        display: flex;
+        flex-direction: column;
+    }
     /* The offline indicator is about everything below it, so it comes before even the verify banner. */
-    .main-content > .offline-banner { order: -2; }
-    .main-content > .verify-banner { order: -1; }
-    .main-content > .content-header { order: 0; }
-    .main-content > #materialsStatus { order: 1; }
-    .main-content > #materialsTable { order: 3; }
-    .main-content > .activity-panel { order: 5; margin: 12px 0; }
+    .main-content > .offline-banner {
+        order: -2;
+    }
+    .main-content > .verify-banner {
+        order: -1;
+    }
+    .main-content > .content-header {
+        order: 0;
+    }
+    .main-content > #materialsStatus {
+        order: 1;
+    }
+    .main-content > #materialsTable {
+        order: 3;
+    }
+    .main-content > .activity-panel {
+        order: 5;
+        margin: 12px 0;
+    }
 
-    .activity-panel { margin-top: 8px; }
-    .activity-list { max-height: 11rem; overflow-y: auto; }
+    .activity-panel {
+        margin-top: 8px;
+    }
+    .activity-list {
+        max-height: 11rem;
+        overflow-y: auto;
+    }
 
     /* One line of activity until opened: the materials stay the first thing on the screen. */
     .activity-toggle {
@@ -1543,8 +1687,13 @@ body:has(.site-bar.is-open) { overflow: hidden; }
         overflow: hidden;
     }
 
-    .activity-panel:not(.activity-open) .activity-item:nth-child(n + 2) { display: none; }
-    .activity-panel.activity-open .activity-list { max-height: 16rem; overflow-y: auto; }
+    .activity-panel:not(.activity-open) .activity-item:nth-child(n + 2) {
+        display: none;
+    }
+    .activity-panel.activity-open .activity-list {
+        max-height: 16rem;
+        overflow-y: auto;
+    }
 }
 
 /* ==== inline SVG icons (src/icons.js) ====================================== */

@@ -17,7 +17,11 @@ const auth = getAuth(app);
 
 function toUser(firebaseUser) {
     return firebaseUser
-        ? { uid: firebaseUser.uid, email: firebaseUser.email, emailVerified: firebaseUser.emailVerified }
+        ? {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              emailVerified: firebaseUser.emailVerified,
+          }
         : null;
 }
 

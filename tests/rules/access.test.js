@@ -1,18 +1,45 @@
 // Who can read and write what: logged out, stranger, viewer, storekeeper, owner.
 import { describe, it, before, after, beforeEach } from "node:test";
 import {
-    startEnv, reset, raw, as, anonymous, ref, get, set, update, remove, assertSucceeds, assertFails, MATERIAL, SITE,
+    startEnv,
+    reset,
+    raw,
+    as,
+    anonymous,
+    ref,
+    get,
+    set,
+    update,
+    remove,
+    assertSucceeds,
+    assertFails,
+    MATERIAL,
+    SITE,
 } from "./helpers.js";
 
 let env;
-before(async () => { env = await startEnv(); });
-after(async () => { await env.cleanup(); });
-beforeEach(async () => { await reset(env); });
+before(async () => {
+    env = await startEnv();
+});
+after(async () => {
+    await env.cleanup();
+});
+beforeEach(async () => {
+    await reset(env);
+});
 
 describe("logged-out visitor gets nothing", () => {
     const paths = [
-        "/", "sites", "sites/s1", "members/s1", "materials/s1", "materials/s1/m1",
-        "userSites/owner1", "memberInfo/s1", "userInvites/someone@example,com", "siteInvites/s1",
+        "/",
+        "sites",
+        "sites/s1",
+        "members/s1",
+        "materials/s1",
+        "materials/s1/m1",
+        "userSites/owner1",
+        "memberInfo/s1",
+        "userInvites/someone@example,com",
+        "siteInvites/s1",
     ];
     for (const p of paths) {
         it(`cannot read ${p}`, async () => {
@@ -32,7 +59,15 @@ describe("logged-out visitor gets nothing", () => {
 });
 
 describe("a signed-in stranger (member of no site) cannot see another site", () => {
-    for (const p of ["sites/s1", "members/s1", "materials/s1", "materials/s1/m1", "memberInfo/s1", "siteInvites/s1", "userSites/owner1"]) {
+    for (const p of [
+        "sites/s1",
+        "members/s1",
+        "materials/s1",
+        "materials/s1/m1",
+        "memberInfo/s1",
+        "siteInvites/s1",
+        "userSites/owner1",
+    ]) {
         it(`cannot read ${p}`, async () => {
             await assertFails(get(ref(as(env, "stranger"), p)));
         });
@@ -118,7 +153,9 @@ describe("storekeeper (foreman): records stock, nothing else", () => {
     });
     it("adds, edits and deletes materials", async () => {
         const db = as(env, "keeper1");
-        await assertSucceeds(set(ref(db, "materials/s1/m9"), { ...MATERIAL, name: "Sand", quantity: 0 }));
+        await assertSucceeds(
+            set(ref(db, "materials/s1/m9"), { ...MATERIAL, name: "Sand", quantity: 0 }),
+        );
         await assertSucceeds(update(ref(db, "materials/s1/m1"), { name: "Cement 42.5" }));
         await assertSucceeds(update(ref(db, "materials/s1/m1"), { minLevel: 2 }));
         await assertSucceeds(remove(ref(db, "materials/s1/m9")));
@@ -159,7 +196,9 @@ describe("owner: everything on their own site", () => {
     });
     it("edits the site's name, location and building type", async () => {
         const db = as(env, "owner1");
-        await assertSucceeds(update(ref(db, "sites/s1"), { name: "Mombasa North", buildingType: "Commercial" }));
+        await assertSucceeds(
+            update(ref(db, "sites/s1"), { name: "Mombasa North", buildingType: "Commercial" }),
+        );
     });
     it("cannot hand the site to someone else by changing ownerUid", async () => {
         await assertFails(update(ref(as(env, "owner1"), "sites/s1"), { ownerUid: "keeper1" }));

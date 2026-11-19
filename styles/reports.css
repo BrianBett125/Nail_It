@@ -3,7 +3,9 @@
    Every colour and length comes from styles/tokens.css. */
 
 /* The print heading exists only on paper (styles/print.css shows it). */
-.print-header { display: none; }
+.print-header {
+    display: none;
+}
 
 .reports-dialog h3 {
     margin: var(--sp-5) 0 var(--sp-2);
@@ -35,7 +37,10 @@
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .report-presets button:hover {
@@ -59,9 +64,17 @@
     gap: var(--sp-3);
 }
 
-.report-range > div { min-width: 0; }
-.report-range .field { min-width: 0; max-width: 100%; padding: 0 var(--sp-2); }
-.report-range .sheet-label { margin-top: 0; }
+.report-range > div {
+    min-width: 0;
+}
+.report-range .field {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 var(--sp-2);
+}
+.report-range .sheet-label {
+    margin-top: 0;
+}
 
 .report-send {
     display: grid;
@@ -69,9 +82,13 @@
     gap: 10px;
 }
 
-.report-send .sheet-secondary { margin: 0; }
+.report-send .sheet-secondary {
+    margin: 0;
+}
 
 @media (max-width: 360px) {
     .report-range,
-    .report-send { grid-template-columns: 1fr; }
+    .report-send {
+        grid-template-columns: 1fr;
+    }
 }

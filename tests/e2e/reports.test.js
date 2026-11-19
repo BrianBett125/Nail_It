@@ -5,7 +5,12 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
-    startServer, launchBrowser, openDashboard, selectSite, waitForRows, SEED,
+    startServer,
+    launchBrowser,
+    openDashboard,
+    selectSite,
+    waitForRows,
+    SEED,
 } from "./helpers.js";
 
 let server;
@@ -26,26 +31,85 @@ const at = (y, m, d, h = 12, min = 0, s = 0) => new Date(y, m - 1, d, h, min, s)
 const now = new Date();
 const thisMonth = (d, h = 12) => at(now.getFullYear(), now.getMonth() + 1, d, h);
 const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-const lastMonth = (d, h = 12) => at(lastMonthDate.getFullYear(), lastMonthDate.getMonth() + 1, d, h);
+const lastMonth = (d, h = 12) =>
+    at(lastMonthDate.getFullYear(), lastMonthDate.getMonth() + 1, d, h);
 const pad = (n) => String(n).padStart(2, "0");
 const day = (date, d) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(d)}`;
 
 const SEEDED = {
     ...SEED,
     materials: {
-        m1: { name: "Cement", quantity: 5, units: "bags", minLevel: 10, updatedAt: thisMonth(1), siteId: "sA" },
-        m2: { name: "Sand, coarse", quantity: 10, units: "tonnes", updatedAt: thisMonth(1), siteId: "sA" },
+        m1: {
+            name: "Cement",
+            quantity: 5,
+            units: "bags",
+            minLevel: 10,
+            updatedAt: thisMonth(1),
+            siteId: "sA",
+        },
+        m2: {
+            name: "Sand, coarse",
+            quantity: 10,
+            units: "tonnes",
+            updatedAt: thisMonth(1),
+            siteId: "sA",
+        },
         m3: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05", siteId: "sB" },
     },
     movements: {
-        v1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 50, type: "opening", byUid: "u1", byEmail: "foreman@example.com", at: lastMonth(10, 8) },
-        v2: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -45, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: thisMonth(1, 9), note: "Slab 1" },
-        v3: { siteId: "sA", materialId: "m2", materialName: "Sand, coarse", units: "tonnes", delta: 10, type: "received", byUid: "u1", byEmail: "foreman@example.com", at: thisMonth(1, 10) },
-        v4: { siteId: "sB", materialId: "m3", materialName: "Nails", units: "kgs", delta: 40, type: "opening", byUid: "u1", byEmail: "foreman@example.com", at: thisMonth(1, 11) },
+        v1: {
+            siteId: "sA",
+            materialId: "m1",
+            materialName: "Cement",
+            units: "bags",
+            delta: 50,
+            type: "opening",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: lastMonth(10, 8),
+        },
+        v2: {
+            siteId: "sA",
+            materialId: "m1",
+            materialName: "Cement",
+            units: "bags",
+            delta: -45,
+            type: "used",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: thisMonth(1, 9),
+            note: "Slab 1",
+        },
+        v3: {
+            siteId: "sA",
+            materialId: "m2",
+            materialName: "Sand, coarse",
+            units: "tonnes",
+            delta: 10,
+            type: "received",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: thisMonth(1, 10),
+        },
+        v4: {
+            siteId: "sB",
+            materialId: "m3",
+            materialName: "Nails",
+            units: "kgs",
+            delta: 40,
+            type: "opening",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: thisMonth(1, 11),
+        },
     },
 };
 
-async function open(seed = SEEDED, viewport = { width: 1280, height: 800 }, rows = ["Cement", "Sand, coarse"]) {
+async function open(
+    seed = SEEDED,
+    viewport = { width: 1280, height: 800 },
+    rows = ["Cement", "Sand, coarse"],
+) {
     const host = { newContext: () => browser.newContext({ viewport, acceptDownloads: true }) };
     const opened = await openDashboard(host, baseUrl, seed);
     if (viewport.width <= 768) {
@@ -58,7 +122,11 @@ async function open(seed = SEEDED, viewport = { width: 1280, height: 800 }, rows
 
 const fileLines = async (download) => {
     const text = fs.readFileSync(await download.path(), "utf8");
-    assert.equal(text.charCodeAt(0), 0xfeff, "starts with the byte order mark so Excel reads UTF-8");
+    assert.equal(
+        text.charCodeAt(0),
+        0xfeff,
+        "starts with the byte order mark so Excel reads UTF-8",
+    );
     assert.ok(text.endsWith("\r\n"), "ends on a line end");
     return text.slice(1).split("\r\n").slice(0, -1);
 };
@@ -72,12 +140,21 @@ describe("the Reports button", () => {
     it("shows only with a site open, and opens a native dialog", async () => {
         const host = { newContext: () => browser.newContext() };
         const { context, page } = await openDashboard(host, baseUrl, SEEDED);
-        assert.equal(await page.locator("#reportsButton").isVisible(), false, "nothing to report on before a site is chosen");
+        assert.equal(
+            await page.locator("#reportsButton").isVisible(),
+            false,
+            "nothing to report on before a site is chosen",
+        );
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand, coarse"]);
         assert.equal(await page.locator("#reportsButton").isVisible(), true);
         await page.click("#reportsButton");
-        assert.equal(await page.evaluate(() => document.getElementById("reportsContainer").matches(":modal")), true);
+        assert.equal(
+            await page.evaluate(() =>
+                document.getElementById("reportsContainer").matches(":modal"),
+            ),
+            true,
+        );
         assert.equal(await page.textContent("#reportsSite"), "Mombasa");
         await context.close();
     });
@@ -96,7 +173,10 @@ describe("stock CSV", () => {
         const { context, page } = await open();
         await page.click("#reportsButton");
         const file = await downloadFrom(page, "#exportStock");
-        assert.equal(file.suggestedFilename(), `nail-it-mombasa-stock-${day(now, now.getDate())}.csv`);
+        assert.equal(
+            file.suggestedFilename(),
+            `nail-it-mombasa-stock-${day(now, now.getDate())}.csv`,
+        );
         assert.deepEqual(await fileLines(file), [
             "Site,Material,In stock,Units,Low-stock level,Status,Last updated",
             `Mombasa,Cement,5,bags,10,Low,${day(now, 1)}`,
@@ -106,10 +186,16 @@ describe("stock CSV", () => {
     });
 
     it("an empty site still downloads a header, and says so", async () => {
-        const { context, page } = await open({ ...SEEDED, materials: { m3: SEEDED.materials.m3 } }, undefined, []);
+        const { context, page } = await open(
+            { ...SEEDED, materials: { m3: SEEDED.materials.m3 } },
+            undefined,
+            [],
+        );
         await page.click("#reportsButton");
         const file = await downloadFrom(page, "#exportStock");
-        assert.deepEqual(await fileLines(file), ["Site,Material,In stock,Units,Low-stock level,Status,Last updated"]);
+        assert.deepEqual(await fileLines(file), [
+            "Site,Material,In stock,Units,Low-stock level,Status,Last updated",
+        ]);
         await context.close();
     });
 });
@@ -120,10 +206,17 @@ describe("movements CSV", () => {
         await page.click("#reportsButton");
         assert.equal(await page.inputValue("#reportFrom"), day(now, 1));
         assert.equal(await page.inputValue("#reportTo"), day(now, now.getDate()));
-        assert.equal(await page.getAttribute('#reportPresets [data-preset="this-month"]', "aria-pressed"), "true");
+        assert.equal(
+            await page.getAttribute('#reportPresets [data-preset="this-month"]', "aria-pressed"),
+            "true",
+        );
         await page.fill("#reportFrom", day(now, 1).slice(0, 8) + "01");
         await page.dispatchEvent("#reportFrom", "input");
-        assert.equal(await page.getAttribute('#reportPresets [data-preset="this-month"]', "aria-pressed"), "false", "typing a date leaves the preset");
+        assert.equal(
+            await page.getAttribute('#reportPresets [data-preset="this-month"]', "aria-pressed"),
+            "false",
+            "typing a date leaves the preset",
+        );
         await context.close();
     });
 
@@ -131,7 +224,10 @@ describe("movements CSV", () => {
         const { context, page } = await open();
         await page.click("#reportsButton");
         const file = await downloadFrom(page, "#exportMovements");
-        assert.equal(file.suggestedFilename(), `nail-it-mombasa-movements-${day(now, 1)}_to_${day(now, now.getDate())}.csv`);
+        assert.equal(
+            file.suggestedFilename(),
+            `nail-it-mombasa-movements-${day(now, 1)}_to_${day(now, now.getDate())}.csv`,
+        );
         assert.deepEqual(await fileLines(file), [
             "Date,Time,Site,Material,Type,Change,Units,By,Note",
             `${day(now, 1)},09:00:00,Mombasa,Cement,Used,-45,bags,foreman@example.com,Slab 1`,
@@ -147,7 +243,12 @@ describe("movements CSV", () => {
         const file = await downloadFrom(page, "#exportMovements");
         const lines = await fileLines(file);
         assert.equal(lines.length, 2);
-        assert.match(lines[1], new RegExp(`^${day(lastMonthDate, 10)},08:00:00,Mombasa,Cement,Opening balance,50,bags,`));
+        assert.match(
+            lines[1],
+            new RegExp(
+                `^${day(lastMonthDate, 10)},08:00:00,Mombasa,Cement,Opening balance,50,bags,`,
+            ),
+        );
         assert.ok(!lines.join("\n").includes("Nails"));
         await context.close();
     });
@@ -156,10 +257,50 @@ describe("movements CSV", () => {
         const edge = {
             ...SEEDED,
             movements: {
-                a: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 1, type: "received", byUid: "u1", byEmail: "x@example.com", at: at(2026, 5, 1, 0, 0, 0) },
-                b: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 2, type: "received", byUid: "u1", byEmail: "x@example.com", at: at(2026, 5, 31, 23, 59, 59) },
-                c: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 4, type: "received", byUid: "u1", byEmail: "x@example.com", at: at(2026, 6, 1, 0, 0, 0) },
-                d: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: 8, type: "received", byUid: "u1", byEmail: "x@example.com", at: at(2026, 4, 30, 23, 59, 59) },
+                a: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: "Cement",
+                    units: "bags",
+                    delta: 1,
+                    type: "received",
+                    byUid: "u1",
+                    byEmail: "x@example.com",
+                    at: at(2026, 5, 1, 0, 0, 0),
+                },
+                b: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: "Cement",
+                    units: "bags",
+                    delta: 2,
+                    type: "received",
+                    byUid: "u1",
+                    byEmail: "x@example.com",
+                    at: at(2026, 5, 31, 23, 59, 59),
+                },
+                c: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: "Cement",
+                    units: "bags",
+                    delta: 4,
+                    type: "received",
+                    byUid: "u1",
+                    byEmail: "x@example.com",
+                    at: at(2026, 6, 1, 0, 0, 0),
+                },
+                d: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: "Cement",
+                    units: "bags",
+                    delta: 8,
+                    type: "received",
+                    byUid: "u1",
+                    byEmail: "x@example.com",
+                    at: at(2026, 4, 30, 23, 59, 59),
+                },
             },
         };
         const { context, page } = await open(edge);
@@ -167,7 +308,10 @@ describe("movements CSV", () => {
         await page.fill("#reportFrom", "2026-05-01");
         await page.fill("#reportTo", "2026-05-31");
         const lines = await fileLines(await downloadFrom(page, "#exportMovements"));
-        assert.deepEqual(lines.slice(1).map((line) => line.split(",")[5]), ["1", "2"]);
+        assert.deepEqual(
+            lines.slice(1).map((line) => line.split(",")[5]),
+            ["1", "2"],
+        );
         await context.close();
     });
 
@@ -177,10 +321,15 @@ describe("movements CSV", () => {
         await page.fill("#reportFrom", "2020-01-01");
         await page.fill("#reportTo", "2020-01-31");
         let downloaded = false;
-        page.on("download", () => { downloaded = true; });
+        page.on("download", () => {
+            downloaded = true;
+        });
         await page.click("#exportMovements");
         await page.locator("#reportError").waitFor();
-        assert.match(await page.textContent("#reportError"), /No movements from 2020-01-01 to 2020-01-31/);
+        assert.match(
+            await page.textContent("#reportError"),
+            /No movements from 2020-01-01 to 2020-01-31/,
+        );
         assert.equal(downloaded, false);
         assert.equal(await page.isEnabled("#exportMovements"), true, "the button is usable again");
         await context.close();
@@ -192,20 +341,41 @@ describe("movements CSV", () => {
         await page.fill("#reportFrom", "2026-10-31");
         await page.fill("#reportTo", "2026-10-01");
         await page.click("#exportMovements");
-        assert.equal(await page.textContent("#reportError"), "The start date is after the end date");
+        assert.equal(
+            await page.textContent("#reportError"),
+            "The start date is after the end date",
+        );
         await page.fill("#reportFrom", "");
         await page.click("#exportMovements");
         assert.equal(await page.textContent("#reportError"), "Choose a start and an end date");
         await page.click('#reportPresets [data-preset="last-7"]');
-        assert.equal(await page.isHidden("#reportError"), true, "choosing a range clears the message");
+        assert.equal(
+            await page.isHidden("#reportError"),
+            true,
+            "choosing a range clears the message",
+        );
         await context.close();
     });
 
     it("a hostile material name is written as text, not as a formula", async () => {
         const seed = {
             ...SEEDED,
-            materials: { m1: { name: "=cmd|' /C calc'!A0", quantity: 1, units: "kgs", siteId: "sA" } },
-            movements: { a: { siteId: "sA", materialId: "m1", materialName: "=cmd|' /C calc'!A0", units: "kgs", delta: 1, type: "received", byUid: "u1", byEmail: "x@example.com", at: thisMonth(1) } },
+            materials: {
+                m1: { name: "=cmd|' /C calc'!A0", quantity: 1, units: "kgs", siteId: "sA" },
+            },
+            movements: {
+                a: {
+                    siteId: "sA",
+                    materialId: "m1",
+                    materialName: "=cmd|' /C calc'!A0",
+                    units: "kgs",
+                    delta: 1,
+                    type: "received",
+                    byUid: "u1",
+                    byEmail: "x@example.com",
+                    at: thisMonth(1),
+                },
+            },
         };
         const { context, page } = await open(seed, undefined, ["=cmd|' /C calc'!A0"]);
         await page.click("#reportsButton");
@@ -221,7 +391,11 @@ describe("share", () => {
     it("hands the summary to the phone's share sheet", async () => {
         const { context, page } = await open();
         // The button text is chosen when the page loads, so share has to exist before it does.
-        await page.addInitScript(() => { navigator.share = async (payload) => { (window.__shared ||= []).push(payload); }; });
+        await page.addInitScript(() => {
+            navigator.share = async (payload) => {
+                (window.__shared ||= []).push(payload);
+            };
+        });
         await page.reload();
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand, coarse"]);
@@ -231,13 +405,22 @@ describe("share", () => {
         const shared = await page.evaluate(() => window.__shared);
         assert.equal(shared.length, 1);
         assert.equal(shared[0].title, "Mombasa stock");
-        assert.match(shared[0].text, new RegExp(`^Mombasa: stock on ${day(now, now.getDate())}\\n2 materials, 1 low\\n\\nCement: 5 bags \\(LOW, level 10\\)\\nSand, coarse: 10 tonnes$`));
+        assert.match(
+            shared[0].text,
+            new RegExp(
+                `^Mombasa: stock on ${day(now, now.getDate())}\\n2 materials, 1 low\\n\\nCement: 5 bags \\(LOW, level 10\\)\\nSand, coarse: 10 tonnes$`,
+            ),
+        );
         await context.close();
     });
 
     it("closing the share sheet is not an error", async () => {
         const { context, page } = await open();
-        await page.addInitScript(() => { navigator.share = async () => { throw new DOMException("closed", "AbortError"); }; });
+        await page.addInitScript(() => {
+            navigator.share = async () => {
+                throw new DOMException("closed", "AbortError");
+            };
+        });
         await page.reload();
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand, coarse"]);
@@ -253,7 +436,14 @@ describe("share", () => {
         await page.addInitScript(() => {
             Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
             window.__copied = [];
-            Object.defineProperty(navigator, "clipboard", { value: { writeText: async (text) => { window.__copied.push(text); } }, configurable: true });
+            Object.defineProperty(navigator, "clipboard", {
+                value: {
+                    writeText: async (text) => {
+                        window.__copied.push(text);
+                    },
+                },
+                configurable: true,
+            });
         });
         await page.reload();
         await selectSite(page, "Mombasa");
@@ -278,7 +468,11 @@ describe("print", () => {
         const facts = await page.evaluate(() => {
             const shown = (selector) => {
                 const el = document.querySelector(selector);
-                return Boolean(el) && getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0;
+                return (
+                    Boolean(el) &&
+                    getComputedStyle(el).display !== "none" &&
+                    el.getBoundingClientRect().height > 0
+                );
             };
             return {
                 header: shown("#printHeader"),
@@ -290,7 +484,9 @@ describe("print", () => {
                 activity: shown("#activityPanel"),
                 rowButtons: shown("#materialTableBody .row-btn"),
                 topBar: shown("header"),
-                heads: [...document.querySelectorAll("#materialsTable thead th")].filter((th) => getComputedStyle(th).display !== "none").map((th) => th.textContent.trim()),
+                heads: [...document.querySelectorAll("#materialsTable thead th")]
+                    .filter((th) => getComputedStyle(th).display !== "none")
+                    .map((th) => th.textContent.trim()),
             };
         });
         assert.equal(facts.header, true);
@@ -302,9 +498,18 @@ describe("print", () => {
         assert.equal(facts.activity, false);
         assert.equal(facts.rowButtons, false);
         assert.equal(facts.topBar, false);
-        assert.deepEqual(facts.heads, ["Material Name", "In stock", "Units", "Last Updated", "Status"]);
+        assert.deepEqual(facts.heads, [
+            "Material Name",
+            "In stock",
+            "Units",
+            "Last Updated",
+            "Status",
+        ]);
         const pdf = await page.pdf({ format: "A4" });
-        assert.ok(pdf.subarray(0, 4).toString() === "%PDF" && pdf.length > 2000, "Save as PDF produces a PDF");
+        assert.ok(
+            pdf.subarray(0, 4).toString() === "%PDF" && pdf.length > 2000,
+            "Save as PDF produces a PDF",
+        );
         await context.close();
     });
 
@@ -316,14 +521,25 @@ describe("print", () => {
 
     it("the Print button closes the dialog and prints, saying what the table is narrowed to", async () => {
         const { context, page } = await open();
-        await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed += 1; }; });
+        await page.evaluate(() => {
+            window.__printed = 0;
+            window.print = () => {
+                window.__printed += 1;
+            };
+        });
         await page.click("#filterLow");
         await page.click("#reportsButton");
         await page.click("#reportPrint");
         await page.waitForFunction(() => window.__printed === 1);
-        assert.equal(await page.evaluate(() => document.getElementById("reportsContainer").open), false);
+        assert.equal(
+            await page.evaluate(() => document.getElementById("reportsContainer").open),
+            false,
+        );
         await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
-        assert.equal(await page.textContent("#printNote"), `Printed ${day(now, now.getDate())}, showing low stock only`);
+        assert.equal(
+            await page.textContent("#printNote"),
+            `Printed ${day(now, now.getDate())}, showing low stock only`,
+        );
         await context.close();
     });
 });
@@ -342,13 +558,28 @@ describe("the dialog on a phone", () => {
                 bodyOverflow: body.scrollWidth > body.clientWidth,
                 closeBottom: box("reportsClose").bottom,
                 vh: innerHeight,
-                tap: ["exportStock", "exportMovements", "reportShare", "reportPrint", "reportsClose", "reportFrom", "reportTo"].map((id) => [id, Math.round(box(id).height)]),
+                tap: [
+                    "exportStock",
+                    "exportMovements",
+                    "reportShare",
+                    "reportPrint",
+                    "reportsClose",
+                    "reportFrom",
+                    "reportTo",
+                ].map((id) => [id, Math.round(box(id).height)]),
             };
         });
         assert.equal(facts.sideways, false);
         assert.equal(facts.bodyOverflow, false);
         await page.waitForTimeout(400);
-        assert.ok(await page.evaluate(() => document.getElementById("reportsClose").getBoundingClientRect().bottom <= innerHeight), "Close is on the screen");
+        assert.ok(
+            await page.evaluate(
+                () =>
+                    document.getElementById("reportsClose").getBoundingClientRect().bottom <=
+                    innerHeight,
+            ),
+            "Close is on the screen",
+        );
         for (const [id, height] of facts.tap) {
             assert.ok(height >= 44, `${id} is ${height}px tall, a thumb needs 44`);
         }

@@ -6,14 +6,38 @@ import fs from "node:fs";
 import path from "node:path";
 import { sourceMatches, headersFor } from "../../scripts/serve.mjs";
 
-const config = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "../../vercel.json"), "utf8"));
+const config = JSON.parse(
+    fs.readFileSync(path.resolve(import.meta.dirname, "../../vercel.json"), "utf8"),
+);
 const csp = (urlPath = "/") => headersFor(config, urlPath)["Content-Security-Policy"];
-const directive = (name) => (csp().split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) || "").split(/\s+/).slice(1);
+const directive = (name) =>
+    (
+        csp()
+            .split(";")
+            .map((d) => d.trim())
+            .find((d) => d.startsWith(`${name} `)) || ""
+    )
+        .split(/\s+/)
+        .slice(1);
 
 test("every path gets the full set of security headers", () => {
-    for (const urlPath of ["/", "/dashboard.html", "/overview.html", "/assets/sparks-800.webp", "/src/data.js", "/sw.js"]) {
+    for (const urlPath of [
+        "/",
+        "/dashboard.html",
+        "/overview.html",
+        "/assets/sparks-800.webp",
+        "/src/data.js",
+        "/sw.js",
+    ]) {
         const headers = headersFor(config, urlPath);
-        for (const key of ["Content-Security-Policy", "X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options", "Permissions-Policy", "Strict-Transport-Security"]) {
+        for (const key of [
+            "Content-Security-Policy",
+            "X-Content-Type-Options",
+            "Referrer-Policy",
+            "X-Frame-Options",
+            "Permissions-Policy",
+            "Strict-Transport-Security",
+        ]) {
             assert.ok(headers[key], `${urlPath} has no ${key}`);
         }
     }
@@ -55,8 +79,10 @@ test("only this site's own script may run as the service worker", () => {
 test("the database, sign-in and token hosts the app really talks to are allowed to connect", () => {
     const connect = directive("connect-src");
     for (const host of [
-        "https://*.firebasedatabase.app", "wss://*.firebasedatabase.app",
-        "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com",
+        "https://*.firebasedatabase.app",
+        "wss://*.firebasedatabase.app",
+        "https://identitytoolkit.googleapis.com",
+        "https://securetoken.googleapis.com",
         "https://www.gstatic.com",
     ]) {
         assert.ok(connect.includes(host), `connect-src is missing ${host}`);
@@ -82,8 +108,14 @@ test("the pictures and the manifest are allowed, and nothing else is", () => {
 });
 
 test("pictures are cached for a week, the dashboard is not cached, and the worker is never cached", () => {
-    assert.equal(headersFor(config, "/assets/sparks-800.webp")["Cache-Control"], "public, max-age=604800");
-    assert.equal(headersFor(config, "/favicon/favicon.ico")["Cache-Control"], "public, max-age=604800");
+    assert.equal(
+        headersFor(config, "/assets/sparks-800.webp")["Cache-Control"],
+        "public, max-age=604800",
+    );
+    assert.equal(
+        headersFor(config, "/favicon/favicon.ico")["Cache-Control"],
+        "public, max-age=604800",
+    );
     assert.equal(headersFor(config, "/dashboard.html")["Cache-Control"], "no-store");
     // A cached sw.js is a worker that can never be replaced: the browser keeps checking for a new one only
     // if it is allowed to revalidate it.
@@ -92,7 +124,11 @@ test("pictures are cached for a week, the dashboard is not cached, and the worke
     // fetches them through the HTTP cache. Leave that import cacheable and a changed policy can sit behind
     // a stale copy: the new worker looks identical to the old one and is never installed.
     assert.match(headersFor(config, "/src/sw-cache.js")["Cache-Control"], /no-cache|max-age=0/);
-    assert.equal(headersFor(config, "/dashboard.js")["Cache-Control"], undefined, "the dashboard script keeps its normal cache behavior");
+    assert.equal(
+        headersFor(config, "/dashboard.js")["Cache-Control"],
+        undefined,
+        "the dashboard script keeps its normal cache behavior",
+    );
 });
 
 test("sourceMatches reads Vercel's path patterns", () => {
@@ -115,10 +151,22 @@ test("the manifest and every icon it names exist, with a name and a short name",
 // url, a scope, standalone display, and a 192 and a 512 icon. Miss any one and the install prompt simply
 // never appears, with nothing on screen to say why.
 test("the manifest carries what a browser needs to install the app on a home screen", () => {
-    const manifest = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "../../favicon/site.webmanifest"), "utf8"));
+    const manifest = JSON.parse(
+        fs.readFileSync(
+            path.resolve(import.meta.dirname, "../../favicon/site.webmanifest"),
+            "utf8",
+        ),
+    );
     assert.equal(manifest.id, "/");
-    assert.equal(manifest.start_url, "/dashboard.html", "the app opens where the work happens, not on the pitch page");
-    assert.ok(fs.existsSync(path.resolve(import.meta.dirname, "../../", manifest.start_url.slice(1))), manifest.start_url);
+    assert.equal(
+        manifest.start_url,
+        "/dashboard.html",
+        "the app opens where the work happens, not on the pitch page",
+    );
+    assert.ok(
+        fs.existsSync(path.resolve(import.meta.dirname, "../../", manifest.start_url.slice(1))),
+        manifest.start_url,
+    );
     assert.equal(manifest.scope, "/", "an installed app cannot navigate outside its scope");
     assert.equal(manifest.display, "standalone", "in a browser tab it would not look installed");
     assert.match(manifest.background_color, /^#[0-9a-f]{6}$/i);
@@ -131,5 +179,8 @@ test("the manifest carries what a browser needs to install the app on a home scr
         assert.equal(icon.type, "image/png");
         assert.match(icon.purpose || "any", /any|maskable/);
     }
-    assert.ok(manifest.description && manifest.description.length > 40, "an install prompt shows this");
+    assert.ok(
+        manifest.description && manifest.description.length > 40,
+        "an install prompt shows this",
+    );
 });

@@ -18,7 +18,15 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startServer, launchBrowser, openDashboard, openOverview, selectSite, waitForRows, rowTexts, wrote, SEED,
+    startServer,
+    launchBrowser,
+    openDashboard,
+    openOverview,
+    selectSite,
+    waitForRows,
+    rowTexts,
+    wrote,
+    SEED,
 } from "./helpers.js";
 
 let server;
@@ -43,14 +51,45 @@ const now = Date.now();
 //               Bricks 500 pieces, no level | Paint 0 litres, level 3 (out).   Three of four are low.
 // Cape Town (sB): Nails 40, no level. Nothing low.
 const MATERIALS = {
-    m1: { name: "Cement", quantity: 5, units: "bags", minLevel: 10, updatedAt: now - 2 * HOUR, siteId: "sA" },
-    m2: { name: "Sand", quantity: 10, units: "tonnes", minLevel: 10, updatedAt: now - 3 * DAY, siteId: "sA" },
+    m1: {
+        name: "Cement",
+        quantity: 5,
+        units: "bags",
+        minLevel: 10,
+        updatedAt: now - 2 * HOUR,
+        siteId: "sA",
+    },
+    m2: {
+        name: "Sand",
+        quantity: 10,
+        units: "tonnes",
+        minLevel: 10,
+        updatedAt: now - 3 * DAY,
+        siteId: "sA",
+    },
     m4: { name: "Bricks", quantity: 500, units: "pieces", updatedAt: now - HOUR, siteId: "sA" },
-    m5: { name: "Paint", quantity: 0, units: "litres", minLevel: 3, updatedAt: now - 5 * DAY, siteId: "sA" },
+    m5: {
+        name: "Paint",
+        quantity: 0,
+        units: "litres",
+        minLevel: 3,
+        updatedAt: now - 5 * DAY,
+        siteId: "sA",
+    },
     m3: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05", siteId: "sB" },
 };
 const MOVEMENTS = {
-    mv1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -5, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 2 * HOUR },
+    mv1: {
+        siteId: "sA",
+        materialId: "m1",
+        materialName: "Cement",
+        units: "bags",
+        delta: -5,
+        type: "used",
+        byUid: "u1",
+        byEmail: "foreman@example.com",
+        at: now - 2 * HOUR,
+    },
 };
 const SEEDED = { ...SEED, materials: MATERIALS, movements: MOVEMENTS };
 
@@ -68,12 +107,24 @@ const names = (page) => rowTexts(page);
 describe("low stock on the dashboard", () => {
     it("a material at or below its level shows a Low badge, an empty one shows Out, others show nothing", async () => {
         const { context, page, state } = await open();
-        assert.equal(await row(page, "Cement").getAttribute("class").then((c) => c.includes("is-low")), true);
+        assert.equal(
+            await row(page, "Cement")
+                .getAttribute("class")
+                .then((c) => c.includes("is-low")),
+            true,
+        );
         assert.equal(await text(page, "#materialTableBody tr:nth-child(1) .badge-low"), "Low");
-        assert.equal((await row(page, "Sand").locator(".badge-low").textContent()).trim(), "Low", "exactly at the level counts");
+        assert.equal(
+            (await row(page, "Sand").locator(".badge-low").textContent()).trim(),
+            "Low",
+            "exactly at the level counts",
+        );
         assert.equal((await row(page, "Paint").locator(".badge-low").textContent()).trim(), "Out");
         assert.equal(await row(page, "Bricks").locator(".badge-low").count(), 0);
-        assert.equal(((await row(page, "Bricks").getAttribute("class")) || "").includes("is-low"), false);
+        assert.equal(
+            ((await row(page, "Bricks").getAttribute("class")) || "").includes("is-low"),
+            false,
+        );
         assert.deepEqual(state.pageErrors, []);
         await context.close();
     });
@@ -82,17 +133,29 @@ describe("low stock on the dashboard", () => {
         const { context, page } = await open();
         const badge = row(page, "Cement").locator(".badge-low");
         assert.match(await badge.textContent(), /^(Low|Out)$/);
-        assert.match((await row(page, "Cement").textContent()), /5 bags left, level 10|level 10/, "the detail is readable text or a title");
+        assert.match(
+            await row(page, "Cement").textContent(),
+            /5 bags left, level 10|level 10/,
+            "the detail is readable text or a title",
+        );
         await context.close();
     });
 
     it("the badge goes when the stock is received above the level, and comes back when it is used", async () => {
         const { context, page } = await open();
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }));
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr .badge-low").length === 2);
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }),
+        );
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr .badge-low").length === 2,
+        );
         assert.equal(await row(page, "Cement").locator(".badge-low").count(), 0);
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "used", delta: -20 }));
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr .badge-low").length === 3);
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "used", delta: -20 }),
+        );
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr .badge-low").length === 3,
+        );
         await context.close();
     });
 
@@ -101,11 +164,15 @@ describe("low stock on the dashboard", () => {
         await row(page, "Bricks").locator(".btn-edit").click();
         await page.fill("#uMinLevel", "600");
         await page.click("#update-material-btn");
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr .badge-low").length === 4);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr .badge-low").length === 4,
+        );
         await row(page, "Bricks").locator(".btn-edit").click();
         await page.fill("#uMinLevel", "");
         await page.click("#update-material-btn");
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr .badge-low").length === 3);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr .badge-low").length === 3,
+        );
         await context.close();
     });
 
@@ -117,12 +184,17 @@ describe("low stock on the dashboard", () => {
         await page.fill("#mMinLevel", "5");
         await page.selectOption("#mUnits", "tonnes");
         await page.click("#material-btn");
-        await page.waitForFunction(() => document.querySelectorAll("#materialTableBody tr .badge-low").length === 4);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#materialTableBody tr .badge-low").length === 4,
+        );
         await context.close();
     });
 
     it("a viewer sees the badges too", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, roles: { sA: "viewer" } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEEDED,
+            roles: { sA: "viewer" },
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand", "Bricks", "Paint"]);
         assert.equal(await page.locator("#materialTableBody .badge-low").count(), 3);
@@ -145,19 +217,34 @@ describe("the site summary", () => {
         await waitForRows(page, ["Nails"]);
         assert.equal(await text(page, "#siteSummary .summary-total"), "1 material");
         assert.equal(await text(page, "#siteSummary .summary-low"), "Nothing low on stock");
-        assert.match(await text(page, "#siteSummary .summary-activity"), /Last activity|No activity yet/);
+        assert.match(
+            await text(page, "#siteSummary .summary-activity"),
+            /Last activity|No activity yet/,
+        );
         await context.close();
     });
 
     it("is hidden until a site is selected, and follows the stock", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, SEEDED, {
-            beforeLoad: () => { try { localStorage.clear(); } catch { /* none */ } },
+            beforeLoad: () => {
+                try {
+                    localStorage.clear();
+                } catch {
+                    /* none */
+                }
+            },
         });
         assert.equal(await page.locator("#siteSummary").isVisible(), false);
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand", "Bricks", "Paint"]);
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }));
-        await page.waitForFunction(() => document.querySelector("#siteSummary .summary-low").textContent.trim() === "2 low on stock");
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }),
+        );
+        await page.waitForFunction(
+            () =>
+                document.querySelector("#siteSummary .summary-low").textContent.trim() ===
+                "2 low on stock",
+        );
         await context.close();
     });
 });
@@ -181,7 +268,9 @@ describe("filter chips", () => {
         const { context, page } = await open();
         await page.click("#filterLow");
         await waitForRows(page, ["Cement", "Sand", "Paint"]);
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }));
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 20 }),
+        );
         await waitForRows(page, ["Sand", "Paint"]);
         assert.match(await text(page, "#filterLow"), /Low stock \(2\)/);
         await context.close();
@@ -201,7 +290,10 @@ describe("filter chips", () => {
     });
 
     it("the chips work for a viewer", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, roles: { sA: "viewer" } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEEDED,
+            roles: { sA: "viewer" },
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand", "Bricks", "Paint"]);
         await page.click("#filterLow");
@@ -215,7 +307,11 @@ describe("search", () => {
         const { context, page } = await open();
         const search = page.locator("#materialSearch");
         assert.equal(await search.getAttribute("type"), "search");
-        assert.ok(await search.getAttribute("aria-label") || await page.locator("label[for='materialSearch']").count(), "it has an accessible name");
+        assert.ok(
+            (await search.getAttribute("aria-label")) ||
+                (await page.locator("label[for='materialSearch']").count()),
+            "it has an accessible name",
+        );
         await page.fill("#materialSearch", "ce");
         await waitForRows(page, ["Cement"]);
         await page.fill("#materialSearch", "  SAND ");
@@ -232,7 +328,10 @@ describe("search", () => {
         assert.equal(await text(page, "#materialsStatus"), 'No materials match "zzz".');
         const markup = "<img src=x onerror=window.__pwned=1>";
         await page.fill("#materialSearch", markup);
-        await page.waitForFunction((m) => document.querySelector("#materialsStatus").textContent.includes(m), markup);
+        await page.waitForFunction(
+            (m) => document.querySelector("#materialsStatus").textContent.includes(m),
+            markup,
+        );
         assert.equal(await page.locator("#materialsStatus img").count(), 0);
         assert.equal(await page.evaluate(() => window.__pwned), undefined);
         await context.close();
@@ -252,8 +351,14 @@ describe("search", () => {
         const { context, page } = await open();
         await page.fill("#materialSearch", "cement");
         await waitForRows(page, ["Cement"]);
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 1 }));
-        await page.waitForFunction(() => document.querySelector("#materialTableBody td:nth-child(2)")?.textContent.trim() === "6");
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m1", { type: "received", delta: 1 }),
+        );
+        await page.waitForFunction(
+            () =>
+                document.querySelector("#materialTableBody td:nth-child(2)")?.textContent.trim() ===
+                "6",
+        );
         assert.deepEqual(await names(page), ["Cement"]);
         assert.equal(await page.inputValue("#materialSearch"), "cement");
         await context.close();
@@ -282,20 +387,35 @@ describe("search", () => {
     });
 
     it("works for a viewer and is not offered on the marketing pages", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEEDED, roles: { sA: "viewer" } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEEDED,
+            roles: { sA: "viewer" },
+        });
         await selectSite(page, "Mombasa");
         await waitForRows(page, ["Cement", "Sand", "Bricks", "Paint"]);
         await page.fill("#materialSearch", "pa");
         await waitForRows(page, ["Paint"]);
-        assert.equal(await page.locator("header .search-container").count(), 0, "no dead search box in the header");
+        assert.equal(
+            await page.locator("header .search-container").count(),
+            0,
+            "no dead search box in the header",
+        );
         await context.close();
 
         const plain = await browser.newContext();
         const marketing = await plain.newPage();
-        await marketing.route("**/kit.fontawesome.com/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
+        await marketing.route("**/kit.fontawesome.com/**", (r) =>
+            r.fulfill({ contentType: "text/javascript", body: "" }),
+        );
         for (const file of ["index.html", "about-us.html"]) {
             await marketing.goto(`${baseUrl}/${file}`);
-            assert.equal(await marketing.locator(".search-container, input[type=search], input[placeholder*=earch]").count(), 0, file);
+            assert.equal(
+                await marketing
+                    .locator(".search-container, input[type=search], input[placeholder*=earch]")
+                    .count(),
+                0,
+                file,
+            );
         }
         await plain.close();
     });
@@ -309,7 +429,9 @@ describe("sort", () => {
 
     it("offers Added (the default), Name, Stock lowest first and Updated newest first", async () => {
         const { context, page } = await open();
-        const options = await page.locator("#materialSort option").evaluateAll((list) => list.map((o) => o.value));
+        const options = await page
+            .locator("#materialSort option")
+            .evaluateAll((list) => list.map((o) => o.value));
         assert.deepEqual(options, ["added", "name", "quantity", "updated"]);
         assert.equal(await page.inputValue("#materialSort"), "added");
         assert.deepEqual(await names(page), ["Cement", "Sand", "Bricks", "Paint"]);
@@ -330,7 +452,9 @@ describe("sort", () => {
         await page.selectOption("#materialSort", "quantity");
         await page.click("#filterLow");
         await waitForRows(page, ["Paint", "Cement", "Sand"]);
-        await page.evaluate(() => window.__nailit.externalMovement("sA", "m2", { type: "used", delta: -9 }));
+        await page.evaluate(() =>
+            window.__nailit.externalMovement("sA", "m2", { type: "used", delta: -9 }),
+        );
         await waitForRows(page, ["Paint", "Sand", "Cement"]);
         await context.close();
     });
@@ -343,7 +467,10 @@ describe("sort", () => {
         await page.click("#movementSubmit");
         await page.waitForFunction(() => window.__nailit.writes.length === 1);
         const [write] = await wrote(page);
-        assert.ok(Object.keys(write.paths).some((p) => p.startsWith("materials/sA/m2/")), "the stock of Sand, not another row");
+        assert.ok(
+            Object.keys(write.paths).some((p) => p.startsWith("materials/sA/m2/")),
+            "the stock of Sand, not another row",
+        );
         await context.close();
     });
 });
@@ -357,13 +484,29 @@ describe("getting around", () => {
 
     it("dashboard.html?site=<id> opens that site; an unknown id is ignored", async () => {
         const opened = await openDashboard(browser, baseUrl, SEEDED, {
-            beforeLoad: () => { try { localStorage.clear(); } catch { /* none */ } },
+            beforeLoad: () => {
+                try {
+                    localStorage.clear();
+                } catch {
+                    /* none */
+                }
+            },
         });
         await opened.page.goto(`${baseUrl}/dashboard.html?site=sB`);
-        await opened.page.waitForFunction(() => window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "materials" && l.siteId === "sB"));
+        await opened.page.waitForFunction(
+            () =>
+                window.__nailit &&
+                window.__nailit
+                    .activeListeners()
+                    .some((l) => l.kind === "materials" && l.siteId === "sB"),
+        );
         await waitForRows(opened.page, ["Nails"]);
         await opened.page.goto(`${baseUrl}/dashboard.html?site=nope`);
-        await opened.page.waitForFunction(() => window.__nailit && window.__nailit.activeListeners().some((l) => l.kind === "sites"));
+        await opened.page.waitForFunction(
+            () =>
+                window.__nailit &&
+                window.__nailit.activeListeners().some((l) => l.kind === "sites"),
+        );
         await opened.page.waitForTimeout(100);
         assert.deepEqual(opened.state.pageErrors, []);
         await opened.context.close();
@@ -376,19 +519,70 @@ describe("getting around", () => {
 const OVERVIEW_SEED = {
     sites: {
         ...SEED.sites,
-        sC: { name: "Kisumu", location: "Lake", buildingType: "Industrial", createdAt: 1714694400000, ownerUid: "u1" },
+        sC: {
+            name: "Kisumu",
+            location: "Lake",
+            buildingType: "Industrial",
+            createdAt: 1714694400000,
+            ownerUid: "u1",
+        },
     },
     materials: {
         ...MATERIALS,
-        k1: { name: "Rebar", quantity: 1, units: "pieces", minLevel: 50, updatedAt: now - 30 * 60_000, siteId: "sC" },
-        k2: { name: "Wire", quantity: 2, units: "kg", minLevel: 50, updatedAt: now - 40 * 60_000, siteId: "sC" },
-        k3: { name: "Pipes", quantity: 3, units: "pieces", minLevel: 50, updatedAt: now - 50 * 60_000, siteId: "sC" },
-        k4: { name: "Tiles", quantity: 4, units: "pieces", minLevel: 50, updatedAt: now - 50 * 60_000, siteId: "sC" },
-        k5: { name: "Glue", quantity: 5, units: "litres", minLevel: 50, updatedAt: now - 50 * 60_000, siteId: "sC" },
+        k1: {
+            name: "Rebar",
+            quantity: 1,
+            units: "pieces",
+            minLevel: 50,
+            updatedAt: now - 30 * 60_000,
+            siteId: "sC",
+        },
+        k2: {
+            name: "Wire",
+            quantity: 2,
+            units: "kg",
+            minLevel: 50,
+            updatedAt: now - 40 * 60_000,
+            siteId: "sC",
+        },
+        k3: {
+            name: "Pipes",
+            quantity: 3,
+            units: "pieces",
+            minLevel: 50,
+            updatedAt: now - 50 * 60_000,
+            siteId: "sC",
+        },
+        k4: {
+            name: "Tiles",
+            quantity: 4,
+            units: "pieces",
+            minLevel: 50,
+            updatedAt: now - 50 * 60_000,
+            siteId: "sC",
+        },
+        k5: {
+            name: "Glue",
+            quantity: 5,
+            units: "litres",
+            minLevel: 50,
+            updatedAt: now - 50 * 60_000,
+            siteId: "sC",
+        },
     },
     movements: {
         ...MOVEMENTS,
-        mk1: { siteId: "sC", materialId: "k1", materialName: "Rebar", units: "pieces", delta: -9, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 30 * 60_000 },
+        mk1: {
+            siteId: "sC",
+            materialId: "k1",
+            materialName: "Rebar",
+            units: "pieces",
+            delta: -9,
+            type: "used",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: now - 30 * 60_000,
+        },
     },
 };
 
@@ -399,7 +593,10 @@ describe("the owner overview", () => {
         const { context, page, state } = await openOverview(browser, baseUrl, OVERVIEW_SEED);
         await page.locator("#overviewList li.overview-site").first().waitFor();
         const names = await page.locator("#overviewList .overview-name").allTextContents();
-        assert.deepEqual(names.map((n) => n.trim()), ["Kisumu", "Mombasa", "Cape Town"]);
+        assert.deepEqual(
+            names.map((n) => n.trim()),
+            ["Kisumu", "Mombasa", "Cape Town"],
+        );
         assert.deepEqual(state.pageErrors, []);
         await context.close();
     });
@@ -419,7 +616,9 @@ describe("the owner overview", () => {
     it("names the low materials, emptiest first, at most three, then 'and N more'", async () => {
         const { context, page } = await openOverview(browser, baseUrl, OVERVIEW_SEED);
         await site(page, "Mombasa").waitFor();
-        const items = (await site(page, "Mombasa").locator(".overview-lowitems li").allTextContents()).map((t) => t.trim());
+        const items = (
+            await site(page, "Mombasa").locator(".overview-lowitems li").allTextContents()
+        ).map((t) => t.trim());
         assert.equal(items.length, 3);
         assert.match(items[0], /Paint/);
         assert.match(items[0], /Out/);
@@ -428,7 +627,7 @@ describe("the owner overview", () => {
         assert.equal(await site(page, "Mombasa").locator(".overview-more").count(), 0);
 
         const kisumu = site(page, "Kisumu");
-        assert.equal((await kisumu.locator(".overview-lowitems li").count()), 3);
+        assert.equal(await kisumu.locator(".overview-lowitems li").count(), 3);
         assert.equal(await text(kisumu, ".overview-more"), "and 2 more");
         assert.equal(await site(page, "Cape Town").locator(".overview-lowitems li").count(), 0);
         await context.close();
@@ -444,8 +643,14 @@ describe("the owner overview", () => {
     it("each site links to its dashboard", async () => {
         const { context, page } = await openOverview(browser, baseUrl, OVERVIEW_SEED);
         await site(page, "Mombasa").waitFor();
-        assert.equal(await site(page, "Mombasa").locator("a.overview-open").getAttribute("href"), "dashboard.html?site=sA");
-        assert.equal(await site(page, "Kisumu").locator("a.overview-open").getAttribute("href"), "dashboard.html?site=sC");
+        assert.equal(
+            await site(page, "Mombasa").locator("a.overview-open").getAttribute("href"),
+            "dashboard.html?site=sA",
+        );
+        assert.equal(
+            await site(page, "Kisumu").locator("a.overview-open").getAttribute("href"),
+            "dashboard.html?site=sC",
+        );
         await context.close();
     });
 
@@ -454,16 +659,30 @@ describe("the owner overview", () => {
         await site(page, "Mombasa").waitFor();
         await page.evaluate(() => {
             for (const id of ["k1", "k2", "k3", "k4", "k5"]) {
-                window.__nailit.externalSetMaterial("sC", id, { name: id, quantity: 999, units: "pieces", minLevel: 50, updatedAt: Date.now() });
+                window.__nailit.externalSetMaterial("sC", id, {
+                    name: id,
+                    quantity: 999,
+                    units: "pieces",
+                    minLevel: 50,
+                    updatedAt: Date.now(),
+                });
             }
         });
-        await page.waitForFunction(() => document.querySelector("#overviewList .overview-name").textContent.trim() === "Mombasa");
+        await page.waitForFunction(
+            () =>
+                document.querySelector("#overviewList .overview-name").textContent.trim() ===
+                "Mombasa",
+        );
         assert.equal(await text(site(page, "Kisumu"), ".overview-low"), "Nothing low on stock");
         assert.equal(await text(page, "#overviewTotals"), "3 sites, 3 low on stock");
 
         await page.evaluate(() => window.__nailit.externalRemoveSite("sC"));
-        await page.waitForFunction(() => document.querySelectorAll("#overviewList li.overview-site").length === 2);
-        const listening = await page.evaluate(() => window.__nailit.activeListeners().filter((l) => l.siteId === "sC").length);
+        await page.waitForFunction(
+            () => document.querySelectorAll("#overviewList li.overview-site").length === 2,
+        );
+        const listening = await page.evaluate(
+            () => window.__nailit.activeListeners().filter((l) => l.siteId === "sC").length,
+        );
         assert.equal(listening, 0, "nothing keeps listening to a deleted site");
         await context.close();
     });
@@ -486,21 +705,33 @@ describe("the owner overview", () => {
     });
 
     it("says it is loading, then says there are no sites when there are none", async () => {
-        const held = await openOverview(browser, baseUrl, OVERVIEW_SEED, { beforeLoad: () => { window.__preset = { holdSnapshots: true }; } });
+        const held = await openOverview(browser, baseUrl, OVERVIEW_SEED, {
+            beforeLoad: () => {
+                window.__preset = { holdSnapshots: true };
+            },
+        });
         assert.match(await text(held.page, "#overviewStatus"), /Loading/i);
         await held.page.evaluate(() => window.__nailit.releaseSnapshots());
         await site(held.page, "Mombasa").waitFor();
         assert.equal(await held.page.locator("#overviewStatus").isVisible(), false);
         await held.context.close();
 
-        const { context, page } = await openOverview(browser, baseUrl, { sites: {}, materials: {} });
-        await page.waitForFunction(() => /No sites yet/i.test(document.querySelector("#overviewStatus").textContent));
+        const { context, page } = await openOverview(browser, baseUrl, {
+            sites: {},
+            materials: {},
+        });
+        await page.waitForFunction(() =>
+            /No sites yet/i.test(document.querySelector("#overviewStatus").textContent),
+        );
         assert.equal(await page.locator("#overviewList li").count(), 0);
         await context.close();
     });
 
     it("a site with no materials says so", async () => {
-        const { context, page } = await openOverview(browser, baseUrl, { sites: SEED.sites, materials: {} });
+        const { context, page } = await openOverview(browser, baseUrl, {
+            sites: SEED.sites,
+            materials: {},
+        });
         await site(page, "Mombasa").waitFor();
         assert.equal(await text(site(page, "Mombasa"), ".overview-total"), "No materials yet");
         assert.equal(await text(site(page, "Mombasa"), ".overview-low"), "Nothing low on stock");
@@ -509,7 +740,10 @@ describe("the owner overview", () => {
     });
 
     it("includes the sites where the person is only a viewer", async () => {
-        const { context, page } = await openOverview(browser, baseUrl, { ...OVERVIEW_SEED, roles: { sA: "viewer", sB: "viewer", sC: "viewer" } });
+        const { context, page } = await openOverview(browser, baseUrl, {
+            ...OVERVIEW_SEED,
+            roles: { sA: "viewer", sB: "viewer", sC: "viewer" },
+        });
         await site(page, "Mombasa").waitFor();
         assert.equal(await page.locator("#overviewList li.overview-site").count(), 3);
         await context.close();
@@ -518,8 +752,25 @@ describe("the owner overview", () => {
     it("shows site names and material names as text (S2)", async () => {
         const evil = "<img src=x onerror=window.__pwned=1>";
         const seed = {
-            sites: { sX: { name: evil, location: "<b>x</b>", buildingType: "Other", createdAt: 1714521600000, ownerUid: "u1" } },
-            materials: { x1: { name: evil, quantity: 0, units: "bags", minLevel: 5, updatedAt: now, siteId: "sX" } },
+            sites: {
+                sX: {
+                    name: evil,
+                    location: "<b>x</b>",
+                    buildingType: "Other",
+                    createdAt: 1714521600000,
+                    ownerUid: "u1",
+                },
+            },
+            materials: {
+                x1: {
+                    name: evil,
+                    quantity: 0,
+                    units: "bags",
+                    minLevel: 5,
+                    updatedAt: now,
+                    siteId: "sX",
+                },
+            },
         };
         const { context, page } = await openOverview(browser, baseUrl, seed);
         await page.locator("#overviewList li.overview-site").first().waitFor();

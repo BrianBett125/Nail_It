@@ -1,0 +1,11 @@
+node_modules/
+assets/
+package-lock.json
+.kilo/
+docs/
+CLAUDE.md
+Plan.md
+# The pages are hand-formatted and pinned by tests/unit/pages.test.js (no self-closing
+# void tags, uppercase doctype). Prettier's HTML writer emits ` />` and a lowercase
+# doctype, which fights those tests, so the HTML is left alone.
+*.html

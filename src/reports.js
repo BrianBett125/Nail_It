@@ -9,14 +9,38 @@
 //   - text that starts with = + - @ gets a leading apostrophe, so a material called "=1+1" can never run as a formula.
 import { nameKey } from "./logic.js";
 import { stockState, lowDetail } from "./insights.js";
-import { formatQuantity, formatDate, lastUpdatedLabel, TYPE_LABELS, sortMovements } from "./movements.js";
+import {
+    formatQuantity,
+    formatDate,
+    lastUpdatedLabel,
+    TYPE_LABELS,
+    sortMovements,
+} from "./movements.js";
 
 export const BOM = "﻿";
 export const CSV_TYPE = "text/csv;charset=utf-8";
 const EOL = "\r\n";
 
-export const STOCK_COLUMNS = ["Site", "Material", "In stock", "Units", "Low-stock level", "Status", "Last updated"];
-export const MOVEMENT_COLUMNS = ["Date", "Time", "Site", "Material", "Type", "Change", "Units", "By", "Note"];
+export const STOCK_COLUMNS = [
+    "Site",
+    "Material",
+    "In stock",
+    "Units",
+    "Low-stock level",
+    "Status",
+    "Last updated",
+];
+export const MOVEMENT_COLUMNS = [
+    "Date",
+    "Time",
+    "Site",
+    "Material",
+    "Type",
+    "Change",
+    "Units",
+    "By",
+    "Note",
+];
 
 const FORMULA_START = /^[=+\-@\t\r]/;
 
@@ -47,7 +71,9 @@ const STATUS = { ok: "OK", low: "Low", out: "Out" };
 
 // Current stock of one site: one line per material, by name.
 export function stockCsv({ site, materials }) {
-    const entries = Object.values(materials || {}).filter((material) => material && typeof material === "object");
+    const entries = Object.values(materials || {}).filter(
+        (material) => material && typeof material === "object",
+    );
     entries.sort((a, b) => nameKey(a.name).localeCompare(nameKey(b.name)));
     const siteName = siteNameOf(site);
     return toCsv([
@@ -108,7 +134,9 @@ function startOfDay(text) {
     }
     const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
     const date = new Date(year, month - 1, day);
-    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null;
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+        ? date
+        : null;
 }
 
 // From and To are whole days, both included: { from, to } in milliseconds (to is the last
@@ -143,21 +171,33 @@ export function presetDates(id, now = Date.now()) {
                 to: iso(new Date(today.getFullYear(), today.getMonth(), 0)),
             };
         case "last-7":
-            return { from: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6)), to: iso(today) };
+            return {
+                from: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6)),
+                to: iso(today),
+            };
         case "this-month":
         default:
-            return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
+            return {
+                from: iso(new Date(today.getFullYear(), today.getMonth(), 1)),
+                to: iso(today),
+            };
     }
 }
 
 // ---- file names and the message to share ----------------------------------------------------
 
 export function slug(text) {
-    const cleaned = String(text ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
+    const cleaned = String(text ?? "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 40)
+        .replace(/-+$/, "");
     return cleaned || "site";
 }
 
-export const stockFileName = (site, now = Date.now()) => `nail-it-${slug(siteNameOf(site))}-stock-${formatDate(now)}.csv`;
+export const stockFileName = (site, now = Date.now()) =>
+    `nail-it-${slug(siteNameOf(site))}-stock-${formatDate(now)}.csv`;
 
 export const movementsFileName = (site, fromText, toText) =>
     `nail-it-${slug(siteNameOf(site))}-movements-${fromText}_to_${toText}.csv`;
@@ -166,24 +206,31 @@ const SHARE_LINES = 40; // a WhatsApp message should be readable: past this it s
 
 // Plain text for WhatsApp or email: the site, the date, anything low first, then the rest.
 export function shareText({ site, materials, now = Date.now() }) {
-    const entries = Object.values(materials || {}).filter((material) => material && typeof material === "object");
-    entries.sort((a, b) =>
-        (Number(stockState(b) !== "ok") - Number(stockState(a) !== "ok"))
-        || nameKey(a.name).localeCompare(nameKey(b.name)));
+    const entries = Object.values(materials || {}).filter(
+        (material) => material && typeof material === "object",
+    );
+    entries.sort(
+        (a, b) =>
+            Number(stockState(b) !== "ok") - Number(stockState(a) !== "ok") ||
+            nameKey(a.name).localeCompare(nameKey(b.name)),
+    );
     const lines = entries.slice(0, SHARE_LINES).map((material) => {
         const quantity = typeof material.quantity === "number" ? material.quantity : 0;
         const base = `${material.name}: ${formatQuantity(quantity)}${material.units ? ` ${material.units}` : ""}`;
         const detail = lowDetail(material);
-        return detail ? `${base} (${stockState(material) === "out" ? "OUT" : "LOW"}, level ${formatQuantity(material.minLevel)})` : base;
+        return detail
+            ? `${base} (${stockState(material) === "out" ? "OUT" : "LOW"}, level ${formatQuantity(material.minLevel)})`
+            : base;
     });
     if (entries.length > SHARE_LINES) {
         lines.push(`and ${entries.length - SHARE_LINES} more`);
     }
     const low = entries.filter((material) => stockState(material) !== "ok").length;
     const head = `${siteNameOf(site)}: stock on ${formatDate(now)}`;
-    const summary = entries.length === 0
-        ? "No materials yet"
-        : `${entries.length} ${entries.length === 1 ? "material" : "materials"}, ${low === 0 ? "nothing low" : `${low} low`}`;
+    const summary =
+        entries.length === 0
+            ? "No materials yet"
+            : `${entries.length} ${entries.length === 1 ? "material" : "materials"}, ${low === 0 ? "nothing low" : `${low} low`}`;
     return [head, summary, "", ...lines].join("\n").trimEnd();
 }
 

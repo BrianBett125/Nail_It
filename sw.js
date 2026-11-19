@@ -32,22 +32,26 @@ const origin = self.location.origin;
 // offline shell. Whatever is missed here is fetched and cached by the fetch handler below on the first
 // normal load, which is every load after this one.
 self.addEventListener("install", (event) => {
-    event.waitUntil((async () => {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.addAll(SHELL_ASSETS);
-        await Promise.allSettled(SDK_ASSETS.map((url) => cache.add(url)));
-        await self.skipWaiting();
-    })());
+    event.waitUntil(
+        (async () => {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.addAll(SHELL_ASSETS);
+            await Promise.allSettled(SDK_ASSETS.map((url) => cache.add(url)));
+            await self.skipWaiting();
+        })(),
+    );
 });
 
 // Activate: drop the caches of older versions of this worker, and take over the pages that are already
 // open so the current visit is covered too, not just the next one.
 self.addEventListener("activate", (event) => {
-    event.waitUntil((async () => {
-        const names = await caches.keys();
-        await Promise.all(cachesToDelete(names).map((name) => caches.delete(name)));
-        await self.clients.claim();
-    })());
+    event.waitUntil(
+        (async () => {
+            const names = await caches.keys();
+            await Promise.all(cachesToDelete(names).map((name) => caches.delete(name)));
+            await self.clients.claim();
+        })(),
+    );
 });
 
 // Somewhere to put a fresh copy without making the page wait for it. Only a complete 200 is stored: a
@@ -75,11 +79,10 @@ async function cacheFirst(request) {
 // The app's own files: answer from the cache straight away, and fetch a fresh copy in the background so
 // the next load has the new one. A page never waits on the network, and a deploy still lands.
 function revalidate(event) {
-    const refresh = fetch(event.request)
-        .then(async (response) => {
-            await store(event.request, response);
-            return response;
-        });
+    const refresh = fetch(event.request).then(async (response) => {
+        await store(event.request, response);
+        return response;
+    });
     event.waitUntil(refresh.catch(() => {}));
     return caches.match(event.request, { ignoreSearch: true }).then((cached) => cached || refresh);
 }
@@ -92,8 +95,9 @@ async function networkFirst(request) {
         await store(request, response);
         return response;
     } catch {
-        const cached = await caches.match(request, { ignoreSearch: true })
-            || await caches.match(OFFLINE_FALLBACK);
+        const cached =
+            (await caches.match(request, { ignoreSearch: true })) ||
+            (await caches.match(OFFLINE_FALLBACK));
         if (cached) {
             return cached;
         }

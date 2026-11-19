@@ -14,7 +14,14 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
-    startServer, launchBrowser, openDashboard, selectSite, waitForRows, wrote, focusOn, SEED,
+    startServer,
+    launchBrowser,
+    openDashboard,
+    selectSite,
+    waitForRows,
+    wrote,
+    focusOn,
+    SEED,
 } from "./helpers.js";
 
 let server;
@@ -36,12 +43,35 @@ const now = Date.now();
 const SEEDED = {
     ...SEED,
     materials: {
-        m1: { name: "Cement", quantity: 5, units: "bags", minLevel: 10, updatedAt: now - 2 * HOUR, siteId: "sA" },
-        m2: { name: "Sand", quantity: 10, units: "tonnes", updatedAt: now - 3 * HOUR, siteId: "sA" },
+        m1: {
+            name: "Cement",
+            quantity: 5,
+            units: "bags",
+            minLevel: 10,
+            updatedAt: now - 2 * HOUR,
+            siteId: "sA",
+        },
+        m2: {
+            name: "Sand",
+            quantity: 10,
+            units: "tonnes",
+            updatedAt: now - 3 * HOUR,
+            siteId: "sA",
+        },
         m3: { name: "Nails", quantity: 40, units: "kgs", lastUpdated: "2024-05-05", siteId: "sB" },
     },
     movements: {
-        v1: { siteId: "sA", materialId: "m1", materialName: "Cement", units: "bags", delta: -5, type: "used", byUid: "u1", byEmail: "foreman@example.com", at: now - 2 * HOUR },
+        v1: {
+            siteId: "sA",
+            materialId: "m1",
+            materialName: "Cement",
+            units: "bags",
+            delta: -5,
+            type: "used",
+            byUid: "u1",
+            byEmail: "foreman@example.com",
+            at: now - 2 * HOUR,
+        },
     },
 };
 
@@ -56,21 +86,72 @@ const row = (page, name) => page.locator("#materialTableBody tr", { hasText: nam
 
 // id, how to open it, the element that has focus first, and what closes it.
 const DIALOGS = [
-    { id: "siteFormContainer", focus: "#siteName", close: "#cancelButton", open: (page) => page.click("#addSiteButton") },
-    { id: "materialFormContainer", focus: "#materialsName", close: "#materialCancelButton", open: (page) => page.click("#addMaterialButton") },
-    { id: "updateFormContainer", focus: "#uMaterialName", close: "#updateCancelButton", open: (page) => row(page, "Cement").locator(".btn-edit").click(), opener: (page) => row(page, "Cement").locator(".btn-edit") },
-    { id: "siteDeleteContainer", focus: "#siteDeleteInput", close: "#siteDeleteCancel", open: openSiteDelete, opener: (page) => page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn"), phoneFoldsOpener: true },
-    { id: "reportsContainer", focus: "#exportStock", close: "#reportsClose", open: (page) => page.click("#reportsButton"), opener: (page) => page.locator("#reportsButton") },
-    { id: "membersContainer", focus: "#membersClose", close: "#membersClose", open: (page) => page.click("#membersButton") },
-    { id: "movementContainer", focus: "#movementAmount", close: "#movementCancel", open: (page) => row(page, "Cement").locator(".btn-use").click(), opener: (page) => row(page, "Cement").locator(".btn-use") },
-    { id: "historyContainer", focus: "#historyClose", close: "#historyClose", open: (page) => row(page, "Cement").locator(".btn-history").click(), opener: (page) => row(page, "Cement").locator(".btn-history") },
+    {
+        id: "siteFormContainer",
+        focus: "#siteName",
+        close: "#cancelButton",
+        open: (page) => page.click("#addSiteButton"),
+    },
+    {
+        id: "materialFormContainer",
+        focus: "#materialsName",
+        close: "#materialCancelButton",
+        open: (page) => page.click("#addMaterialButton"),
+    },
+    {
+        id: "updateFormContainer",
+        focus: "#uMaterialName",
+        close: "#updateCancelButton",
+        open: (page) => row(page, "Cement").locator(".btn-edit").click(),
+        opener: (page) => row(page, "Cement").locator(".btn-edit"),
+    },
+    {
+        id: "siteDeleteContainer",
+        focus: "#siteDeleteInput",
+        close: "#siteDeleteCancel",
+        open: openSiteDelete,
+        opener: (page) =>
+            page.locator("#siteList li", { hasText: "Mombasa" }).locator(".delete-site-btn"),
+        phoneFoldsOpener: true,
+    },
+    {
+        id: "reportsContainer",
+        focus: "#exportStock",
+        close: "#reportsClose",
+        open: (page) => page.click("#reportsButton"),
+        opener: (page) => page.locator("#reportsButton"),
+    },
+    {
+        id: "membersContainer",
+        focus: "#membersClose",
+        close: "#membersClose",
+        open: (page) => page.click("#membersButton"),
+    },
+    {
+        id: "movementContainer",
+        focus: "#movementAmount",
+        close: "#movementCancel",
+        open: (page) => row(page, "Cement").locator(".btn-use").click(),
+        opener: (page) => row(page, "Cement").locator(".btn-use"),
+    },
+    {
+        id: "historyContainer",
+        focus: "#historyClose",
+        close: "#historyClose",
+        open: (page) => row(page, "Cement").locator(".btn-history").click(),
+        opener: (page) => row(page, "Cement").locator(".btn-history"),
+    },
 ];
 
 async function open(viewport) {
     const host = {
-        newContext: () => browser.newContext({
-            viewport, deviceScaleFactor: viewport.width < 600 ? 2 : 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600,
-        }),
+        newContext: () =>
+            browser.newContext({
+                viewport,
+                deviceScaleFactor: viewport.width < 600 ? 2 : 1,
+                isMobile: viewport.width < 600,
+                hasTouch: viewport.width < 600,
+            }),
     };
     const opened = await openDashboard(host, baseUrl, SEEDED);
     await selectSite(opened.page, "Mombasa");
@@ -79,9 +160,13 @@ async function open(viewport) {
 }
 
 const isOpen = (page, id) => page.evaluate((i) => document.getElementById(i).open === true, id);
-const inside = (page, id) => page.evaluate((i) => document.getElementById(i).contains(document.activeElement), id);
+const inside = (page, id) =>
+    page.evaluate((i) => document.getElementById(i).contains(document.activeElement), id);
 
-for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["phone", { width: 375, height: 700 }]]) {
+for (const [name, viewport] of [
+    ["desktop", { width: 1280, height: 800 }],
+    ["phone", { width: 375, height: 700 }],
+]) {
     for (const dialog of DIALOGS) {
         describe(`${dialog.id} on a ${name}`, () => {
             it("is a native <dialog>, closed at first, and opens as a modal", async () => {
@@ -93,7 +178,14 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 assert.deepEqual(facts, { tag: "DIALOG", open: false });
                 await dialog.open(page);
                 assert.equal(await isOpen(page, dialog.id), true);
-                assert.equal(await page.evaluate((id) => document.getElementById(id).matches(":modal"), dialog.id), true, "opened with showModal, so it is modal");
+                assert.equal(
+                    await page.evaluate(
+                        (id) => document.getElementById(id).matches(":modal"),
+                        dialog.id,
+                    ),
+                    true,
+                    "opened with showModal, so it is modal",
+                );
                 await context.close();
             });
 
@@ -103,17 +195,28 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 const name = await page.evaluate((id) => {
                     const el = document.getElementById(id);
                     const labelled = el.getAttribute("aria-labelledby");
-                    const text = labelled ? labelled.split(/\s+/).map((i) => (document.getElementById(i) || {}).textContent || "").join(" ") : el.getAttribute("aria-label");
+                    const text = labelled
+                        ? labelled
+                              .split(/\s+/)
+                              .map((i) => (document.getElementById(i) || {}).textContent || "")
+                              .join(" ")
+                        : el.getAttribute("aria-label");
                     return (text || "").trim();
                 }, dialog.id);
-                assert.ok(name.length >= 3, `the dialog has no accessible name (aria-labelledby or aria-label): "${name}"`);
+                assert.ok(
+                    name.length >= 3,
+                    `the dialog has no accessible name (aria-labelledby or aria-label): "${name}"`,
+                );
                 await context.close();
             });
 
             it("puts focus inside, on the right control", async () => {
                 const { context, page } = await open(viewport);
                 await dialog.open(page);
-                assert.equal(await page.evaluate(() => document.activeElement.id), dialog.focus.slice(1));
+                assert.equal(
+                    await page.evaluate(() => document.activeElement.id),
+                    dialog.focus.slice(1),
+                );
                 await context.close();
             });
 
@@ -122,17 +225,29 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 await dialog.open(page);
                 for (let i = 0; i < 12; i += 1) {
                     await page.keyboard.press("Tab");
-                    assert.equal(await inside(page, dialog.id), true, `Tab ${i + 1} left the dialog`);
+                    assert.equal(
+                        await inside(page, dialog.id),
+                        true,
+                        `Tab ${i + 1} left the dialog`,
+                    );
                 }
                 for (let i = 0; i < 12; i += 1) {
                     await page.keyboard.press("Shift+Tab");
-                    assert.equal(await inside(page, dialog.id), true, `Shift+Tab ${i + 1} left the dialog`);
+                    assert.equal(
+                        await inside(page, dialog.id),
+                        true,
+                        `Shift+Tab ${i + 1} left the dialog`,
+                    );
                 }
                 await page.evaluate(() => {
                     const behind = document.querySelector("header a") || document.body;
                     behind.focus();
                 });
-                assert.equal(await inside(page, dialog.id), true, "something behind the dialog took focus");
+                assert.equal(
+                    await inside(page, dialog.id),
+                    true,
+                    "something behind the dialog took focus",
+                );
                 await context.close();
             });
 
@@ -142,10 +257,22 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 await page.keyboard.press("Escape");
                 assert.equal(await isOpen(page, dialog.id), false);
                 if (dialog.opener && !(dialog.phoneFoldsOpener && viewport.width < 600)) {
-                    assert.equal(await focusOn(page, dialog.opener(page)), true, "focus did not return to the button that opened the dialog");
+                    assert.equal(
+                        await focusOn(page, dialog.opener(page)),
+                        true,
+                        "focus did not return to the button that opened the dialog",
+                    );
                 } else {
-                    await page.waitForFunction(() => document.activeElement && document.activeElement.tagName !== "BODY", undefined, { timeout: 5000 });
-                    assert.notEqual(await page.evaluate(() => document.activeElement.tagName), "BODY", "focus was dropped on the page");
+                    await page.waitForFunction(
+                        () => document.activeElement && document.activeElement.tagName !== "BODY",
+                        undefined,
+                        { timeout: 5000 },
+                    );
+                    assert.notEqual(
+                        await page.evaluate(() => document.activeElement.tagName),
+                        "BODY",
+                        "focus was dropped on the page",
+                    );
                 }
                 assert.deepEqual(await wrote(page), [], "closing writes nothing");
                 await context.close();
@@ -166,10 +293,23 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
                 await dialog.open(page);
                 const box = await page.evaluate((id) => {
                     const r = document.getElementById(id).getBoundingClientRect();
-                    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight };
+                    return {
+                        left: r.left,
+                        right: r.right,
+                        top: r.top,
+                        bottom: r.bottom,
+                        vw: innerWidth,
+                        vh: innerHeight,
+                    };
                 }, dialog.id);
-                assert.ok(box.left >= -1 && box.right <= box.vw + 1, `wider than the screen: ${JSON.stringify(box)}`);
-                assert.ok(box.top >= -1 && box.bottom <= box.vh + 1, `taller than the screen: ${JSON.stringify(box)}`);
+                assert.ok(
+                    box.left >= -1 && box.right <= box.vw + 1,
+                    `wider than the screen: ${JSON.stringify(box)}`,
+                );
+                assert.ok(
+                    box.top >= -1 && box.bottom <= box.vh + 1,
+                    `taller than the screen: ${JSON.stringify(box)}`,
+                );
                 await context.close();
             });
         });
@@ -203,7 +343,9 @@ describe("one dialog at a time, and the page does not scroll behind it", () => {
         const { context, page } = await open({ width: 1280, height: 800 });
         await page.evaluate(() => document.getElementById("addMaterialButton").click());
         await page.evaluate(() => document.getElementById("membersButton").click());
-        const states = await page.evaluate(() => [...document.querySelectorAll("dialog")].filter((d) => d.open).map((d) => d.id));
+        const states = await page.evaluate(() =>
+            [...document.querySelectorAll("dialog")].filter((d) => d.open).map((d) => d.id),
+        );
         assert.ok(states.length <= 1, `open at once: ${states.join(", ")}`);
         await context.close();
     });

@@ -2,21 +2,45 @@
 // Realtime Database emulator: `npm run test:rules` starts the emulator and runs them.
 import fs from "node:fs";
 import path from "node:path";
-import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
+import {
+    initializeTestEnvironment,
+    assertSucceeds,
+    assertFails,
+} from "@firebase/rules-unit-testing";
 import { ref, get, set, update, remove, push, increment, serverTimestamp } from "firebase/database";
 import {
-    buildMovementUpdates, buildAddMaterialUpdates, buildRemoveMaterialUpdates, buildRestoreMaterialUpdates,
+    buildMovementUpdates,
+    buildAddMaterialUpdates,
+    buildRemoveMaterialUpdates,
+    buildRestoreMaterialUpdates,
     buildEditMaterialUpdates,
 } from "../../src/movements.js";
 
-export { ref, get, set, update, remove, push, increment, serverTimestamp, assertSucceeds, assertFails };
+export {
+    ref,
+    get,
+    set,
+    update,
+    remove,
+    push,
+    increment,
+    serverTimestamp,
+    assertSucceeds,
+    assertFails,
+};
 
 // How the page tells src/movements.js what a server timestamp and an increment are.
 export const SV = { timestamp: serverTimestamp, increment };
 
 export const RULES_PATH = path.resolve(import.meta.dirname, "../../database.rules.json");
 
-export const SITE = { name: "Mombasa", location: "Nyali", buildingType: "Residential", createdAt: 1700000000000, ownerUid: "owner1" };
+export const SITE = {
+    name: "Mombasa",
+    location: "Nyali",
+    buildingType: "Residential",
+    createdAt: 1700000000000,
+    ownerUid: "owner1",
+};
 export const MATERIAL = { name: "Cement", quantity: 5, units: "bags", lastUpdated: "2024-05-03" };
 
 // Site s1: owner1 (owner), keeper1 (storekeeper), viewer1 (viewer). Site s2 belongs to somebody else.
@@ -72,7 +96,9 @@ export async function raw(env, pathName) {
 
 // email_verified defaults to true: a real account has verified its address before it can claim an invite.
 export function as(env, uid, claims = {}) {
-    return env.authenticatedContext(uid, { email: `${uid}@example.com`, email_verified: true, ...claims }).database();
+    return env
+        .authenticatedContext(uid, { email: `${uid}@example.com`, email_verified: true, ...claims })
+        .database();
 }
 
 export function anonymous(env) {
@@ -90,27 +116,60 @@ function newId(db, siteId) {
 }
 
 export function receive(db, uid, siteId, materialId, material, movement) {
-    return update(ref(db), buildMovementUpdates({
-        siteId, materialId, movementId: newId(db, siteId), material, movement, user: userOf(uid), sv: SV,
-    }));
+    return update(
+        ref(db),
+        buildMovementUpdates({
+            siteId,
+            materialId,
+            movementId: newId(db, siteId),
+            material,
+            movement,
+            user: userOf(uid),
+            sv: SV,
+        }),
+    );
 }
 
 export function addMaterial(db, uid, siteId, materialId, material) {
-    return update(ref(db), buildAddMaterialUpdates({
-        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
-    }));
+    return update(
+        ref(db),
+        buildAddMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: newId(db, siteId),
+            material,
+            user: userOf(uid),
+            sv: SV,
+        }),
+    );
 }
 
 export function removeMaterial(db, uid, siteId, materialId, material) {
-    return update(ref(db), buildRemoveMaterialUpdates({
-        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
-    }));
+    return update(
+        ref(db),
+        buildRemoveMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: newId(db, siteId),
+            material,
+            user: userOf(uid),
+            sv: SV,
+        }),
+    );
 }
 
 export function restoreMaterial(db, uid, siteId, materialId, material) {
-    return update(ref(db), buildRestoreMaterialUpdates({
-        siteId, materialId, movementId: newId(db, siteId), material, user: userOf(uid), sv: SV,
-    }));
+    return update(
+        ref(db),
+        buildRestoreMaterialUpdates({
+            siteId,
+            materialId,
+            movementId: newId(db, siteId),
+            material,
+            user: userOf(uid),
+            sv: SV,
+        }),
+    );
 }
 
 export function editMaterial(db, siteId, materialId, fields) {

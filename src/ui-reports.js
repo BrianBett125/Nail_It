@@ -106,7 +106,11 @@ export function createReportsUI({ data, getContext, showToast, reportError }) {
         const count = Object.keys(materials || {}).length;
         download(stockCsv({ site, materials }), stockFileName(site));
         say("");
-        showToast(count === 0 ? "Saved the stock list (no materials yet)" : `Saved the stock of ${count} ${count === 1 ? "material" : "materials"}`);
+        showToast(
+            count === 0
+                ? "Saved the stock list (no materials yet)"
+                : `Saved the stock of ${count} ${count === 1 ? "material" : "materials"}`,
+        );
     }
 
     async function exportMovements() {
@@ -132,9 +136,14 @@ export function createReportsUI({ data, getContext, showToast, reportError }) {
                 showError(`No movements from ${fromInput.value} to ${toInput.value}`);
                 return;
             }
-            download(movementsCsv({ site, movements }), movementsFileName(site, fromInput.value, toInput.value));
+            download(
+                movementsCsv({ site, movements }),
+                movementsFileName(site, fromInput.value, toInput.value),
+            );
             say("");
-            showToast(`Saved ${movements.length} ${movements.length === 1 ? "movement" : "movements"}`);
+            showToast(
+                `Saved ${movements.length} ${movements.length === 1 ? "movement" : "movements"}`,
+            );
         } catch (error) {
             say("");
             reportError(error);

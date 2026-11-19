@@ -17,7 +17,10 @@ for (const page of PAGES) {
         const html = markup(page);
         assert.match(html, /<html lang="en">/);
         assert.match(html, /<title>[^<]{3,}<\/title>/);
-        assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1(\.0)?">/);
+        assert.match(
+            html,
+            /<meta name="viewport" content="width=device-width, initial-scale=1(\.0)?">/,
+        );
         assert.equal((html.match(/<main\b/g) || []).length, 1, "exactly one <main>");
         assert.equal((html.match(/<h1\b/g) || []).length, 1, "exactly one <h1>");
     });
@@ -27,7 +30,10 @@ for (const page of PAGES) {
         assert.doesNotMatch(html, /fontawesome|font-awesome|class="fa[ s-]/i);
         assert.doesNotMatch(html, /<style\b|\sstyle="|\sonclick=|<script>[^<]/i);
         for (const tag of html.match(/<script\b[^>]*>/g) || []) {
-            assert.ok(/type="module"/.test(tag) || /\bdefer\b/.test(tag), `a script that blocks rendering: ${tag}`);
+            assert.ok(
+                /type="module"/.test(tag) || /\bdefer\b/.test(tag),
+                `a script that blocks rendering: ${tag}`,
+            );
         }
     });
 
@@ -55,8 +61,13 @@ test("no stylesheet or script names a font that is never loaded", () => {
 
 test("every stylesheet and script a page names exists", () => {
     for (const page of PAGES) {
-        for (const match of read(page).matchAll(/(?:href|src)="((?:styles|favicon|src|assets)\/[^"]+|[A-Za-z-]+\.js)"/g)) {
-            assert.ok(fs.existsSync(path.join(ROOT, match[1])), `${page} names ${match[1]}, which does not exist`);
+        for (const match of read(page).matchAll(
+            /(?:href|src)="((?:styles|favicon|src|assets)\/[^"]+|[A-Za-z-]+\.js)"/g,
+        )) {
+            assert.ok(
+                fs.existsSync(path.join(ROOT, match[1])),
+                `${page} names ${match[1]}, which does not exist`,
+            );
         }
     }
 });
@@ -65,8 +76,11 @@ test("every stylesheet and script a page names exists", () => {
 // browser the worker. src/sw-register.js does the registering, and it needs the module type like any other.
 test("every page registers the service worker", () => {
     for (const page of PAGES) {
-        assert.match(markup(page), /<script src="src\/sw-register\.js" type="module"><\/script>/,
-            `${page} does not register the service worker, so it cannot open with no signal`);
+        assert.match(
+            markup(page),
+            /<script src="src\/sw-register\.js" type="module"><\/script>/,
+            `${page} does not register the service worker, so it cannot open with no signal`,
+        );
     }
 });
 
@@ -74,7 +88,11 @@ test("every page links the manifest and an apple touch icon, so it can be instal
     for (const page of PAGES) {
         const html = markup(page);
         assert.match(html, /<link rel="manifest" href="favicon\/site\.webmanifest">/, page);
-        assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="favicon\/apple-touch-icon\.png">/, page);
+        assert.match(
+            html,
+            /<link rel="apple-touch-icon" sizes="180x180" href="favicon\/apple-touch-icon\.png">/,
+            page,
+        );
     }
 });
 
@@ -84,7 +102,11 @@ test("the dashboard has one offline indicator, hidden until it is needed and nev
     const html = markup("dashboard.html");
     assert.equal((html.match(/id="offlineBanner"/g) || []).length, 1, "exactly one indicator");
     assert.match(html, /<div id="offlineBanner"[^>]*\brole="status"[^>]*\shidden>/);
-    assert.match(read("styles/print.css"), /\.offline-banner\b/, "a printed stock sheet must not carry it");
+    assert.match(
+        read("styles/print.css"),
+        /\.offline-banner\b/,
+        "a printed stock sheet must not carry it",
+    );
     // The banner is a flex row, so `display: flex` beats the browser's own [hidden] rule and the one thing
     // keeping it off the screen is this one. Losing the !important shows it to everybody, for good.
     assert.match(read("styles/dashboard.css"), /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/);
@@ -96,8 +118,13 @@ test("the dashboard has one offline indicator, hidden until it is needed and nev
 function fakeDocument() {
     const make = (name) => {
         const node = { name, attrs: {}, children: [] };
-        node.setAttribute = (key, value) => { node.attrs[key] = String(value); };
-        node.appendChild = (child) => { node.children.push(child); return child; };
+        node.setAttribute = (key, value) => {
+            node.attrs[key] = String(value);
+        };
+        node.appendChild = (child) => {
+            node.children.push(child);
+            return child;
+        };
         return node;
     };
     return { createElementNS: (ns, name) => ({ ...make(name), ns }) };
@@ -115,7 +142,10 @@ test("each icon is an inline SVG that is decoration, takes the text colour, and 
             assert.equal(svg.attrs.focusable, "false");
             assert.equal(svg.attrs.stroke, "currentColor");
             assert.equal(svg.attrs.viewBox, "0 0 24 24");
-            assert.ok(svg.children.length >= 2 && svg.children.every((c) => c.name === "path" && /^M/.test(c.attrs.d)));
+            assert.ok(
+                svg.children.length >= 2 &&
+                    svg.children.every((c) => c.name === "path" && /^M/.test(c.attrs.d)),
+            );
         }
         assert.throws(() => icon("fire"), /Unknown icon/);
     } finally {
@@ -124,6 +154,9 @@ test("each icon is an inline SVG that is decoration, takes the text colour, and 
 });
 
 test("the icons source never uses innerHTML", () => {
-    const code = read("src/icons.js").split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
+    const code = read("src/icons.js")
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("//"))
+        .join("\n");
     assert.doesNotMatch(code, /innerHTML/);
 });

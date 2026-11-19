@@ -58,18 +58,26 @@ describe("login page: sign in", () => {
 
     it("the email is trimmed and the password is sent untouched", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.hold = true; });
+        await page.evaluate(() => {
+            window.__auth.hold = true;
+        });
         await page.fill("#email", "  Sam@Example.com ");
         await page.fill("#password", " pass word ");
         await page.click("#authSubmit");
         await page.waitForFunction(() => window.__auth.calls.length === 1);
-        assert.deepEqual((await authCalls(page))[0], { op: "signIn", email: "Sam@Example.com", password: " pass word " });
+        assert.deepEqual((await authCalls(page))[0], {
+            op: "signIn",
+            email: "Sam@Example.com",
+            password: " pass word ",
+        });
         await context.close();
     });
 
     it("a wrong password shows a plain message and stays on the page, ready to try again", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/invalid-credential" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/invalid-credential" };
+        });
         await submit(page, "sam@example.com", "nope123");
         await message(page).waitFor();
         assert.equal(await message(page).textContent(), "Wrong email or password.");
@@ -85,7 +93,9 @@ describe("login page: sign in", () => {
 
     it("never shows a raw Firebase code or message", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/some-new-internal-error" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/some-new-internal-error" };
+        });
         await submit(page, "sam@example.com", "secret1");
         await message(page).waitFor();
         assert.equal(await message(page).textContent(), "Something went wrong. Try again.");
@@ -94,7 +104,9 @@ describe("login page: sign in", () => {
 
     it("says so plainly when sign-in is not set up yet (no API key)", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/invalid-api-key" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/invalid-api-key" };
+        });
         await submit(page, "sam@example.com", "secret1");
         await message(page).waitFor();
         assert.match(await message(page).textContent(), /not set up yet/);
@@ -103,12 +115,20 @@ describe("login page: sign in", () => {
 
     it("no connection and too many attempts get their own messages", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/network-request-failed" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/network-request-failed" };
+        });
         await submit(page, "sam@example.com", "secret1");
-        await page.waitForFunction(() => document.getElementById("authMessage").textContent.includes("No connection"));
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/too-many-requests" }; });
+        await page.waitForFunction(() =>
+            document.getElementById("authMessage").textContent.includes("No connection"),
+        );
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/too-many-requests" };
+        });
         await page.click("#authSubmit");
-        await page.waitForFunction(() => document.getElementById("authMessage").textContent.includes("Wait a few minutes"));
+        await page.waitForFunction(() =>
+            document.getElementById("authMessage").textContent.includes("Wait a few minutes"),
+        );
         await context.close();
     });
 
@@ -125,7 +145,9 @@ describe("login page: sign in", () => {
 
     it("pressing Enter submits, and a second press while the first is out sends nothing more", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.hold = true; });
+        await page.evaluate(() => {
+            window.__auth.hold = true;
+        });
         await page.fill("#email", "sam@example.com");
         await page.fill("#password", "secret1");
         await page.press("#password", "Enter");
@@ -184,7 +206,9 @@ describe("login page: create account", () => {
     it("an address that already has an account says so and offers sign-in", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
         await page.click("#toSignUp");
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/email-already-in-use" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/email-already-in-use" };
+        });
         await submit(page, "sam@example.com", "secret1");
         await message(page).waitFor();
         assert.match(await message(page).textContent(), /already exists\. Sign in instead/);
@@ -195,7 +219,9 @@ describe("login page: create account", () => {
     it("an invalid email address gets a plain message", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
         await page.click("#toSignUp");
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/invalid-email" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/invalid-email" };
+        });
         await submit(page, "not-an-email", "secret1");
         await message(page).waitFor();
         assert.equal(await message(page).textContent(), "Enter a valid email address.");
@@ -211,9 +237,14 @@ describe("login page: reset password", () => {
         assert.equal(await page.locator("#passwordGroup").isHidden(), true);
         await submit(page, "anyone@example.com");
         await message(page).waitFor();
-        assert.equal(await message(page).textContent(), "If an account exists for that email, a reset link is on its way.");
+        assert.equal(
+            await message(page).textContent(),
+            "If an account exists for that email, a reset link is on its way.",
+        );
         assert.equal(await message(page).getAttribute("role"), "status");
-        assert.deepEqual(await authCalls(page), [{ op: "resetPassword", email: "anyone@example.com" }]);
+        assert.deepEqual(await authCalls(page), [
+            { op: "resetPassword", email: "anyone@example.com" },
+        ]);
         assert.match(page.url(), /login\.html/);
         await context.close();
     });
@@ -221,30 +252,44 @@ describe("login page: reset password", () => {
     it("a rate limit on reset is reported", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
         await page.click("#toReset");
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/too-many-requests" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/too-many-requests" };
+        });
         await submit(page, "anyone@example.com");
-        await page.waitForFunction(() => document.getElementById("authMessage").textContent.includes("Wait a few minutes"));
+        await page.waitForFunction(() =>
+            document.getElementById("authMessage").textContent.includes("Wait a few minutes"),
+        );
         await context.close();
     });
 
     it("switching mode clears the old message and a reset does not need a password", async () => {
         const { context, page } = await openLogin(browser, baseUrl);
-        await page.evaluate(() => { window.__auth.failWith = { code: "auth/invalid-credential" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "auth/invalid-credential" };
+        });
         await submit(page, "sam@example.com", "nope123");
         await message(page).waitFor();
         await page.click("#toReset");
         assert.equal(await message(page).isHidden(), true);
         await page.fill("#email", "sam@example.com");
         await page.click("#authSubmit"); // the password field is hidden and not required in this mode
-        await page.waitForFunction(() => document.getElementById("authMessage").textContent.includes("reset link"));
-        assert.deepEqual((await authCalls(page)).map((c) => c.op), ["signIn", "resetPassword"]);
+        await page.waitForFunction(() =>
+            document.getElementById("authMessage").textContent.includes("reset link"),
+        );
+        assert.deepEqual(
+            (await authCalls(page)).map((c) => c.op),
+            ["signIn", "resetPassword"],
+        );
         await context.close();
     });
 });
 
 describe("dashboard guard and session", () => {
     it("signed out: dashboard.html sends the visitor to the login page and shows no data", async () => {
-        const { context, page, state } = await openDashboard(browser, baseUrl, { ...SEED, user: null });
+        const { context, page, state } = await openDashboard(browser, baseUrl, {
+            ...SEED,
+            user: null,
+        });
         assert.match(page.url(), /login\.html/);
         assert.deepEqual(state.pageErrors, []);
         await context.close();
@@ -258,7 +303,10 @@ describe("dashboard guard and session", () => {
     });
 
     it("the sites are asked for with the signed-in user's id", async () => {
-        const { context, page } = await openDashboard(browser, baseUrl, { ...SEED, user: { uid: "uX", email: "x@example.com", emailVerified: true } });
+        const { context, page } = await openDashboard(browser, baseUrl, {
+            ...SEED,
+            user: { uid: "uX", email: "x@example.com", emailVerified: true },
+        });
         assert.equal(await page.locator("#userEmail").textContent(), "x@example.com");
         await context.close();
     });
@@ -279,16 +327,24 @@ describe("dashboard guard and session", () => {
 
     it("a different account signing in reloads the page, so nothing of the first account stays", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
-        await page.evaluate(() => { window.__marker = "same-page"; });
-        await page.evaluate(() => window.__auth.setUser({ uid: "u7", email: "other@example.com", emailVerified: true }));
+        await page.evaluate(() => {
+            window.__marker = "same-page";
+        });
+        await page.evaluate(() =>
+            window.__auth.setUser({ uid: "u7", email: "other@example.com", emailVerified: true }),
+        );
         await page.waitForFunction(() => window.__marker === undefined);
         await context.close();
     });
 
     it("a token refresh for the same account does not reload the page", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
-        await page.evaluate(() => { window.__marker = "same-page"; });
-        await page.evaluate(() => window.__auth.setUser({ uid: "u1", email: "foreman@example.com", emailVerified: true }));
+        await page.evaluate(() => {
+            window.__marker = "same-page";
+        });
+        await page.evaluate(() =>
+            window.__auth.setUser({ uid: "u1", email: "foreman@example.com", emailVerified: true }),
+        );
         await page.waitForTimeout(100);
         assert.equal(await page.evaluate(() => window.__marker), "same-page");
         await context.close();
@@ -305,7 +361,10 @@ describe("dashboard guard and session", () => {
 });
 
 describe("email verification", () => {
-    const unverified = { ...SEED, user: { uid: "u1", email: "new@example.com", emailVerified: false } };
+    const unverified = {
+        ...SEED,
+        user: { uid: "u1", email: "new@example.com", emailVerified: false },
+    };
 
     it("a verified account sees no banner", async () => {
         const { context, page } = await openDashboard(browser, baseUrl);
@@ -325,13 +384,18 @@ describe("email verification", () => {
         const { context, page } = await openDashboard(browser, baseUrl, unverified);
         await page.click("#resendVerification");
         await toastLocator(page, "Verification email sent to new@example.com").waitFor();
-        assert.deepEqual((await authCalls(page)).map((c) => c.op), ["resendVerification"]);
+        assert.deepEqual(
+            (await authCalls(page)).map((c) => c.op),
+            ["resendVerification"],
+        );
         await context.close();
     });
 
     it("a failed resend shows the error", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, unverified);
-        await page.evaluate(() => { window.__auth.failWith = { code: "x" }; });
+        await page.evaluate(() => {
+            window.__auth.failWith = { code: "x" };
+        });
         await page.click("#resendVerification");
         await toastLocator(page, "fake auth failure").waitFor();
         await context.close();
@@ -347,7 +411,9 @@ describe("email verification", () => {
 
     it("'I have verified' after the link was opened clears the banner", async () => {
         const { context, page } = await openDashboard(browser, baseUrl, unverified);
-        await page.evaluate(() => { window.__auth.verifyOnRefresh = true; });
+        await page.evaluate(() => {
+            window.__auth.verifyOnRefresh = true;
+        });
         await page.click("#checkVerified");
         await toastLocator(page, "Email verified").waitFor();
         assert.equal(await page.locator("#verifyBanner").isHidden(), true);
@@ -357,16 +423,28 @@ describe("email verification", () => {
     it("invitations are only listened for once the email is verified", async () => {
         const seed = {
             ...unverified,
-            sites: { ...SEED.sites, sX: { name: "Kisumu", location: "Lake", buildingType: "Other", createdAt: 1, ownerUid: "boss" } },
+            sites: {
+                ...SEED.sites,
+                sX: {
+                    name: "Kisumu",
+                    location: "Lake",
+                    buildingType: "Other",
+                    createdAt: 1,
+                    ownerUid: "boss",
+                },
+            },
             hiddenSites: ["sX"],
             invites: { sX: { role: "viewer", siteName: "Kisumu", invitedBy: "boss@example.com" } },
         };
         const { context, page } = await openDashboard(browser, baseUrl, seed);
-        const kinds = async () => (await page.evaluate(() => window.__nailit.activeListeners())).map((l) => l.kind);
+        const kinds = async () =>
+            (await page.evaluate(() => window.__nailit.activeListeners())).map((l) => l.kind);
         assert.equal((await kinds()).includes("invites"), false);
         assert.equal(await page.locator("#invitesPanel").isHidden(), true);
 
-        await page.evaluate(() => { window.__auth.verifyOnRefresh = true; });
+        await page.evaluate(() => {
+            window.__auth.verifyOnRefresh = true;
+        });
         await page.click("#checkVerified");
         await page.locator("#invitesPanel").waitFor();
         assert.equal((await kinds()).includes("invites"), true);

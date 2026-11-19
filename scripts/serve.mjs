@@ -58,7 +58,9 @@ const FAKE_FILES = {
 
 export async function createServer({ fake = false } = {}) {
     const config = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
-    const { default: seed } = fake ? await import(pathToFileURL(path.join(ROOT, "scripts/fake-seed.js")).href) : { default: null };
+    const { default: seed } = fake
+        ? await import(pathToFileURL(path.join(ROOT, "scripts/fake-seed.js")).href)
+        : { default: null };
 
     return http.createServer((req, res) => {
         const urlPath = decodeURIComponent(new URL(req.url, "http://x").pathname);
@@ -81,7 +83,9 @@ export async function createServer({ fake = false } = {}) {
         let body = fs.readFileSync(file);
         if (fake && file.endsWith(".html")) {
             // The seed is an external script, so the Content-Security-Policy needs no inline exception.
-            body = body.toString("utf8").replace("<head>", '<head>\n    <script src="/__seed.js"></script>');
+            body = body
+                .toString("utf8")
+                .replace("<head>", '<head>\n    <script src="/__seed.js"></script>');
         }
         send(200, TYPES[path.extname(file)] || "application/octet-stream", body);
     });
@@ -92,6 +96,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
     const port = Number(argv[argv.indexOf("--port") + 1]) || 5173;
     const server = await createServer({ fake: argv.includes("--fake") });
     server.listen(port, "127.0.0.1", () => {
-        console.log(`Serving ${ROOT} at http://127.0.0.1:${port}${argv.includes("--fake") ? " with the FAKE data layer and sign-in" : ""}`);
+        console.log(
+            `Serving ${ROOT} at http://127.0.0.1:${port}${argv.includes("--fake") ? " with the FAKE data layer and sign-in" : ""}`,
+        );
     });
 }

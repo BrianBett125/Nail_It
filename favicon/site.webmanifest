@@ -11,11 +11,7 @@
     "dir": "ltr",
     "background_color": "#000000",
     "theme_color": "#000000",
-    "categories": [
-        "business",
-        "productivity",
-        "utilities"
-    ],
+    "categories": ["business", "productivity", "utilities"],
     "icons": [
         {
             "src": "android-chrome-192x192.png",

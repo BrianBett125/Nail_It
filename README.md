@@ -4,14 +4,28 @@ Nail_It is a construction site stock taking application, able to store materials
 
 ## Authors
 
-* [Brian Bett] @BrianBett756@gmail.com
-* [Njenga Mwangi] @wilsonnjenga799@gmail.com
+- [Brian Bett] @BrianBett756@gmail.com
+- [Njenga Mwangi] @wilsonnjenga799@gmail.com
 
 ## Link to Demo Web Application
 
- [Nail It](https://vercel.com/brianbett125s-projects/nail-it)
+[Nail It](https://nail-it-brianbett125s-projects.vercel.app)
 
 Hosted on Vercel at the moment.
+
+## Screenshots
+
+The dashboard, open on a site:
+
+![The dashboard on a desktop](docs/screenshots/dashboard-desktop.png)
+
+The same site on a phone:
+
+![The dashboard on a phone](docs/screenshots/dashboard-phone.png)
+
+The sign-in page:
+
+![The sign-in page](docs/screenshots/login.png)
 
 ## Accounts and roles
 
@@ -19,15 +33,23 @@ You sign in with an email and a password (the **Sign in** page; **Create an acco
 
 Every site has people in it, each with one role:
 
-| Role | Can do |
-|---|---|
+| Role                                 | Can do                                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | **Owner** (whoever created the site) | Everything: record stock, add, edit and delete materials, delete the site, invite people, change roles, remove people |
-| **Storekeeper** (foreman) | Record stock (Received, Used), add, edit and delete materials |
-| **Viewer** (engineer, QS, architect) | Read the stock, every material's history and the site's activity. No buttons to change anything |
+| **Storekeeper** (foreman)            | Record stock (Received, Used), add, edit and delete materials                                                         |
+| **Viewer** (engineer, QS, architect) | Read the stock, every material's history and the site's activity. No buttons to change anything                       |
 
 The page only shows what your role may do, and the database refuses the rest even if someone bypasses the page (`database.rules.json`).
 
 **Inviting someone:** open the site, click **Members**, type their email, pick **Storekeeper** or **Viewer**, click **Send invite**. Nothing is emailed from the app: tell them to sign up or sign in with that email. They accept under **Invitations** in the sidebar. Non-owners can leave a site from the same dialog (two taps), and owners can change roles or remove people there.
+
+## How to use it, by role
+
+**Owner.** You made the site, so you have the keys. Sign in, click **Add Site**, and the app opens it. Add the materials you hold (name, quantity, unit, and the low-stock level if you want it watched). Then invite the people on the ground from **Members**: type their email, pick **Storekeeper** or **Viewer**, and click **Send invite**. When a material runs low its row says **Low** and the **Needs attention** strip names it; the tiles at the top of the site say how many materials there are, how many are low and when the site last moved. Across every site you own, the **Overview** link in the header lists them worst first (most low stock), and **Reports** turns the open site into a stock CSV, a movements CSV for a date range, a share message or a printout. You can change anyone's role, remove people, and delete a whole site (type its name to confirm).
+
+**Storekeeper (foreman).** Your job is on the ground. Open the site, press **Received** when a delivery lands or **Used** when it goes into the work, type the amount, add a note if it helps, and confirm: three taps. Add a material with **Add Material** (or **Add & another** to keep going; the unit stays filled in). The stock is never typed: it is always the sum of what was received and used. The pen icon edits a material's name, unit or low-stock level (never its quantity), and the bin deletes it with an 8-second **Undo**. If the signal drops, keep recording: the movement is kept on your phone and sends itself when the connection is back (see **Offline** below).
+
+**Viewer (engineer, QS, architect).** You see everything and change nothing. Read the stock list, press **History** on a material for every change with who, when, how much, the note and the stock after, and watch the site's activity feed under the table. **Reports** is open to you too, and the **Overview** link lists the sites you belong to. There are no Receive, Use, edit or delete buttons on your page, and the database refuses those writes even if someone bypasses the page.
 
 ## Usage
 
@@ -67,7 +89,7 @@ Two things to expect while offline: a material's **History** and the site's **ac
 
 ## Development
 
-The site is static, there is no build step. `package.json` only holds the test tooling.
+The site is static, there is no build step. `package.json` only holds the test, lint and format tooling.
 
 ```
 npm install              # once; installs the test tooling
@@ -76,31 +98,49 @@ npm run test:rules       # the database rules, on the Firebase emulator (needs J
 npm run test:e2e         # drives the pages in Chrome against an in-memory fake database and fake sign-in
 npm test                 # unit and e2e
 npm run test:all         # unit, rules and e2e
+npm run lint             # ESLint over every source and test file
+npm run format:check     # Prettier in check mode; `npm run format` writes the fixes
 git config core.hooksPath .githooks   # run the unit tests before every commit
 node scripts/serve.mjs --fake         # open every page at http://127.0.0.1:5173 with fake data and a fake sign-in, no account needed
 node scripts/lighthouse.mjs           # Lighthouse mobile on every page: performance and accessibility must be 90 or more
 python3 scripts/optimize-images.py ORIGINALS assets   # rebuild the WebP pictures within their size budgets
 ```
 
+### Continuous integration
+
+Every pull request runs the same gates a person runs by hand, in `.github/workflows/ci.yml`: **Lint and format** (`npm run lint`, `npm run format:check`), **Unit tests** (`npm run test:unit`), **Database rules** on the Firebase emulator (`npm run test:rules`, which needs Java 17), and **End-to-end** in Chrome (`npm run test:e2e`). Pushing again to the same branch cancels the run it replaces.
+
+### Deploying the database rules
+
+`database.rules.json` is the real access control and data-integrity check, not the page. `tests/rules/` proves what it allows and refuses. To run the emulator by hand or publish the rules:
+
+```
+firebase emulators:start --only database   # the emulator the rules tests use (its UI is off in firebase.json)
+firebase deploy --only database            # publish database.rules.json to the live project (project owner only)
+```
+
+`npm run test:rules` starts the emulator, runs the whole suite and shuts it down in one command. `docs/PHASE2-DEPLOY.md` has the full first-time deploy, including the console steps only the project owner can do.
+
 How it is laid out:
 
-* `dashboard.js` wires the page. It talks to the database only through `src/data.js`.
-* `src/data.js` and `src/auth.js` are the only files that talk to Firebase (both use the one app made in `src/firebase-app.js`, configured in `src/firebase-config.js`).
-* `src/roles.js` holds who may do what on the page, and the invite email keys. `src/auth-errors.js` turns Firebase Auth errors into plain sentences.
-* `login.html` and `login.js` are the sign-in, sign-up and reset page. `dashboard.js` sends anyone who is not signed in there.
-* `database.rules.json` is the real access control. `tests/rules/` checks it on the emulator: who can read and write what, validation, invites, creating and deleting a site, stock movements (the quantity cannot move without a matching movement, nobody edits history), the migration and the backfill.
-* `scripts/` holds the one-time migration of the old data (`docs/PHASE2-DEPLOY.md` has the steps, including the ones only the project owner can do).
-* `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
-* `src/movements.js` holds everything about stock movements with no DOM and no Firebase: checking an amount, the multi-path writes the data layer sends, the running balance and the wording of the history and the activity feed.
-* `src/reports.js` decides what goes into a CSV file, a date range, a file name and the shared message, with no DOM and no Firebase (`tests/unit/reports.test.js`). `src/ui-reports.js` is the Reports dialog; `data.fetchMovementsBetween` reads a range with one query on the indexed `at` field, so it needs no new rule and no deploy. `styles/print.css` is the print view, loaded for print only. Tests: `tests/e2e/reports.test.js` downloads every file and reads it back.
-* `src/insights.js` holds what counts as low stock, how a list is searched, filtered and sorted, and how a site and the overview are summarised, with no DOM and no Firebase. `src/ui-insights.js` is the dashboard's summary tiles, attention strip and controls; `overview.html` and `overview.js` are the owner overview. None of it adds data: it all reads what Phase 3 already stores.
-* `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
-* `src/toast.js` shows the toast messages that replaced `alert()`. `src/icons.js` draws the few icons as inline SVG (there is no icon font).
-* `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site, Google's Firebase CDN and this project's exact Realtime Database host, and only this site's own script may run as the service worker (`worker-src 'self'`). The dashboard document is served `no-store` so Vercel applies new CSP headers immediately; the service worker still caches the app shell for offline startup. `sw.js` and `src/sw-cache.js` are served `no-cache` so a new worker is always picked up. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
-* `sw.js` is the service worker that lets the app open with no signal. `src/sw-cache.js` holds the whole policy as a plain module (what is cached, and which of three strategies every request gets) so `node --test` can check it (`tests/unit/sw-cache.test.js`), and `sw.js` is the thin part that carries it out. `src/sw-register.js` registers it from every page. The worker caches only the app's own files and the Firebase SDK from Google's CDN; the database, sign-in and every write are passed straight through. `src/outbox.js` is what keeps a movement recorded with no signal: it writes the movement to the phone before the app asks the database, replays it on the next start, and drops it once the server has it. `dashboard.js` shows the offline banner and the count of waiting changes from `data.subscribeConnection` (Firebase's `.info/connected`) and `data.observeOutbox`. `tests/unit/outbox.test.js` and `tests/e2e/offline.test.js` cover both: the offline E2E is the one file that runs with the worker on and the real files behind it (it shuts the test server down and proves the app still opens and its files still load), and the indicator and the queue are tested on the fake data layer, where the connection flag can be flipped. `docs/PHASE7-DEPLOY.md` has the real-phone check.
-* `src/dialog.js` opens every form and sheet as a native `<dialog>` (focus trap, Escape, a sheet that rides above the phone keyboard). `src/ui-drawer.js` turns the sidebar into a site picker drawer at 768px and below; `styles/dialogs.css` styles the dialogs as bottom sheets on a phone and cards on a desktop. On a phone the trash can for a site is inside the drawer.
-* `tests/e2e/a11y.test.js` runs axe-core on every page and dialog, on a phone and on a desktop (zero serious or critical violations; `AXE_ALL=1` also fails on moderate ones). `tests/e2e/phone.test.js` and `tests/e2e/dialogs.test.js` hold the 375px and native `<dialog>` contract.
-* `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
+- `dashboard.js` wires the page. It talks to the database only through `src/data.js`.
+- `src/data.js` and `src/auth.js` are the only files that talk to Firebase (both use the one app made in `src/firebase-app.js`, configured in `src/firebase-config.js`).
+- `src/roles.js` holds who may do what on the page, and the invite email keys. `src/auth-errors.js` turns Firebase Auth errors into plain sentences.
+- `login.html` and `login.js` are the sign-in, sign-up and reset page. `dashboard.js` sends anyone who is not signed in there.
+- `database.rules.json` is the real access control. `tests/rules/` checks it on the emulator: who can read and write what, validation, invites, creating and deleting a site, stock movements (the quantity cannot move without a matching movement, nobody edits history), the migration and the backfill.
+- `scripts/` holds the one-time migration of the old data (`docs/PHASE2-DEPLOY.md` has the steps, including the ones only the project owner can do).
+- `src/logic.js` holds validation, name normalization, the dropdown lists and the cascade-delete builder, with no DOM and no Firebase.
+- `src/movements.js` holds everything about stock movements with no DOM and no Firebase: checking an amount, the multi-path writes the data layer sends, the running balance and the wording of the history and the activity feed.
+- `src/reports.js` decides what goes into a CSV file, a date range, a file name and the shared message, with no DOM and no Firebase (`tests/unit/reports.test.js`). `src/ui-reports.js` is the Reports dialog; `data.fetchMovementsBetween` reads a range with one query on the indexed `at` field, so it needs no new rule and no deploy. `styles/print.css` is the print view, loaded for print only. Tests: `tests/e2e/reports.test.js` downloads every file and reads it back.
+- `src/insights.js` holds what counts as low stock, how a list is searched, filtered and sorted, and how a site and the overview are summarised, with no DOM and no Firebase. `src/ui-insights.js` is the dashboard's summary tiles, attention strip and controls; `overview.html` and `overview.js` are the owner overview. None of it adds data: it all reads what Phase 3 already stores.
+- `scripts/backfill.mjs` is the one-time Phase 3 backfill (`docs/PHASE3-DEPLOY.md` has the steps).
+- `src/toast.js` shows the toast messages that replaced `alert()`. `src/icons.js` draws the few icons as inline SVG (there is no icon font).
+- `vercel.json` holds the security headers every page is served with, above all a strict Content-Security-Policy: no inline script or style, scripts only from this site, Google's Firebase CDN and this project's exact Realtime Database host, and only this site's own script may run as the service worker (`worker-src 'self'`). The dashboard document is served `no-store` so Vercel applies new CSP headers immediately; the service worker still caches the app shell for offline startup. `sw.js` and `src/sw-cache.js` are served `no-cache` so a new worker is always picked up. `scripts/serve.mjs` serves the pages with the same headers, so `tests/e2e/security.test.js` can run the policy in real Chrome. `docs/PHASE5-DEPLOY.md` has the check to do on a Vercel preview.
+- `sw.js` is the service worker that lets the app open with no signal. `src/sw-cache.js` holds the whole policy as a plain module (what is cached, and which of three strategies every request gets) so `node --test` can check it (`tests/unit/sw-cache.test.js`), and `sw.js` is the thin part that carries it out. `src/sw-register.js` registers it from every page. The worker caches only the app's own files and the Firebase SDK from Google's CDN; the database, sign-in and every write are passed straight through. `src/outbox.js` is what keeps a movement recorded with no signal: it writes the movement to the phone before the app asks the database, replays it on the next start, and drops it once the server has it. `dashboard.js` shows the offline banner and the count of waiting changes from `data.subscribeConnection` (Firebase's `.info/connected`) and `data.observeOutbox`. `tests/unit/outbox.test.js` and `tests/e2e/offline.test.js` cover both: the offline E2E is the one file that runs with the worker on and the real files behind it (it shuts the test server down and proves the app still opens and its files still load), and the indicator and the queue are tested on the fake data layer, where the connection flag can be flipped. `docs/PHASE7-DEPLOY.md` has the real-phone check.
+- `src/dialog.js` opens every form and sheet as a native `<dialog>` (focus trap, Escape, a sheet that rides above the phone keyboard). `src/ui-drawer.js` turns the sidebar into a site picker drawer at 768px and below; `styles/dialogs.css` styles the dialogs as bottom sheets on a phone and cards on a desktop. On a phone the trash can for a site is inside the drawer.
+- `tests/e2e/a11y.test.js` runs axe-core on every page and dialog, on a phone and on a desktop (zero serious or critical violations; `AXE_ALL=1` also fails on moderate ones). `tests/e2e/phone.test.js` and `tests/e2e/dialogs.test.js` hold the 375px and native `<dialog>` contract.
+- `tests/e2e/fake-data.js` replaces `src/data.js` during E2E tests, so the tests never touch the real database. The E2E suite fails if the page tries to reach Firebase.
+- `eslint.config.js` (ESLint 9 flat config) and `.prettierrc.json` set the lint and format rules. `.prettierignore` keeps Prettier off the hand-formatted HTML (pinned by `tests/unit/pages.test.js`) and off `docs/`. `.github/workflows/ci.yml` runs all four gates on every pull request.
 
 What is stored (everything is under a site, so one person's sites are never downloaded with another's):
 
