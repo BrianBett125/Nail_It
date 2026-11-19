@@ -96,6 +96,29 @@ test("every page links the manifest and an apple touch icon, so it can be instal
     }
 });
 
+// The app is one colour, and that reaches the browser's own chrome as well as its own: with no theme
+// colour the Android status bar and the desktop tab sit at the browser's default next to a near-black
+// app header, and with no declared scheme a phone in dark mode paints native controls dark on a page
+// that is light-only by design. The colour is read out of tokens.css, so the markup cannot drift from
+// the palette it is quoting.
+test("every page hands the browser the app's chrome colour and a light-only scheme", () => {
+    const chrome = /--chrome:\s*(#[0-9a-f]{6})/i.exec(read("styles/tokens.css"));
+    assert.ok(chrome, "styles/tokens.css declares --chrome");
+    for (const page of PAGES) {
+        const html = markup(page);
+        assert.match(
+            html,
+            new RegExp(`<meta name="theme-color" content="${chrome[1]}">`),
+            `${page} does not give the browser the app's chrome colour`,
+        );
+        assert.match(
+            html,
+            /<meta name="color-scheme" content="light">/,
+            `${page} lets the operating system repaint the app dark`,
+        );
+    }
+});
+
 // Phase 7: the dashboard is the page that says the app is working offline. One indicator, announced to a
 // screen reader rather than left for the eye alone, hidden until it is needed, and never printed.
 test("the dashboard has one offline indicator, hidden until it is needed and never printed", () => {
