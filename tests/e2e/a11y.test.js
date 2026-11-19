@@ -100,12 +100,18 @@ const VIEWPORTS = {
 // A browser host whose pages have the viewport (and, on a phone, touch), for the shared harness.
 function host(viewport) {
     return {
-        newContext: () =>
+        // Spread the harness options through (it asks for serviceWorkers: "block"); a context that
+        // drops them would let the worker serve cached modules and defeat the fake data layer.
+        newContext: (options = {}) =>
             browser.newContext({
+                ...options,
                 viewport,
                 deviceScaleFactor: viewport.width < 600 ? 2 : 1,
                 isMobile: viewport.width < 600,
                 hasTouch: viewport.width < 600,
+                // axe has to read settled colours, not a blend caught mid-transition. Reduced motion
+                // makes tokens.css zero every transition before it starts, so the audit is deterministic.
+                reducedMotion: "reduce",
             }),
     };
 }

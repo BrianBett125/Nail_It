@@ -572,12 +572,13 @@ table.readonly td.cell-manage {
     display: none;
 }
 
-/* Table cells that hold buttons */
+/* Table cells that hold buttons. The cell wraps: the actions in .cell-stock and .cell-manage are
+   otherwise a min-width the column cannot shrink below, which pushes the whole table past the content
+   column on a wide default font. The buttons themselves stay on one line. */
 .cell-stock,
 .cell-manage {
     padding-left: 8px;
     padding-right: 8px;
-    white-space: nowrap;
 }
 
 .cell-stock {
@@ -590,6 +591,7 @@ table.readonly td.cell-manage {
 td .btn-edit,
 td .btn-delete {
     box-sizing: border-box;
+    white-space: nowrap;
     min-width: 44px;
     min-height: 44px;
     margin: 2px 4px 2px 0;

@@ -417,7 +417,9 @@ describe("material history", () => {
         await page.locator("#historyContainer").waitFor({ state: "visible" });
         assert.match(await page.textContent("#historyTitle"), /Cement/);
 
+        // The sheet paints before its rows do: wait for the movement read to land, then count.
         const rows = page.locator("#historyList .history-row");
+        await rows.first().waitFor({ state: "visible" });
         assert.equal(await rows.count(), 2);
         const first = rows.nth(0);
         assert.match(await first.locator(".history-who").textContent(), /boss/);

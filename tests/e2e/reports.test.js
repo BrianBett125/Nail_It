@@ -110,7 +110,12 @@ async function open(
     viewport = { width: 1280, height: 800 },
     rows = ["Cement", "Sand, coarse"],
 ) {
-    const host = { newContext: () => browser.newContext({ viewport, acceptDownloads: true }) };
+    // Spread the harness options through so serviceWorkers: "block" survives; otherwise a reload after
+    // addInitScript would be answered by the worker's cache instead of the fake data layer.
+    const host = {
+        newContext: (options = {}) =>
+            browser.newContext({ ...options, viewport, acceptDownloads: true }),
+    };
     const opened = await openDashboard(host, baseUrl, seed);
     if (viewport.width <= 768) {
         await opened.page.click("#sitePickerButton"); // on a phone the sites are in the drawer
